@@ -1,0 +1,392 @@
+package {{.DomainSnake}}
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/google/uuid"
+	"github.com/samber/do"
+
+	entityPkg "{{.Module}}/internal/core/entity/{{.DomainSnake}}"
+	repoPkg "{{.Module}}/internal/repository/{{.DomainSnake}}"
+	"{{.Module}}/internal/repository"
+	"{{.Module}}/internal/utils"
+)
+
+// {{.UseCase.Interface.Name}} defines the interface for {{.DomainSnake}} use cases
+type {{.UseCase.Interface.Name}} interface {
+	{{- /* Standard CRUD Methods */}}
+	{{- if .UseCase.Interface.StandardMethods.Create}}
+	// Create creates a new {{.DomainSnake}}
+	Create(ctx context.Context, {{.EntitySnake}} *entityPkg.{{.Entity}}) error
+	{{- end}}
+
+	{{- if .UseCase.Interface.StandardMethods.GetByID}}
+	// GetByID retrieves a {{.DomainSnake}} by ID
+	GetByID(ctx context.Context, id uuid.UUID) (*entityPkg.{{.Entity}}, error)
+	{{- end}}
+
+	{{- if .UseCase.Interface.StandardMethods.List}}
+	// List retrieves a list of {{.EntitiesSnake}} with optional filtering
+	List(ctx context.Context, filters map[string]interface{}, limit, offset int) ([]*entityPkg.{{.Entity}}, error)
+	{{- end}}
+
+	{{- if .UseCase.Interface.StandardMethods.Update}}
+	// Update updates an existing {{.DomainSnake}}
+	Update(ctx context.Context, {{.EntitySnake}} *entityPkg.{{.Entity}}) error
+	{{- end}}
+
+	{{- if .UseCase.Interface.StandardMethods.Delete}}
+	// Delete deletes a {{.DomainSnake}} by ID
+	Delete(ctx context.Context, id uuid.UUID) error
+	{{- end}}
+
+	{{- if .UseCase.Interface.StandardMethods.Validate}}
+	// Validate validates a {{.DomainSnake}} entity
+	Validate(ctx context.Context, {{.EntitySnake}} *entityPkg.{{.Entity}}) error
+	{{- end}}
+
+	{{- if .UseCase.Interface.StandardMethods.Count}}
+	// Count returns the total number of {{.EntitiesSnake}}
+	Count(ctx context.Context, filters map[string]interface{}) (int64, error)
+	{{- end}}
+
+	{{- /* Business Methods */}}
+	{{- range .UseCase.Interface.BusinessMethods}}
+	// {{.Name}} {{.Description}}
+	{{.Name}}(ctx context.Context{{range .Parameters}}, {{.Name}} {{.Type}}{{end}}) {{.Returns}}
+	{{- end}}
+
+	{{- /* Additional Business Methods */}}
+	{{- range .UseCase.BusinessMethods}}
+	// {{.Name}} {{.Description}}
+	{{.Name}}(ctx context.Context{{range .Parameters}}, {{.Name}} {{.Type}}{{end}}) {{.Returns}}
+	{{- end}}
+}
+
+// {{.UseCase.Implementation.Name}} implements the {{.DomainSnake}} use case interface
+type {{.UseCase.Implementation.Name}} struct {
+	{{- range .UseCase.Implementation.Dependencies}}
+	{{- if eq . "*utils.Logger"}}
+	logger *utils.Logger
+	{{- else if contains . "Repository"}}
+	{{$.EntitySnake}}Repo repoPkg.{{.}}
+	{{- else}}
+	{{toSnakeCase .}} {{.}}
+	{{- end}}
+	{{- end}}
+}
+
+// Ensure {{.UseCase.Implementation.Name}} implements the {{.UseCase.Interface.Name}} interface
+var _ {{.UseCase.Interface.Name}} = (*{{.UseCase.Implementation.Name}})(nil)
+
+// New{{.UseCase.Implementation.Name}} creates a new {{.DomainSnake}} use case
+func New{{.UseCase.Implementation.Name}}(injector *do.Injector) (*{{.UseCase.Implementation.Name}}, error) {
+	// Get dependencies from injector
+	repositories := do.MustInvoke[*repository.Repositories](injector)
+	log := do.MustInvoke[*utils.Logger](injector)
+
+	// Get the {{.DomainSnake}} repository from the repositories container
+	repoField, ok := repository.GetField(repositories, "{{.Entity}}")
+	if !ok {
+		return nil, fmt.Errorf("failed to get {{.DomainSnake}} repository from container")
+	}
+	
+	{{.EntitySnake}}Repo, ok := repoField.(repoPkg.I{{.Entity}}Repository)
+	if !ok {
+		return nil, fmt.Errorf("failed to cast {{.DomainSnake}} repository to correct type")
+	}
+
+	return &{{.UseCase.Implementation.Name}}{
+	{{- range .UseCase.Implementation.Dependencies}}
+	{{- if eq . "*utils.Logger"}}
+	logger: log,
+	{{- else if contains . "Repository"}}
+	{{$.EntitySnake}}Repo: {{$.EntitySnake}}Repo,
+	{{- else}}
+	{{toSnakeCase .}}: do.MustInvoke[{{.}}](injector),
+	{{- end}}
+	{{- end}}
+	}, nil
+}
+
+{{- /* Standard Method Implementations */}}
+{{- if .UseCase.Interface.StandardMethods.Create}}
+
+// Create creates a new {{.DomainSnake}}
+func (uc *{{.UseCase.Implementation.Name}}) Create(ctx context.Context, {{.EntitySnake}} *entityPkg.{{.Entity}}) error {
+	{{- if .UseCase.Logging.Enabled}}
+	uc.logger.{{toPascalCase .UseCase.Logging.Level}}(fmt.Sprintf("creating {{.DomainSnake}} %+v", {{.EntitySnake}}))
+	{{- end}}
+	
+	{{- if .UseCase.Validation.Enabled}}
+	// Validate entity before creation
+	if err := uc.validate{{.Entity}}({{.EntitySnake}}); err != nil {
+		return fmt.Errorf("validation failed: %w", err)
+	}
+	{{- end}}
+	
+	{{- if .UseCase.Transactions.Enabled}}
+	// Create with business logic validation
+	{{- end}}
+	return uc.{{.EntitySnake}}Repo.Create(ctx, {{.EntitySnake}})
+}
+{{- end}}
+
+{{- if .UseCase.Interface.StandardMethods.GetByID}}
+
+// GetByID retrieves a {{.DomainSnake}} by ID
+func (uc *{{.UseCase.Implementation.Name}}) GetByID(ctx context.Context, id uuid.UUID) (*entityPkg.{{.Entity}}, error) {
+	{{- if .UseCase.Logging.Enabled}}
+	uc.logger.{{toPascalCase .UseCase.Logging.Level}}(fmt.Sprintf("getting {{.DomainSnake}} by ID %s", id))
+	{{- end}}
+	
+	return uc.{{.EntitySnake}}Repo.GetByID(ctx, id)
+}
+{{- end}}
+
+{{- if .UseCase.Interface.StandardMethods.List}}
+
+// List retrieves a list of {{.EntitiesSnake}} with optional filtering
+func (uc *{{.UseCase.Implementation.Name}}) List(ctx context.Context, filters map[string]interface{}, limit, offset int) ([]*entityPkg.{{.Entity}}, error) {
+	{{- if .UseCase.Logging.Enabled}}
+	uc.logger.{{toPascalCase .UseCase.Logging.Level}}(fmt.Sprintf("listing {{.EntitiesSnake}} with filters %+v, limit %d, offset %d", filters, limit, offset))
+	{{- end}}
+	
+	{{- if .UseCase.Validation.Enabled}}
+	// Apply business rules for listing
+	filters = uc.applyBusinessFilters(filters)
+	{{- end}}
+	
+	return uc.{{.EntitySnake}}Repo.List(ctx, filters, limit, offset)
+}
+{{- end}}
+
+{{- if .UseCase.Interface.StandardMethods.Update}}
+
+// Update updates an existing {{.DomainSnake}}
+func (uc *{{.UseCase.Implementation.Name}}) Update(ctx context.Context, {{.EntitySnake}} *entityPkg.{{.Entity}}) error {
+	{{- if .UseCase.Logging.Enabled}}
+	uc.logger.{{toPascalCase .UseCase.Logging.Level}}(fmt.Sprintf("updating {{.DomainSnake}} %+v", {{.EntitySnake}}))
+	{{- end}}
+	
+	{{- if .UseCase.Validation.Enabled}}
+	// Validate entity before update
+	if err := uc.validate{{.Entity}}({{.EntitySnake}}); err != nil {
+		return fmt.Errorf("validation failed: %w", err)
+	}
+	
+	// Check if entity exists and user has permission to update
+	existing, err := uc.{{.EntitySnake}}Repo.GetByID(ctx, {{.EntitySnake}}.ID)
+	if err != nil {
+		return fmt.Errorf("failed to get existing {{.DomainSnake}}: %w", err)
+	}
+	
+	// Apply business rules for updates
+	if err := uc.validateUpdate(existing, {{.EntitySnake}}); err != nil {
+		return fmt.Errorf("update validation failed: %w", err)
+	}
+	{{- end}}
+	
+	return uc.{{.EntitySnake}}Repo.Update(ctx, {{.EntitySnake}})
+}
+{{- end}}
+
+{{- if .UseCase.Interface.StandardMethods.Delete}}
+
+// Delete deletes a {{.DomainSnake}} by ID
+func (uc *{{.UseCase.Implementation.Name}}) Delete(ctx context.Context, id uuid.UUID) error {
+	{{- if .UseCase.Logging.Enabled}}
+	uc.logger.{{toPascalCase .UseCase.Logging.Level}}(fmt.Sprintf("deleting {{.DomainSnake}} with ID %s", id))
+	{{- end}}
+	
+	{{- if .UseCase.Validation.Enabled}}
+	// Check if entity exists and can be deleted
+	existing, err := uc.{{.EntitySnake}}Repo.GetByID(ctx, id)
+	if err != nil {
+		return fmt.Errorf("failed to get {{.DomainSnake}} for deletion: %w", err)
+	}
+	
+	// Apply business rules for deletion
+	if err := uc.validateDelete(existing); err != nil {
+		return fmt.Errorf("delete validation failed: %w", err)
+	}
+	{{- end}}
+	
+	return uc.{{.EntitySnake}}Repo.Delete(ctx, id)
+}
+{{- end}}
+
+{{- if .UseCase.Interface.StandardMethods.Validate}}
+
+// Validate validates a {{.DomainSnake}} entity
+func (uc *{{.UseCase.Implementation.Name}}) Validate(ctx context.Context, {{.EntitySnake}} *entityPkg.{{.Entity}}) error {
+	{{- if .UseCase.Logging.Enabled}}
+	uc.logger.{{toPascalCase .UseCase.Logging.Level}}("validating {{.DomainSnake}} entity")
+	{{- end}}
+	
+	return uc.validate{{.Entity}}({{.EntitySnake}})
+}
+{{- end}}
+
+{{- if .UseCase.Interface.StandardMethods.Count}}
+
+// Count returns the total number of {{.EntitiesSnake}}
+func (uc *{{.UseCase.Implementation.Name}}) Count(ctx context.Context, filters map[string]interface{}) (int64, error) {
+	{{- if .UseCase.Logging.Enabled}}
+	uc.logger.{{toPascalCase .UseCase.Logging.Level}}("counting {{.EntitiesSnake}}")
+	{{- end}}
+	
+	{{- if .UseCase.Validation.Enabled}}
+	// Apply business filters for counting
+	filters = uc.applyBusinessFilters(filters)
+	{{- end}}
+	
+	return uc.{{.EntitySnake}}Repo.Count(ctx, filters)
+}
+{{- end}}
+
+{{- /* Business Method Implementations */}}
+{{- range .UseCase.Interface.BusinessMethods}}
+
+// {{.Name}} {{.Description}}
+func (uc *{{$.UseCase.Implementation.Name}}) {{.Name}}(ctx context.Context{{range .Parameters}}, {{.Name}} {{.Type}}{{end}}) {{.Returns}} {
+	{{- if $.UseCase.Logging.Enabled}}
+	uc.logger.{{toPascalCase $.UseCase.Logging.Level}}("executing business method {{.Name}}")
+	{{- end}}
+	
+	{{- if .Implementation}}
+	{{.Implementation}}
+	{{- else}}
+	{{- if $.Generation.PreserveCustomCode}}
+	// @gohex:begin:custom:{{toSnakeCase .Name}}
+	{{- if contains .Returns "error"}}
+	return fmt.Errorf("{{.Name}} not implemented")
+	{{- else if eq .Returns "bool"}}
+	return false
+	{{- else if contains .Returns "int"}}
+	return 0
+	{{- else if contains .Returns "*"}}
+	return nil
+	{{- else}}
+	panic("{{.Name}} not implemented")
+	{{- end}}
+	// @gohex:end:custom:{{toSnakeCase .Name}}
+	{{- end}}
+	{{- end}}
+}
+{{- end}}
+
+{{- /* Additional Business Method Implementations */}}
+{{- range .UseCase.BusinessMethods}}
+
+// {{.Name}} {{.Description}}
+func (uc *{{$.UseCase.Implementation.Name}}) {{.Name}}(ctx context.Context{{range .Parameters}}, {{.Name}} {{.Type}}{{end}}) {{.Returns}} {
+	{{- if $.UseCase.Logging.Enabled}}
+	uc.logger.{{toPascalCase $.UseCase.Logging.Level}}("executing business method {{.Name}}")
+	{{- end}}
+	
+	{{- if .Implementation}}
+	{{.Implementation}}
+	{{- else}}
+	{{- if $.Generation.PreserveCustomCode}}
+	// @gohex:begin:custom:{{toSnakeCase .Name}}
+	{{- if .Steps}}
+	// Business workflow steps:
+	{{- range .Steps}}
+	// Step {{.Name}}: {{.Type}}
+	{{- if eq .Type "validate"}}
+	// Add validation logic here
+	{{- else if eq .Type "repository_call"}}
+	// Call repository method: {{.Repository}}.{{.Method}}
+	{{- else if eq .Type "business_logic"}}
+	// Add business logic here
+	{{- else if eq .Type "event"}}
+	// Publish event: {{.Event}}
+	{{- end}}
+	{{- end}}
+	{{- end}}
+	
+	{{- if contains .Returns "error"}}
+	return fmt.Errorf("{{.Name}} not implemented")
+	{{- else if eq .Returns "bool"}}
+	return false
+	{{- else if contains .Returns "int"}}
+	return 0
+	{{- else if contains .Returns "*"}}
+	return nil
+	{{- else}}
+	panic("{{.Name}} not implemented")
+	{{- end}}
+	// @gohex:end:custom:{{toSnakeCase .Name}}
+	{{- end}}
+	{{- end}}
+}
+{{- end}}
+
+{{- /* Validation Helper Methods */}}
+{{- if .UseCase.Validation.Enabled}}
+
+// validate{{.Entity}} validates a {{.DomainSnake}} entity
+func (uc *{{.UseCase.Implementation.Name}}) validate{{.Entity}}({{.EntitySnake}} *entityPkg.{{.Entity}}) error {
+	{{- if .Generation.PreserveCustomCode}}
+	// @gohex:begin:custom:validate_{{toSnakeCase .Entity}}
+	// Add validation logic here
+	// Example validations:
+	{{- range .UseCase.Validation.Rules}}
+	// - {{.}} validation
+	{{- end}}
+	return nil
+	// @gohex:end:custom:validate_{{toSnakeCase .Entity}}
+	{{- else}}
+	return nil
+	{{- end}}
+}
+
+// applyBusinessFilters applies business rules to filters
+func (uc *{{.UseCase.Implementation.Name}}) applyBusinessFilters(filters map[string]interface{}) map[string]interface{} {
+	{{- if .Generation.PreserveCustomCode}}
+	// @gohex:begin:custom:apply_business_filters
+	// Add business filter logic here
+	// Example: Add tenant filtering, access control, etc.
+	return filters
+	// @gohex:end:custom:apply_business_filters
+	{{- else}}
+	return filters
+	{{- end}}
+}
+
+// validateUpdate validates business rules for updates
+func (uc *{{.UseCase.Implementation.Name}}) validateUpdate(existing, updated *entityPkg.{{.Entity}}) error {
+	{{- if .Generation.PreserveCustomCode}}
+	// @gohex:begin:custom:validate_update
+	// Add update validation logic here
+	// Example: Check permissions, validate changes, etc.
+	return nil
+	// @gohex:end:custom:validate_update
+	{{- else}}
+	return nil
+	{{- end}}
+}
+
+// validateDelete validates business rules for deletion
+func (uc *{{.UseCase.Implementation.Name}}) validateDelete({{.EntitySnake}} *entityPkg.{{.Entity}}) error {
+	{{- if .Generation.PreserveCustomCode}}
+	// @gohex:begin:custom:validate_delete
+	// Add delete validation logic here
+	// Example: Check dependencies, permissions, etc.
+	return nil
+	// @gohex:end:custom:validate_delete
+	{{- else}}
+	return nil
+	{{- end}}
+}
+{{- end}}
+
+{{- if .Generation.PreserveCustomCode}}
+
+// Custom business logic methods
+// @gohex:begin:custom:business_methods
+// Add your custom business logic methods here
+// @gohex:end:custom:business_methods
+{{- end}}

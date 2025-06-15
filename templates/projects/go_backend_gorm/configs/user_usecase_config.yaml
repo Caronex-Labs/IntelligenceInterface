@@ -1,0 +1,387 @@
+version: "1.0"
+domain: "user"
+description: "User management domain with enhanced model, repository, and use case configuration"
+module: "go_backend_gorm"
+
+# Model configuration for database layer
+model:
+  name: "User"
+  description: "User represents a user in the database"
+  table_name: "users"
+  soft_delete: false
+  
+  fields:
+    - name: "Email"
+      type: "string"
+      description: "User email address"
+      constraints: ["not null", "unique"]
+      max_length: 255
+      validations: ["email"]
+      unique: true
+      nullable: false
+      
+    - name: "FirstName"
+      type: "string"
+      description: "User first name"
+      constraints: ["not null"]
+      max_length: 100
+      min_length: 2
+      nullable: false
+      
+    - name: "LastName"
+      type: "string"
+      description: "User last name"
+      constraints: ["not null"]
+      max_length: 100
+      min_length: 2
+      nullable: false
+      
+    - name: "PasswordHash"
+      type: "string"
+      description: "Encrypted password hash"
+      constraints: ["not null"]
+      exclude_from_json: true
+      sensitive: true
+      nullable: false
+      
+    - name: "IsActive"
+      type: "bool"
+      description: "User account active status"
+      default: true
+      nullable: false
+      
+    - name: "ProfilePictureURL"
+      type: "string"
+      description: "URL to user profile picture"
+      nullable: true
+      
+    - name: "LastLoginAt"
+      type: "*time.Time"
+      description: "Last login timestamp"
+      nullable: true
+
+  indexes:
+    - name: "idx_users_email"
+      fields: ["Email"]
+      unique: true
+    - name: "idx_users_active"
+      fields: ["IsActive"]
+    - name: "idx_users_last_login"
+      fields: ["LastLoginAt"]
+
+  custom_methods:
+    - name: "FullName"
+      description: "Returns the user's full name"
+      returns: "string"
+      implementation: "return m.FirstName + \" \" + m.LastName"
+      
+    - name: "IsValidEmail"
+      description: "Validates the email format"
+      returns: "bool"
+      placeholder: true
+
+  hooks:
+    before_create: true
+    before_update: false
+
+# Repository configuration
+repository:
+  description: "User repository for database operations"
+  
+  interface:
+    name: "IUserRepository"
+    standard_methods:
+      create: true
+      get_by_id: true
+      list: true
+      update: true
+      delete: true
+      count: true
+      exists: true
+      get_by_field: false
+      
+    custom_methods:
+      - name: "GetByEmail"
+        description: "Retrieves a user by email address"
+        parameters:
+          - name: "email"
+            type: "string"
+            description: "User email address"
+            required: true
+        returns: "(*entityPkg.User, error)"
+        
+      - name: "GetActiveUsers"
+        description: "Retrieves all active users"
+        parameters: []
+        returns: "([]*entityPkg.User, error)"
+        
+      - name: "UpdateLastLogin"
+        description: "Updates the last login timestamp for a user"
+        parameters:
+          - name: "userID"
+            type: "uuid.UUID"
+            description: "User ID"
+            required: true
+        returns: "error"
+        transaction: true
+  
+  implementation:
+    name: "UserRepository"
+    dependencies:
+      - "*postgres.DB"
+      - "*utils.Logger"
+    
+  queries:
+    - name: "SearchUsersByName"
+      description: "Searches users by first or last name"
+      parameters:
+        - name: "searchTerm"
+          type: "string"
+          description: "Search term for name"
+          required: true
+      returns: "([]*entityPkg.User, error)"
+      gorm: |
+        var models []modelsPkg.User
+        err := r.db.WithContext(ctx).Where("first_name ILIKE ? OR last_name ILIKE ?", "%"+searchTerm+"%", "%"+searchTerm+"%").Find(&models).Error
+        if err != nil {
+            return nil, err
+        }
+        entities := make([]*entityPkg.User, len(models))
+        for i, model := range models {
+            modelCopy := model
+            entities[i] = entityPkg.FromUserModel(&modelCopy)
+        }
+        return entities, nil
+    
+  pagination:
+    enabled: true
+    default_limit: 20
+    max_limit: 100
+    type: "offset"
+    
+  filtering:
+    enabled: true
+    fields: ["is_active", "created_at", "updated_at"]
+    operators: ["=", "!=", ">", ">=", "<", "<=", "LIKE", "IN"]
+    search_fields: ["first_name", "last_name", "email"]
+    
+  logging:
+    enabled: true
+    level: "debug"
+    methods: ["Create", "Update", "Delete", "GetByEmail"]
+    
+  transactions:
+    enabled: true
+    methods: ["Create", "Update", "Delete", "UpdateLastLogin"]
+
+# Use case configuration
+use_case:
+  description: "User business logic and orchestration"
+  
+  # Interface configuration
+  interface:
+    name: "IUserUseCase"
+    standard_methods:
+      create: true
+      get_by_id: true
+      list: true
+      update: true
+      delete: true
+      validate: true
+      count: false
+      
+    business_methods:
+      - name: "AuthenticateUser"
+        description: "Authenticates a user with email and password"
+        parameters:
+          - name: "email"
+            type: "string"
+            description: "User email"
+            required: true
+            validation: ["email", "not_empty"]
+          - name: "password"
+            type: "string"
+            description: "User password"
+            required: true
+            validation: ["not_empty", "min_length:8"]
+        returns: "(*entityPkg.User, error)"
+        authorization: ["public"]
+        conversions:
+          auto_detect: true
+        placeholder: true
+        
+      - name: "ChangePassword"
+        description: "Changes a user's password"
+        parameters:
+          - name: "userID"
+            type: "uuid.UUID"
+            description: "User ID"
+            required: true
+          - name: "oldPassword"
+            type: "string"
+            description: "Current password"
+            required: true
+          - name: "newPassword"
+            type: "string"
+            description: "New password"
+            required: true
+            validation: ["min_length:8", "complexity"]
+        returns: "error"
+        authorization: ["authenticated", "self_or_admin"]
+        transactional: true
+        events: ["password_changed"]
+        placeholder: true
+        
+      - name: "DeactivateUser"
+        description: "Deactivates a user account"
+        parameters:
+          - name: "userID"
+            type: "uuid.UUID"
+            description: "User ID to deactivate"
+            required: true
+        returns: "error"
+        authorization: ["admin"]
+        transactional: true
+        events: ["user_deactivated"]
+        validation: ["check_admin_permissions", "check_user_exists"]
+        placeholder: true
+  
+  # Implementation configuration
+  implementation:
+    name: "UserUseCase"
+    dependencies:
+      - "IUserRepository"
+      - "*utils.Logger"
+    error_handling: "wrap"
+  
+  # Business method workflows
+  business_methods:
+    - name: "RegisterUser"
+      description: "Registers a new user with validation and email verification"
+      parameters:
+        - name: "registrationData"
+          type: "*RegistrationRequest"
+          description: "User registration data"
+          required: true
+          validation: ["required_fields", "email_format", "password_strength"]
+      returns: "(*entityPkg.User, error)"
+      steps:
+        - name: "validate_input"
+          type: "validate"
+          validation: "email_unique"
+        - name: "hash_password"
+          type: "business_logic"
+        - name: "create_user"
+          type: "repository_call"
+          repository: "userRepo"
+          method: "Create"
+        - name: "send_verification"
+          type: "event"
+          event: "user_registered"
+      validation: ["email_unique", "password_strength", "terms_accepted"]
+      authorization: ["public"]
+      transactional: true
+      events: ["user_registered", "verification_email_sent"]
+      conversions:
+        auto_detect: true
+        input_conversion:
+          - from: "*RegistrationRequest"
+            to: "*entityPkg.User"
+            method: "ToUserEntity"
+      placeholder: true
+      
+    - name: "UpdateProfile"
+      description: "Updates user profile information"
+      parameters:
+        - name: "userID"
+          type: "uuid.UUID"
+          description: "User ID"
+          required: true
+        - name: "profileData"
+          type: "*ProfileUpdateRequest"
+          description: "Profile update data"
+          required: true
+      returns: "(*entityPkg.User, error)"
+      steps:
+        - name: "validate_permissions"
+          type: "validate"
+          validation: "user_permissions"
+        - name: "get_existing_user"
+          type: "repository_call"
+          repository: "userRepo"
+          method: "GetByID"
+        - name: "merge_updates"
+          type: "business_logic"
+        - name: "validate_changes"
+          type: "validate"
+          validation: "profile_changes"
+        - name: "update_user"
+          type: "repository_call"
+          repository: "userRepo"
+          method: "Update"
+        - name: "notify_changes"
+          type: "event"
+          event: "profile_updated"
+      validation: ["user_permissions", "email_unique_on_change"]
+      authorization: ["authenticated", "self_or_admin"]
+      transactional: true
+      events: ["profile_updated"]
+      conversions:
+        auto_detect: true
+        input_conversion:
+          - from: "*ProfileUpdateRequest"
+            to: "*entityPkg.User"
+            method: "MergeProfileUpdate"
+        output_conversion:
+          - from: "*entityPkg.User"
+            to: "*UserProfileResponse"
+            method: "ToProfileResponse"
+      placeholder: true
+  
+  # Validation configuration
+  validation:
+    enabled: true
+    rules:
+      - "required"
+      - "format"
+      - "business_rules"
+      - "authorization"
+    custom:
+      - "email_unique"
+      - "password_strength"
+      - "user_permissions"
+  
+  # Logging configuration
+  logging:
+    enabled: true
+    level: "debug"
+    methods: ["Create", "Update", "Delete", "AuthenticateUser", "ChangePassword", "RegisterUser"]
+  
+  # Transaction configuration
+  transactions:
+    enabled: true
+    methods: ["Create", "Update", "Delete", "ChangePassword", "RegisterUser", "UpdateProfile", "DeactivateUser"]
+  
+  # Event configuration
+  events:
+    enabled: true
+    types: ["user_registered", "password_changed", "profile_updated", "user_deactivated", "verification_email_sent"]
+    publisher: "EventPublisher"
+  
+  # Additional dependencies
+  dependencies:
+    - name: "EmailService"
+      type: "IEmailService"
+      alias: "emailService"
+    - name: "PasswordHasher"
+      type: "IPasswordHasher"
+      alias: "passwordHasher"
+    - name: "EventPublisher"
+      type: "IEventPublisher"
+      alias: "eventPublisher"
+
+# Generation options
+generation:
+  preserve_custom_code: true
+  uuid_primary_key: true
+  generate_migrations: true

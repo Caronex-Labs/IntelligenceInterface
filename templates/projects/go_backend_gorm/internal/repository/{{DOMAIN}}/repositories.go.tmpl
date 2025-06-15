@@ -1,0 +1,26 @@
+package {{.DomainSnake}}
+
+import (
+	"github.com/samber/do"
+
+	"go_backend_gorm/internal/repository"
+)
+
+// Register{{.Entity}}Repository registers the {{.DomainSnake}} repository in the dependency injection container
+func Register{{.Entity}}Repository(injector *do.Injector) {
+	// Register the repository implementation
+	do.Provide(injector, New{{.Entity}}Repository)
+	
+	// Register a callback to add the repository to the Repositories struct
+	do.ProvideNamedValue(injector, "register_{{.EntitySnake}}_repository", func(r *repository.Repositories) {
+		// This will be called after Repositories is created
+		// Add the {{.Entity}} repository to the Repositories struct
+		repo, err := do.Invoke[I{{.Entity}}Repository](injector)
+		if err != nil {
+			panic(err)
+		}
+		
+		// Add the field dynamically using reflection
+		repository.AddField(r, "{{.Entity}}", repo)
+	})
+}

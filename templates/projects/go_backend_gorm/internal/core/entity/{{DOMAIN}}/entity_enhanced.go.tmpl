@@ -1,0 +1,128 @@
+package {{.DomainSnake}}
+
+import (
+	"time"
+
+	"github.com/google/uuid"
+	
+	modelsPkg "{{.Module}}/internal/core/models/{{.DomainSnake}}"
+)
+
+// {{.Entity}} represents a {{.DomainSnake}} entity in the system
+{{- if .EntityConfig.Description}}
+// {{.EntityConfig.Description}}
+{{- end}}
+type {{.Entity}} struct {
+	ID        uuid.UUID `json:"id"`
+	{{- range .Fields}}
+	{{.Name}}     {{.Type}} `{{.Tags}}`{{if .Description}} // {{.Description}}{{end}}
+	{{- end}}
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// From{{.Entity}}Model converts a model to an entity
+func From{{.Entity}}Model(model *modelsPkg.{{.Entity}}) *{{.Entity}} {
+	return &{{.Entity}}{
+		ID:        model.ID,
+		{{- range .Fields}}
+		{{.Name}}:     model.{{.Name}},
+		{{- end}}
+		CreatedAt: model.CreatedAt,
+		UpdatedAt: model.UpdatedAt,
+	}
+}
+
+// To{{.Entity}}Model converts an entity to a model
+func (e *{{.Entity}}) To{{.Entity}}Model() *modelsPkg.{{.Entity}} {
+	return &modelsPkg.{{.Entity}}{
+		ID:        e.ID,
+		{{- range .Fields}}
+		{{.Name}}:     e.{{.Name}},
+		{{- end}}
+		CreatedAt: e.CreatedAt,
+		UpdatedAt: e.UpdatedAt,
+	}
+}
+
+{{- if .Fields}}
+
+// Validation methods
+{{- range .Fields}}
+{{- if .Validations}}
+
+// Validate{{.Name}} validates the {{.Name}} field
+func (e *{{$.Entity}}) Validate{{.Name}}() error {
+	{{- range .Validations}}
+	{{- if eq . "required"}}
+	if e.{{$.Name}} == "" {
+		return fmt.Errorf("{{lower $.Name}} is required")
+	}
+	{{- else if eq . "email"}}
+	if !isValidEmail(e.{{$.Name}}) {
+		return fmt.Errorf("{{lower $.Name}} must be a valid email address")
+	}
+	{{- end}}
+	{{- end}}
+	return nil
+}
+{{- end}}
+{{- end}}
+
+// ValidateAll validates all fields
+func (e *{{.Entity}}) ValidateAll() error {
+	{{- range .Fields}}
+	{{- if .Validations}}
+	if err := e.Validate{{.Name}}(); err != nil {
+		return err
+	}
+	{{- end}}
+	{{- end}}
+	return nil
+}
+{{- end}}
+
+// From{{.Entity}}Request converts a request to an entity
+func From{{.Entity}}Request(request interface{}) *{{.Entity}} {
+	// @gohex:begin:custom:from_request
+	// Implementation will be added by the developer
+	return &{{.Entity}}{}
+	// @gohex:end:custom:from_request
+}
+
+// To{{.Entity}}Response converts an entity to a response
+func (e *{{.Entity}}) To{{.Entity}}Response() interface{} {
+	// @gohex:begin:custom:to_response
+	// Implementation will be added by the developer
+	return map[string]interface{}{
+		"id": e.ID,
+		{{- range .Fields}}
+		"{{toSnakeCase .Name}}": e.{{.Name}},
+		{{- end}}
+		"created_at": e.CreatedAt,
+		"updated_at": e.UpdatedAt,
+	}
+	// @gohex:end:custom:to_response
+}
+
+{{- if .Fields}}
+
+// Helper functions for validation
+{{- $emailValidation := false}}
+{{- range .Fields}}
+{{- range .Validations}}
+{{- if eq . "email"}}
+{{- $emailValidation = true}}
+{{- end}}
+{{- end}}
+{{- end}}
+
+{{- if $emailValidation}}
+func isValidEmail(email string) bool {
+	// @gohex:begin:custom:email_validation
+	// Simple email validation - can be enhanced
+	return strings.Contains(email, "@") && strings.Contains(email, ".")
+	// @gohex:end:custom:email_validation
+}
+{{- end}}
+{{- end}}

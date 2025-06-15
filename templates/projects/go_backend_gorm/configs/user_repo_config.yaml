@@ -1,0 +1,204 @@
+version: "1.0"
+domain: "user"
+description: "User management domain with enhanced model and repository configuration"
+module: "go_backend_gorm"
+
+# Model configuration for database layer
+model:
+  name: "User"
+  description: "User represents a user in the database"
+  table_name: "users"
+  soft_delete: false
+  
+  # Model fields
+  fields:
+    - name: "Email"
+      type: "string"
+      description: "User email address"
+      constraints: ["not null", "unique"]
+      max_length: 255
+      validations: ["email"]
+      unique: true
+      nullable: false
+      
+    - name: "FirstName"
+      type: "string"
+      description: "User first name"
+      constraints: ["not null"]
+      max_length: 100
+      min_length: 2
+      nullable: false
+      
+    - name: "LastName"
+      type: "string"
+      description: "User last name"
+      constraints: ["not null"]
+      max_length: 100
+      min_length: 2
+      nullable: false
+      
+    - name: "PasswordHash"
+      type: "string"
+      description: "Encrypted password hash"
+      constraints: ["not null"]
+      exclude_from_json: true
+      sensitive: true
+      nullable: false
+      
+    - name: "IsActive"
+      type: "bool"
+      description: "User account active status"
+      default: true
+      nullable: false
+      
+    - name: "ProfilePictureURL"
+      type: "string"
+      description: "URL to user profile picture"
+      nullable: true
+      
+    - name: "LastLoginAt"
+      type: "*time.Time"
+      description: "Last login timestamp"
+      nullable: true
+
+  # Database indexes
+  indexes:
+    - name: "idx_users_email"
+      fields: ["Email"]
+      unique: true
+    - name: "idx_users_active"
+      fields: ["IsActive"]
+    - name: "idx_users_last_login"
+      fields: ["LastLoginAt"]
+
+  # Custom methods
+  custom_methods:
+    - name: "FullName"
+      description: "Returns the user's full name"
+      returns: "string"
+      implementation: "return m.FirstName + \" \" + m.LastName"
+      
+    - name: "IsValidEmail"
+      description: "Validates the email format"
+      returns: "bool"
+      placeholder: true
+
+  # GORM hooks
+  hooks:
+    before_create: true
+    before_update: false
+
+# Repository configuration
+repository:
+  description: "User repository for database operations"
+  
+  # Interface configuration
+  interface:
+    name: "IUserRepository"
+    standard_methods:
+      create: true
+      get_by_id: true
+      list: true
+      update: true
+      delete: true
+      count: true
+      exists: true
+      get_by_field: false
+      
+    custom_methods:
+      - name: "GetByEmail"
+        description: "Retrieves a user by email address"
+        parameters:
+          - name: "email"
+            type: "string"
+            description: "User email address"
+            required: true
+        returns: "(*entityPkg.User, error)"
+        filterable: false
+        paginatable: false
+        cacheable: true
+        
+      - name: "GetActiveUsers"
+        description: "Retrieves all active users"
+        parameters: []
+        returns: "([]*entityPkg.User, error)"
+        filterable: true
+        paginatable: true
+        
+      - name: "UpdateLastLogin"
+        description: "Updates the last login timestamp for a user"
+        parameters:
+          - name: "userID"
+            type: "uuid.UUID"
+            description: "User ID"
+            required: true
+        returns: "error"
+        transaction: true
+  
+  # Implementation configuration
+  implementation:
+    name: "UserRepository"
+    dependencies:
+      - "*postgres.DB"
+      - "*utils.Logger"
+    error_handling: "wrap"
+    
+  # Custom queries
+  queries:
+    - name: "SearchUsersByName"
+      description: "Searches users by first or last name"
+      parameters:
+        - name: "searchTerm"
+          type: "string"
+          description: "Search term for name"
+          required: true
+      returns: "([]*entityPkg.User, error)"
+      gorm: |
+        var models []modelsPkg.User
+        err := r.db.WithContext(ctx).Where("first_name ILIKE ? OR last_name ILIKE ?", "%"+searchTerm+"%", "%"+searchTerm+"%").Find(&models).Error
+        if err != nil {
+            return nil, err
+        }
+        entities := make([]*entityPkg.User, len(models))
+        for i, model := range models {
+            modelCopy := model
+            entities[i] = entityPkg.FromUserModel(&modelCopy)
+        }
+        return entities, nil
+    
+  # Pagination configuration
+  pagination:
+    enabled: true
+    default_limit: 20
+    max_limit: 100
+    type: "offset"
+    
+  # Filtering configuration
+  filtering:
+    enabled: true
+    fields: ["is_active", "created_at", "updated_at"]
+    operators: ["=", "!=", ">", ">=", "<", "<=", "LIKE", "IN"]
+    search_fields: ["first_name", "last_name", "email"]
+    
+  # Caching configuration
+  caching:
+    enabled: false
+    ttl: "1h"
+    keys: ["user_by_id", "user_by_email"]
+    
+  # Logging configuration
+  logging:
+    enabled: true
+    level: "debug"
+    methods: ["Create", "Update", "Delete", "GetByEmail"]
+    
+  # Transaction configuration
+  transactions:
+    enabled: true
+    methods: ["Create", "Update", "Delete", "UpdateLastLogin"]
+
+# Generation options
+generation:
+  preserve_custom_code: true
+  uuid_primary_key: true
+  generate_migrations: true

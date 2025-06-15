@@ -1,0 +1,137 @@
+package {{.DomainSnake}}
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"github.com/google/uuid"
+	"github.com/samber/do"
+	"gorm.io/gorm"
+
+	"go_backend_gorm/external/postgres"
+	entityPkg "go_backend_gorm/internal/core/entity/{{.DomainSnake}}"
+	modelsPkg "go_backend_gorm/internal/core/models/{{.DomainSnake}}"
+	"go_backend_gorm/internal/utils"
+)
+
+// I{{.Entity}}Repository defines the interface for {{.DomainSnake}} repository operations
+type I{{.Entity}}Repository interface {
+	// Create creates a new {{.DomainSnake}}
+	Create(ctx context.Context, {{.EntitySnake}} *entityPkg.{{.Entity}}) error
+
+	// GetByID retrieves a {{.DomainSnake}} by ID
+	GetByID(ctx context.Context, id uuid.UUID) (*entityPkg.{{.Entity}}, error)
+
+	// List retrieves a list of {{.EntitiesSnake}} with optional filtering
+	List(ctx context.Context, filters map[string]interface{}, limit, offset int) ([]*entityPkg.{{.Entity}}, error)
+
+	// Update updates an existing {{.DomainSnake}}
+	Update(ctx context.Context, {{.EntitySnake}} *entityPkg.{{.Entity}}) error
+
+	// Delete deletes a {{.DomainSnake}} by ID
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// {{.Entity}}Repository implements the {{.DomainSnake}} repository interface
+type {{.Entity}}Repository struct {
+	db     *postgres.DB
+	logger *utils.Logger
+}
+
+// Ensure {{.Entity}}Repository implements the I{{.Entity}}Repository interface
+var _ I{{.Entity}}Repository = (*{{.Entity}}Repository)(nil)
+
+// New{{.Entity}}Repository creates a new {{.DomainSnake}} repository
+func New{{.Entity}}Repository(injector *do.Injector) (I{{.Entity}}Repository, error) {
+	// Get dependencies from injector
+	db := do.MustInvoke[*postgres.DB](injector)
+	log := do.MustInvoke[*utils.Logger](injector)
+
+	return &{{.Entity}}Repository{
+		db:     db,
+		logger: log,
+	}, nil
+}
+
+// Create creates a new {{.DomainSnake}}
+func (r *{{.Entity}}Repository) Create(ctx context.Context, {{.EntitySnake}} *entityPkg.{{.Entity}}) error {
+	r.logger.Debug(fmt.Sprintf("creating {{.DomainSnake}} %+v", {{.EntitySnake}}))
+	
+	// Convert entity to model
+	model := {{.EntitySnake}}.To{{.Entity}}Model()
+	
+	return r.db.WithContext(ctx).Create(model).Error
+}
+
+// GetByID retrieves a {{.DomainSnake}} by ID
+func (r *{{.Entity}}Repository) GetByID(ctx context.Context, id uuid.UUID) (*entityPkg.{{.Entity}}, error) {
+	r.logger.Debug(fmt.Sprintf("getting {{.DomainSnake}} by ID %s", id))
+	
+	var model modelsPkg.{{.Entity}}
+	err := r.db.WithContext(ctx).First(&model, "id = ?", id).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("{{.DomainSnake}} not found: %w", err)
+		}
+		return nil, err
+	}
+	
+	// Convert model to entity
+	entity := entityPkg.From{{.Entity}}Model(&model)
+	return entity, nil
+}
+
+// List retrieves a list of {{.EntitiesSnake}} with optional filtering
+func (r *{{.Entity}}Repository) List(ctx context.Context, filters map[string]interface{}, limit, offset int) ([]*entityPkg.{{.Entity}}, error) {
+	r.logger.Debug(fmt.Sprintf("listing {{.EntitiesSnake}} with filters %+v, limit %d, offset %d", filters, limit, offset))
+	
+	var models []modelsPkg.{{.Entity}}
+	
+	query := r.db.WithContext(ctx)
+	
+	// Apply filters if provided
+	if filters != nil {
+		for key, value := range filters {
+			query = query.Where(key, value)
+		}
+	}
+	
+	// Apply pagination
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+	
+	err := query.Find(&models).Error
+	if err != nil {
+		return nil, err
+	}
+	
+	// Convert models to entities
+	entities := make([]*entityPkg.{{.Entity}}, len(models))
+	for i, model := range models {
+		modelCopy := model // Create a copy to avoid reference issues
+		entities[i] = entityPkg.From{{.Entity}}Model(&modelCopy)
+	}
+	
+	return entities, nil
+}
+
+// Update updates an existing {{.DomainSnake}}
+func (r *{{.Entity}}Repository) Update(ctx context.Context, {{.EntitySnake}} *entityPkg.{{.Entity}}) error {
+	r.logger.Debug(fmt.Sprintf("updating {{.DomainSnake}} %+v", {{.EntitySnake}}))
+	
+	// Convert entity to model
+	model := {{.EntitySnake}}.To{{.Entity}}Model()
+	
+	return r.db.WithContext(ctx).Save(model).Error
+}
+
+// Delete deletes a {{.DomainSnake}} by ID
+func (r *{{.Entity}}Repository) Delete(ctx context.Context, id uuid.UUID) error {
+	r.logger.Debug(fmt.Sprintf("deleting {{.DomainSnake}} with ID %s", id))
+	return r.db.WithContext(ctx).Delete(&modelsPkg.{{.Entity}}{}, "id = ?", id).Error
+}

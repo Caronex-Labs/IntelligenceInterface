@@ -1,0 +1,252 @@
+# Refined User Domain Configuration
+# This represents the "sweet spot" between minimal config and full control
+
+version: "1.0"
+domain: "user"
+description: "User management domain with authentication"
+
+# Entity Configuration (Business Logic Layer)
+entity:
+  name: "User"
+  description: "User entity representing a system user"
+  
+  # Core business fields
+  fields:
+    - name: "Email"
+      type: "string"
+      description: "User email address"
+      unique: true
+      
+    - name: "FirstName"
+      type: "string"
+      description: "User first name"
+      
+    - name: "LastName" 
+      type: "string"
+      description: "User last name"
+      
+    - name: "FullName"
+      type: "string"
+      computed: true
+      description: "Full name computed from first and last name"
+      formula: "FirstName + \" \" + LastName"
+      
+    - name: "IsActive"
+      type: "bool"
+      default: true
+      description: "User account status"
+      
+    - name: "LastLoginAt"
+      type: "*time.Time"
+      nullable: true
+      description: "Last login timestamp"
+
+# Database Models
+models:
+  - name: "User"
+    table_name: "users"
+    fields:
+      - name: "Email"
+        type: "string"
+        constraints: ["not null", "unique"]
+        index: true
+      - name: "FirstName"
+        type: "string"
+        constraints: ["not null"]
+      - name: "LastName"
+        type: "string"
+        constraints: ["not null"]
+      - name: "PasswordHash"
+        type: "string"
+        constraints: ["not null"]
+        exclude_from_json: true
+      - name: "IsActive"
+        type: "bool"
+        default: true
+
+  - name: "UserProfile"
+    table_name: "user_profiles"
+    fields:
+      - name: "UserID"
+        type: "uuid.UUID"
+        constraints: ["foreign_key:users.id"]
+      - name: "LastLoginAt"
+        type: "*time.Time"
+        nullable: true
+
+# API Configuration
+api:
+  base_path: "/api/v1/users"
+  
+  # Request types
+  requests:
+    - name: "CreateUserRequest"
+      fields:
+        - name: "Email"
+          type: "string"
+          validations: ["required", "email"]
+        - name: "FirstName"
+          type: "string"
+          validations: ["required", "min:2", "max:50"]
+        - name: "LastName"
+          type: "string"
+          validations: ["required", "min:2", "max:50"]
+        - name: "Password"
+          type: "string"
+          validations: ["required", "min:8"]
+          
+    - name: "UpdateUserRequest"
+      fields:
+        - name: "FirstName"
+          type: "string"
+          validations: ["omitempty", "min:2", "max:50"]
+        - name: "LastName"
+          type: "string"
+          validations: ["omitempty", "min:2", "max:50"]
+          
+    - name: "LoginRequest"
+      fields:
+        - name: "Email"
+          type: "string"
+          validations: ["required", "email"]
+        - name: "Password"
+          type: "string"
+          validations: ["required"]
+
+  # Response types  
+  responses:
+    - name: "UserResponse"
+      fields:
+        - name: "ID"
+          type: "uuid.UUID"
+        - name: "Email"
+          type: "string"
+        - name: "FullName"
+          type: "string"
+        - name: "IsActive"
+          type: "bool"
+        - name: "CreatedAt"
+          type: "time.Time"
+          
+    - name: "AuthResponse"
+      fields:
+        - name: "User"
+          type: "UserResponse"
+        - name: "Token"
+          type: "string"
+        - name: "ExpiresAt"
+          type: "time.Time"
+
+# Custom Repository Methods
+repository:
+  custom_methods:
+    - name: "GetByEmail"
+      description: "Find user by email address"
+      parameters:
+        - name: "email"
+          type: "string"
+      returns: "*entity.User"
+      query: "email = ?"
+      
+    - name: "UpdateLastLogin"
+      description: "Update last login timestamp"
+      parameters:
+        - name: "userID"
+          type: "uuid.UUID"
+        - name: "loginTime"
+          type: "time.Time"
+      returns: "error"
+      query: "UPDATE user_profiles SET last_login_at = ? WHERE user_id = ?"
+
+# Custom Business Logic
+use_case:
+  custom_methods:
+    - name: "AuthenticateUser"
+      description: "Authenticate user and update login time"
+      parameters:
+        - name: "email"
+          type: "string"
+        - name: "password"
+          type: "string"
+      returns: "*entity.User"
+      business_logic: |
+        1. Get user by email
+        2. Verify password hash
+        3. Update last login timestamp
+        4. Return user entity
+        
+    - name: "RegisterUser"
+      description: "Register new user with password hashing"
+      parameters:
+        - name: "request"
+          type: "CreateUserRequest"
+      returns: "*entity.User"
+      business_logic: |
+        1. Validate email uniqueness
+        2. Hash password
+        3. Create user entity
+        4. Save to repository
+
+# HTTP Endpoints
+endpoints:
+  # Standard CRUD
+  - method: "POST"
+    path: "/api/v1/users"
+    handler: "CreateUser"
+    request: "CreateUserRequest"
+    response: "UserResponse"
+    status_code: 201
+    use_case_method: "RegisterUser"
+    
+  - method: "GET"
+    path: "/api/v1/users/{id}"
+    handler: "GetUser"
+    response: "UserResponse"
+    use_case_method: "GetByID"
+    
+  - method: "GET"
+    path: "/api/v1/users"
+    handler: "ListUsers"
+    response: "[]UserResponse"
+    use_case_method: "List"
+    query_params:
+      - name: "is_active"
+        type: "bool"
+        optional: true
+      - name: "limit"
+        type: "int"
+        default: 10
+      - name: "offset"
+        type: "int"
+        default: 0
+        
+  - method: "PUT"
+    path: "/api/v1/users/{id}"
+    handler: "UpdateUser"
+    request: "UpdateUserRequest"
+    response: "UserResponse"
+    use_case_method: "Update"
+    
+  # Custom auth endpoint
+  - method: "POST"
+    path: "/api/v1/auth/login"
+    handler: "LoginUser"
+    request: "LoginRequest"
+    response: "AuthResponse"
+    use_case_method: "AuthenticateUser"
+
+# Generation Options
+generation:
+  preserve_custom_code: true
+  generate_tests: true
+  generate_migrations: true
+  soft_delete: false
+  uuid_primary_key: true
+  
+# Features to Enable
+features:
+  authentication: true
+  authorization: false
+  auditing: false
+  caching: false
+  rate_limiting: false

@@ -1,0 +1,175 @@
+package {{.DomainSnake}}
+
+import (
+	"time"
+{{- if .EntityConfig.RequiresUUID}}
+	"github.com/google/uuid"
+{{- end}}
+{{- range .EntityConfig.Imports}}
+	"{{.}}"
+{{- end}}
+	
+	modelsPkg "{{.Module}}/internal/core/models/{{.DomainSnake}}"
+)
+
+// {{.EntityConfig.Name}} {{.EntityConfig.Description}}
+type {{.EntityConfig.Name}} struct {
+{{- range .EntityConfig.Fields}}
+{{- if .Standard}}
+	{{.Name}} {{.Type}} `{{.Tags}}`{{- if .Description}} // {{.Description}}{{- end}}
+{{- end}}
+{{- end}}
+	// @gohex:begin:custom:fields
+	// Add your custom fields here
+{{- range .EntityConfig.Fields}}
+{{- if not .Standard}}
+	{{.Name}} {{.Type}} `{{.Tags}}`{{- if .Description}} // {{.Description}}{{- end}}
+{{- end}}
+{{- end}}
+	// @gohex:end:custom:fields
+}
+
+{{- range .EntityConfig.ComputedFields}}
+
+// {{.Name}} {{.Description}}
+func (e *{{$.EntityConfig.Name}}) {{.Name}}() {{.Type}} {
+	// @gohex:begin:custom:computed:{{.NameSnake}}
+{{- if .Formula}}
+	return {{.Formula}}
+{{- else}}
+	// Implementation will be added by the developer
+	var result {{.Type}}
+	return result
+{{- end}}
+	// @gohex:end:custom:computed:{{.NameSnake}}
+}
+{{- end}}
+
+{{- range .EntityConfig.ConversionMethods}}
+{{- if eq .Name (printf "From%sModel" $.EntityConfig.Name)}}
+
+// {{.Name}} converts a model to an entity
+func {{.Name}}(model *modelsPkg.{{$.EntityConfig.Name}}) *{{$.EntityConfig.Name}} {
+	if model == nil {
+		return nil
+	}
+	
+	entity := &{{$.EntityConfig.Name}}{
+{{- range $.EntityConfig.Fields}}
+{{- if .Standard}}
+		{{.Name}}: model.{{.Name}},
+{{- end}}
+{{- end}}
+	}
+	
+	// @gohex:begin:custom:from_model_mapping
+	// Map custom fields from model to entity
+{{- range $.EntityConfig.Fields}}
+{{- if not .Standard}}
+	entity.{{.Name}} = model.{{.ModelField | default .Name}}
+{{- end}}
+{{- end}}
+	// @gohex:end:custom:from_model_mapping
+	
+	return entity
+}
+{{- end}}
+
+{{- if eq .Name (printf "To%sModel" $.EntityConfig.Name)}}
+
+// {{.Name}} converts an entity to a model
+func (e *{{$.EntityConfig.Name}}) {{.Name}}() *modelsPkg.{{$.EntityConfig.Name}} {
+	if e == nil {
+		return nil
+	}
+	
+	model := &modelsPkg.{{$.EntityConfig.Name}}{
+{{- range $.EntityConfig.Fields}}
+{{- if .Standard}}
+		{{.Name}}: e.{{.Name}},
+{{- end}}
+{{- end}}
+	}
+	
+	// @gohex:begin:custom:to_model_mapping
+	// Map custom fields from entity to model
+{{- range $.EntityConfig.Fields}}
+{{- if not .Standard}}
+	model.{{.ModelField | default .Name}} = e.{{.Name}}
+{{- end}}
+{{- end}}
+	// @gohex:end:custom:to_model_mapping
+	
+	return model
+}
+{{- end}}
+
+{{- if eq .Name (printf "From%sRequest" $.EntityConfig.Name)}}
+
+// {{.Name}} converts a request to an entity
+func {{.Name}}(request interface{}) *{{$.EntityConfig.Name}} {
+	// @gohex:begin:custom:from_request_implementation
+	// Implementation will be added by the developer
+	// Example:
+	// if req, ok := request.(*Create{{$.EntityConfig.Name}}Request); ok {
+	//     return &{{$.EntityConfig.Name}}{
+{{- range $.EntityConfig.Fields}}
+{{- if not .Standard}}
+	//         {{.Name}}: req.{{.Name}},
+{{- end}}
+{{- end}}
+	//         IsActive: true,
+	//     }
+	// }
+	return &{{$.EntityConfig.Name}}{}
+	// @gohex:end:custom:from_request_implementation
+}
+{{- end}}
+
+{{- if eq .Name (printf "To%sResponse" $.EntityConfig.Name)}}
+
+// {{.Name}} converts an entity to a response
+func (e *{{$.EntityConfig.Name}}) {{.Name}}() interface{} {
+	// @gohex:begin:custom:to_response_implementation
+	// Implementation will be added by the developer
+	// Example:
+	// return &{{$.EntityConfig.Name}}Response{
+	//     ID: e.ID,
+{{- range $.EntityConfig.Fields}}
+{{- if not .Standard}}
+	//     {{.Name}}: e.{{.Name}},
+{{- end}}
+{{- end}}
+{{- range $.EntityConfig.ComputedFields}}
+	//     {{.Name}}: e.{{.Name}}(),
+{{- end}}
+	//     CreatedAt: e.CreatedAt,
+	// }
+	return nil
+	// @gohex:end:custom:to_response_implementation
+}
+{{- end}}
+{{- end}}
+
+// @gohex:begin:custom:methods
+// Add your custom entity methods here
+{{- range .EntityConfig.CustomMethods}}
+
+// {{.Name}} {{.Description}}
+func (e *{{$.EntityConfig.Name}}) {{.Name}}({{- range $i, $param := .Parameters}}{{- if $i}}, {{- end}}{{$param.Name}} {{$param.Type}}{{- end}}){{- if .Returns}}{{- if gt (len .Returns) 1}} ({{- end}}{{- range $i, $ret := .Returns}}{{- if $i}}, {{- end}} {{$ret}}{{- end}}{{- if gt (len .Returns) 1}}){{- end}}{{- end}} {
+	// @gohex:begin:custom:method:{{.NameSnake}}
+	// Implementation will be added by the developer
+{{- if .DefaultImplementation}}
+	{{.DefaultImplementation}}
+{{- else}}
+{{- range .Returns}}
+	var result {{.}}
+{{- end}}
+{{- if .Returns}}
+	return {{- range $i, $ret := .Returns}}{{- if $i}}, {{- end}} result{{- end}}
+{{- end}}
+{{- end}}
+	// @gohex:end:custom:method:{{.NameSnake}}
+}
+{{- end}}
+// @gohex:end:custom:methods

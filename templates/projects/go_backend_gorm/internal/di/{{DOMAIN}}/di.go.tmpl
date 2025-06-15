@@ -1,0 +1,25 @@
+package {{.DomainSnake}}
+
+import (
+	"github.com/samber/do"
+
+	handlersPkg "go_backend_gorm/internal/interface/http/handlers/{{.DomainSnake}}"
+	repositoryPkg "go_backend_gorm/internal/repository/{{.DomainSnake}}"
+	usecasePkg "go_backend_gorm/internal/usecase/{{.DomainSnake}}"
+)
+
+// Register{{.Domain}} registers all {{.DomainSnake}} components in the dependency injection container
+func Register{{.Domain}}(injector *do.Injector) {
+	// Register entity
+	// Entity creation is typically handled by the repository or use case
+	// No need to register entity constructors
+	
+	// Register repository
+	repositoryPkg.Register{{.Entity}}Repository(injector)
+	
+	// Register use case
+	usecasePkg.Register{{.Entity}}UseCase(injector)
+	
+	// Register handler
+	handlersPkg.Register{{.Entity}}Handler(injector)
+}

@@ -1,0 +1,394 @@
+version: "1.0"
+domain: "user"
+description: "User management domain"
+
+# Entity - Business Logic Layer
+entity:
+  name: "User"
+  description: "User entity combining user account and profile data"
+  fields:
+    - name: "Email"
+      type: "string"
+      description: "User email address"
+    - name: "FullName"
+      type: "string" 
+      description: "Computed full name from first and last name"
+      computed: true
+    - name: "IsActive"
+      type: "bool"
+      description: "Whether the user account is active"
+      default: true
+    - name: "LastLoginAt"
+      type: "*time.Time"
+      description: "Last login timestamp"
+      nullable: true
+    # Standard fields (ID, CreatedAt, UpdatedAt) are automatically included
+
+# Models - Database Layer
+models:
+  - name: "User"
+    table_name: "users"
+    description: "Main user account table"
+    fields:
+      - name: "Email"
+        type: "string"
+        constraints: ["not null", "unique"]
+        description: "Unique email address"
+      - name: "FirstName"
+        type: "string"
+        constraints: ["not null"]
+        description: "User first name"
+      - name: "LastName"
+        type: "string"
+        constraints: ["not null"]
+        description: "User last name"
+      - name: "PasswordHash"
+        type: "string"
+        constraints: ["not null"]
+        exclude_from_json: true
+        description: "Bcrypt hashed password"
+      - name: "IsActive"
+        type: "bool"
+        default: true
+        description: "Account active status"
+      # Standard fields (ID, CreatedAt, UpdatedAt) are automatically included
+        
+  - name: "UserProfile"
+    table_name: "user_profiles"
+    description: "Extended user profile information"
+    fields:
+      - name: "UserID"
+        type: "uuid.UUID"
+        constraints: ["not null", "foreign_key:users.id"]
+        description: "Reference to user account"
+      - name: "ProfilePictureURL"
+        type: "string"
+        nullable: true
+        description: "URL to profile picture"
+      - name: "Bio"
+        type: "string"
+        nullable: true
+        description: "User biography"
+      - name: "LastLoginAt"
+        type: "*time.Time"
+        nullable: true
+        description: "Last login timestamp"
+      # Standard fields (ID, CreatedAt, UpdatedAt) are automatically included
+
+# API Layer - Request/Response Types
+api:
+  requests:
+    - name: "CreateUserRequest"
+      description: "Request to create a new user"
+      fields:
+        - name: "Email"
+          type: "string"
+          validations: ["required", "email"]
+          description: "User email address"
+        - name: "FirstName"
+          type: "string"
+          validations: ["required", "min:2", "max:50"]
+          description: "User first name"
+        - name: "LastName"
+          type: "string"
+          validations: ["required", "min:2", "max:50"]
+          description: "User last name"
+        - name: "Password"
+          type: "string"
+          validations: ["required", "min:8"]
+          description: "User password"
+          
+    - name: "UpdateUserRequest"
+      description: "Request to update user information"
+      fields:
+        - name: "FirstName"
+          type: "string"
+          validations: ["omitempty", "min:2", "max:50"]
+          description: "Updated first name"
+        - name: "LastName"
+          type: "string"
+          validations: ["omitempty", "min:2", "max:50"]
+          description: "Updated last name"
+        - name: "Bio"
+          type: "string"
+          validations: ["omitempty", "max:500"]
+          description: "Updated user biography"
+          
+    - name: "ChangePasswordRequest"
+      description: "Request to change user password"
+      fields:
+        - name: "CurrentPassword"
+          type: "string"
+          validations: ["required"]
+          description: "Current password for verification"
+        - name: "NewPassword"
+          type: "string"
+          validations: ["required", "min:8"]
+          description: "New password"
+          
+    - name: "LoginRequest"
+      description: "Request to authenticate user"
+      fields:
+        - name: "Email"
+          type: "string"
+          validations: ["required", "email"]
+          description: "User email address"
+        - name: "Password"
+          type: "string"
+          validations: ["required"]
+          description: "User password"
+  
+  responses:
+    - name: "UserResponse"
+      description: "Standard user response"
+      fields:
+        - name: "ID"
+          type: "uuid.UUID"
+          description: "User unique identifier"
+        - name: "Email"
+          type: "string"
+          description: "User email address"
+        - name: "FullName"
+          type: "string"
+          description: "User full name"
+        - name: "Bio"
+          type: "string"
+          description: "User biography"
+          nullable: true
+        - name: "ProfilePictureURL"
+          type: "string"
+          description: "Profile picture URL"
+          nullable: true
+        - name: "IsActive"
+          type: "bool"
+          description: "Account active status"
+        - name: "CreatedAt"
+          type: "time.Time"
+          description: "Account creation timestamp"
+        
+    - name: "AuthResponse"
+      description: "Authentication response with token"
+      fields:
+        - name: "User"
+          type: "UserResponse"
+          description: "User information"
+        - name: "Token"
+          type: "string"
+          description: "JWT authentication token"
+        - name: "ExpiresAt"
+          type: "time.Time"
+          description: "Token expiration time"
+
+# Repository Layer - Data Access
+repository:
+  description: "User data access layer"
+  # Standard methods (Create, GetByID, List, Update, Delete) are automatically generated
+  custom_methods:
+    - name: "GetByEmail"
+      description: "Get user by email address"
+      parameters:
+        - name: "email"
+          type: "string"
+      returns: "*entity.User"
+      query: "email = ?"
+      
+    - name: "ListActive"
+      description: "List active users with pagination"
+      parameters:
+        - name: "limit"
+          type: "int"
+        - name: "offset"
+          type: "int"
+      returns: "[]*entity.User"
+      query: "is_active = true ORDER BY created_at DESC LIMIT ? OFFSET ?"
+      
+    - name: "UpdateLastLogin"
+      description: "Update user's last login timestamp"
+      parameters:
+        - name: "userID"
+          type: "uuid.UUID"
+        - name: "loginTime"
+          type: "time.Time"
+      returns: "error"
+      query: "UPDATE user_profiles SET last_login_at = ?, updated_at = ? WHERE user_id = ?"
+      
+    - name: "SearchUsers"
+      description: "Search users by name or email"
+      parameters:
+        - name: "searchTerm"
+          type: "string"
+        - name: "limit"
+          type: "int"
+        - name: "offset"
+          type: "int"
+      returns: "[]*entity.User"
+      query: "(first_name ILIKE ? OR last_name ILIKE ? OR email ILIKE ?) AND is_active = true"
+
+# Use Case Layer - Business Logic
+use_case:
+  description: "User business logic layer"
+  # Standard methods (Create, GetByID, List, Update, Delete) are automatically generated
+  custom_methods:
+    - name: "AuthenticateUser"
+      description: "Authenticate user with email and password"
+      parameters:
+        - name: "email"
+          type: "string"
+        - name: "password"
+          type: "string"
+      returns: "*entity.User"
+      business_logic: |
+        Verify user credentials and update last login timestamp.
+        Returns user entity if authentication successful.
+        
+    - name: "ChangePassword"
+      description: "Change user password after verification"
+      parameters:
+        - name: "userID"
+          type: "uuid.UUID"
+        - name: "currentPassword"
+          type: "string"
+        - name: "newPassword"
+          type: "string"
+      returns: "error"
+      business_logic: |
+        Verify current password, hash new password, and update user record.
+        
+    - name: "DeactivateUser"
+      description: "Soft delete user by setting IsActive to false"
+      parameters:
+        - name: "userID"
+          type: "uuid.UUID"
+      returns: "error"
+      business_logic: |
+        Set user IsActive flag to false instead of hard delete.
+        
+    - name: "UpdateProfile"
+      description: "Update user profile information"
+      parameters:
+        - name: "userID"
+          type: "uuid.UUID"
+        - name: "updates"
+          type: "UpdateUserRequest"
+      returns: "*entity.User"
+      business_logic: |
+        Update user profile fields and return updated entity.
+        
+    - name: "SearchUsers"
+      description: "Search users with business rules"
+      parameters:
+        - name: "searchTerm"
+          type: "string"
+        - name: "pagination"
+          type: "Pagination"
+      returns: "[]*entity.User"
+      business_logic: |
+        Search users by name or email with proper pagination and filtering.
+
+# Handler Layer - HTTP API
+handlers:
+  description: "User HTTP API handlers"
+  endpoints:
+    # Standard CRUD endpoints
+    - method: "POST"
+      path: "/api/v1/users"
+      handler: "CreateUser"
+      description: "Create a new user account"
+      request: "CreateUserRequest"
+      response: "UserResponse"
+      status_code: 201
+      use_case_method: "Create"
+      
+    - method: "GET"
+      path: "/api/v1/users/{id}"
+      handler: "GetUser"
+      description: "Get user by ID"
+      response: "UserResponse"
+      use_case_method: "GetByID"
+      
+    - method: "GET"
+      path: "/api/v1/users"
+      handler: "ListUsers"
+      description: "List users with optional filtering"
+      response: "[]UserResponse"
+      use_case_method: "List"
+      query_params:
+        - name: "is_active"
+          type: "bool"
+          description: "Filter by active status"
+        - name: "search"
+          type: "string"
+          description: "Search in name or email"
+        - name: "limit"
+          type: "int"
+          default: 10
+          description: "Number of results per page"
+        - name: "offset"
+          type: "int"
+          default: 0
+          description: "Number of results to skip"
+      
+    - method: "PUT"
+      path: "/api/v1/users/{id}"
+      handler: "UpdateUser"
+      description: "Update user information"
+      request: "UpdateUserRequest"
+      response: "UserResponse"
+      use_case_method: "UpdateProfile"
+      
+    - method: "DELETE"
+      path: "/api/v1/users/{id}"
+      handler: "DeleteUser"
+      description: "Deactivate user account"
+      use_case_method: "DeactivateUser"
+      status_code: 204
+      
+    # Custom endpoints
+    - method: "POST"
+      path: "/api/v1/auth/login"
+      handler: "LoginUser"
+      description: "Authenticate user and return token"
+      request: "LoginRequest"
+      response: "AuthResponse"
+      use_case_method: "AuthenticateUser"
+      
+    - method: "POST"
+      path: "/api/v1/users/{id}/change-password"
+      handler: "ChangeUserPassword"
+      description: "Change user password"
+      request: "ChangePasswordRequest"
+      use_case_method: "ChangePassword"
+      status_code: 204
+      
+    - method: "POST"
+      path: "/api/v1/users/{id}/deactivate"
+      handler: "DeactivateUser"
+      description: "Deactivate user account"
+      use_case_method: "DeactivateUser"
+      status_code: 204
+      
+    - method: "GET"
+      path: "/api/v1/users/search"
+      handler: "SearchUsers"
+      description: "Search users by name or email"
+      response: "[]UserResponse"
+      use_case_method: "SearchUsers"
+      query_params:
+        - name: "q"
+          type: "string"
+          required: true
+          description: "Search query"
+        - name: "limit"
+          type: "int"
+          default: 10
+        - name: "offset"
+          type: "int"
+          default: 0
+
+# Code Generation Options
+generation:
+  preserve_custom_code: true
+  generate_tests: true
+  generate_docs: true
+  overwrite_generated: true
+  backup_on_overwrite: false

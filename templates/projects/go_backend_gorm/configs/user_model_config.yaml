@@ -1,0 +1,95 @@
+version: "1.0"
+domain: "user"
+description: "User management domain with enhanced model configuration"
+module: "go_backend_gorm"
+
+# Model configuration for database layer
+model:
+  name: "User"
+  description: "User represents a user in the database"
+  table_name: "users"
+  soft_delete: false
+  
+  # Model fields
+  fields:
+    - name: "Email"
+      type: "string"
+      description: "User email address"
+      constraints: ["not null", "unique"]
+      max_length: 255
+      validations: ["email"]
+      unique: true
+      nullable: false
+      
+    - name: "FirstName"
+      type: "string"
+      description: "User first name"
+      constraints: ["not null"]
+      max_length: 100
+      min_length: 2
+      nullable: false
+      
+    - name: "LastName"
+      type: "string"
+      description: "User last name"
+      constraints: ["not null"]
+      max_length: 100
+      min_length: 2
+      nullable: false
+      
+    - name: "PasswordHash"
+      type: "string"
+      description: "Encrypted password hash"
+      constraints: ["not null"]
+      exclude_from_json: true
+      sensitive: true
+      nullable: false
+      
+    - name: "IsActive"
+      type: "bool"
+      description: "User account active status"
+      default: true
+      nullable: false
+      
+    - name: "ProfilePictureURL"
+      type: "string"
+      description: "URL to user profile picture"
+      nullable: true
+      
+    - name: "LastLoginAt"
+      type: "*time.Time"
+      description: "Last login timestamp"
+      nullable: true
+
+  # Database indexes
+  indexes:
+    - name: "idx_users_email"
+      fields: ["Email"]
+      unique: true
+    - name: "idx_users_active"
+      fields: ["IsActive"]
+    - name: "idx_users_last_login"
+      fields: ["LastLoginAt"]
+
+  # Custom methods
+  custom_methods:
+    - name: "FullName"
+      description: "Returns the user's full name"
+      returns: "string"
+      implementation: "return m.FirstName + \" \" + m.LastName"
+      
+    - name: "IsValidEmail"
+      description: "Validates the email format"
+      returns: "bool"
+      placeholder: true
+
+  # GORM hooks
+  hooks:
+    before_create: true
+    before_update: false
+
+# Generation options
+generation:
+  preserve_custom_code: true
+  uuid_primary_key: true
+  generate_migrations: true

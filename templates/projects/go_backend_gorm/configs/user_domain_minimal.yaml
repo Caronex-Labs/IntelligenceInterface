@@ -1,0 +1,48 @@
+# Minimal User Domain Configuration
+# This shows the absolute minimum needed - everything else uses smart defaults
+
+version: "1.0"
+domain: "user"
+description: "User management domain"
+
+# Just specify the essential business fields
+entity:
+  fields:
+    - name: "Email"
+      type: "string"
+      unique: true
+      validations: ["required", "email"]
+      
+    - name: "FirstName"
+      type: "string"
+      validations: ["required"]
+      
+    - name: "LastName"
+      type: "string" 
+      validations: ["required"]
+      
+    - name: "PasswordHash"
+      type: "string"
+      exclude_from_json: true
+      
+    - name: "IsActive"
+      type: "bool"
+      default: true
+
+# Optional: Add one custom method
+repository:
+  custom_methods:
+    - name: "GetByEmail"
+      parameters:
+        - name: "email"
+          type: "string"
+      returns: "*entity.User"
+
+# Optional: Add authentication endpoint
+endpoints:
+  - method: "POST"
+    path: "/auth/login"
+    handler: "LoginUser"
+    
+# Everything else (models, CRUD endpoints, validation, etc.) 
+# is generated using proven defaults!

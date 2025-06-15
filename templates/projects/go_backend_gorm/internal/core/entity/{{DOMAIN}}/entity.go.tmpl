@@ -1,0 +1,49 @@
+package {{.DomainSnake}}
+
+import (
+	"time"
+
+	"github.com/google/uuid"
+	
+	modelsPkg "go_backend_gorm/internal/core/models/{{.DomainSnake}}"
+)
+
+// {{.Entity}} represents a {{.DomainSnake}} entity in the system
+type {{.Entity}} struct {
+	ID        uuid.UUID `json:"id"`
+	// Add your fields here
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// From{{.Entity}}Model converts a model to an entity
+func From{{.Entity}}Model(model *modelsPkg.{{.Entity}}) *{{.Entity}} {
+	return &{{.Entity}}{
+		ID:        model.ID,
+		// Map other fields here
+		CreatedAt: model.CreatedAt,
+		UpdatedAt: model.UpdatedAt,
+	}
+}
+
+// To{{.Entity}}Model converts an entity to a model
+func (e *{{.Entity}}) To{{.Entity}}Model() *modelsPkg.{{.Entity}} {
+	return &modelsPkg.{{.Entity}}{
+		ID:        e.ID,
+		// Map other fields here
+		CreatedAt: e.CreatedAt,
+		UpdatedAt: e.UpdatedAt,
+	}
+}
+
+// From{{.Entity}}Request converts a request to an entity
+func From{{.Entity}}Request(request interface{}) *{{.Entity}} {
+	// Implementation will be added by the developer
+	return &{{.Entity}}{}
+}
+
+// To{{.Entity}}Response converts an entity to a response
+func (e *{{.Entity}}) To{{.Entity}}Response() interface{} {
+	// Implementation will be added by the developer
+	return nil
+}

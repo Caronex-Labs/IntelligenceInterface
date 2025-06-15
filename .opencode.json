@@ -1,0 +1,33 @@
+{
+  "data": {
+    "directory": ".opencode"
+  },
+  "providers": {
+    "openrouter": {
+      "apiKey": "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",
+      "disabled": false
+    }
+  },
+  "agents": {
+    "coder": {
+      "model": "openrouter.claude-3.5-sonnet",
+      "maxTokens": 5000
+    }
+  },
+  "mcpServers": {
+    "example": {
+      "type": "stdio",
+      "command": "path/to/mcp-server",
+      "env": [],
+      "args": []
+    }
+  },
+  "lsp": {
+    "go": {
+      "disabled": false,
+      "command": "gopls"
+    }
+  },
+  "debug": false,
+  "debugLSP": false
+}

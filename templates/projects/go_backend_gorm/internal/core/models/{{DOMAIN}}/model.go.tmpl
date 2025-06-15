@@ -1,0 +1,257 @@
+package {{.DomainSnake}}
+
+import (
+	{{- if .ModelConfig.RequiresUUID}}
+	"github.com/google/uuid"
+	{{- end}}
+	{{- if .ModelConfig.RequiresTime}}
+	"time"
+	{{- end}}
+	{{- range .ModelConfig.Imports}}
+	"{{.}}"
+	{{- end}}
+)
+
+// {{.ModelConfig.Name}} represents {{.ModelConfig.Description}}
+type {{.ModelConfig.Name}} struct {
+	{{- /* Standard Fields */}}
+	{{- range .ModelConfig.Fields}}
+	{{- if .Standard}}
+	{{.Name}} {{.Type}} {{.GormTags}}{{if .JSONTags}} {{.JSONTags}}{{end}}{{if .Description}} // {{.Description}}{{end}}
+	{{- end}}
+	{{- end}}
+
+	{{- /* Custom Fields */}}
+	{{- $hasCustomFields := false}}
+	{{- range .ModelConfig.Fields}}
+	{{- if not .Standard}}
+	{{- $hasCustomFields = true}}
+	{{- break}}
+	{{- end}}
+	{{- end}}
+	{{- if $hasCustomFields}}
+
+	// Custom fields
+	{{- range .ModelConfig.Fields}}
+	{{- if not .Standard}}
+	{{.Name}} {{.Type}} {{.GormTags}}{{if .JSONTags}} {{.JSONTags}}{{end}}{{if .Description}} // {{.Description}}{{end}}
+	{{- end}}
+	{{- end}}
+	{{- end}}
+
+	{{- /* Custom Code Region for Additional Fields */}}
+	{{- if .Generation.PreserveCustomCode}}
+
+	// @gohex:begin:custom:fields
+	// Add additional custom fields here
+	// @gohex:end:custom:fields
+	{{- end}}
+}
+
+{{- if .ModelConfig.TableName}}
+
+// TableName specifies the table name for {{.ModelConfig.Name}}
+func ({{.ModelConfig.Name}}) TableName() string {
+	return "{{.ModelConfig.TableName}}"
+}
+{{- end}}
+
+{{- /* Database Hooks */}}
+{{- if .ModelConfig.Hooks.BeforeCreate}}
+
+// BeforeCreate will set UUID and handle pre-creation logic
+func (m *{{.ModelConfig.Name}}) BeforeCreate() error {
+	{{- if .ModelConfig.RequiresUUID}}
+	if m.ID == uuid.Nil {
+		m.ID = uuid.New()
+	}
+	{{- end}}
+	{{- /* Handle default values */}}
+	{{- range .ModelConfig.Fields}}
+	{{- if .DefaultValue}}
+	{{- if eq .Type "string"}}
+	if m.{{.Name}} == "" {
+		m.{{.Name}} = "{{.DefaultValue}}"
+	}
+	{{- else if eq .Type "bool"}}
+	// Boolean default already set to {{.DefaultValue}}
+	{{- else if contains .Type "int"}}
+	if m.{{.Name}} == 0 {
+		m.{{.Name}} = {{.DefaultValue}}
+	}
+	{{- end}}
+	{{- end}}
+	{{- end}}
+	{{- if .Generation.PreserveCustomCode}}
+
+	// @gohex:begin:custom:before_create
+	// Add custom before create logic here
+	// @gohex:end:custom:before_create
+	{{- end}}
+	return nil
+}
+{{- end}}
+
+{{- if .ModelConfig.Hooks.BeforeUpdate}}
+
+// BeforeUpdate handles pre-update logic
+func (m *{{.ModelConfig.Name}}) BeforeUpdate() error {
+	{{- if .Generation.PreserveCustomCode}}
+	// @gohex:begin:custom:before_update
+	// Add custom before update logic here
+	// @gohex:end:custom:before_update
+	{{- end}}
+	return nil
+}
+{{- end}}
+
+{{- /* Computed Methods */}}
+{{- if .ModelConfig.ComputedMethods}}
+
+// Computed methods
+{{- range .ModelConfig.ComputedMethods}}
+
+// {{.Name}} {{.Description}}
+func (m *{{$.ModelConfig.Name}}) {{.Name}}() {{.Returns}} {
+	{{- if .Implementation}}
+	{{.Implementation}}
+	{{- else}}
+	{{- if $.Generation.PreserveCustomCode}}
+	// @gohex:begin:custom:{{.NameSnake}}
+	{{- if eq .Returns "string"}}
+	return ""
+	{{- else if eq .Returns "bool"}}
+	return false
+	{{- else if eq .Returns "int"}}
+	return 0
+	{{- else}}
+	return nil
+	{{- end}}
+	// @gohex:end:custom:{{.NameSnake}}
+	{{- end}}
+	{{- end}}
+}
+{{- end}}
+{{- end}}
+
+{{- /* Validation Methods */}}
+{{- if .ModelConfig.ValidationMethods}}
+
+// Validation methods
+{{- range .ModelConfig.ValidationMethods}}
+
+// {{.Name}} {{.Description}}
+func (m *{{$.ModelConfig.Name}}) {{.Name}}() {{.Returns}} {
+	{{- if .Implementation}}
+	{{.Implementation}}
+	{{- else}}
+	{{- if $.Generation.PreserveCustomCode}}
+	// @gohex:begin:custom:{{.NameSnake}}
+	{{- if eq .Returns "bool"}}
+	return true
+	{{- else if eq .Returns "error"}}
+	return nil
+	{{- else}}
+	return nil
+	{{- end}}
+	// @gohex:end:custom:{{.NameSnake}}
+	{{- end}}
+	{{- end}}
+}
+{{- end}}
+{{- end}}
+
+{{- /* Custom Methods */}}
+{{- if .ModelConfig.CustomMethods}}
+
+// Custom methods
+{{- range .ModelConfig.CustomMethods}}
+
+// {{.Name}} {{.Description}}
+func (m *{{$.ModelConfig.Name}}) {{.Name}}(){{if .Parameters}} {{.Parameters}}{{end}} {{.Returns}} {
+	{{- if .Implementation}}
+	{{.Implementation}}
+	{{- else}}
+	{{- if $.Generation.PreserveCustomCode}}
+	// @gohex:begin:custom:{{.NameSnake}}
+	{{- if eq .Returns "string"}}
+	return ""
+	{{- else if eq .Returns "bool"}}
+	return false
+	{{- else if eq .Returns "int"}}
+	return 0
+	{{- else if eq .Returns "error"}}
+	return nil
+	{{- else}}
+	return nil
+	{{- end}}
+	// @gohex:end:custom:{{.NameSnake}}
+	{{- end}}
+	{{- end}}
+}
+{{- end}}
+{{- end}}
+
+{{- /* Relationship Methods */}}
+{{- if .ModelConfig.Relationships}}
+
+// Relationship methods
+{{- range .ModelConfig.Relationships}}
+{{- if eq .Type "hasMany"}}
+
+// Get{{pluralize .Entity}} retrieves associated {{toSnakeCase (pluralize .Entity)}}
+func (m *{{$.ModelConfig.Name}}) Get{{pluralize .Entity}}(db interface{}) error {
+	{{- if $.Generation.PreserveCustomCode}}
+	// @gohex:begin:custom:get_{{toSnakeCase (pluralize .Entity)}}
+	// Implementation will be added by the developer
+	return nil
+	// @gohex:end:custom:get_{{toSnakeCase (pluralize .Entity)}}
+	{{- else}}
+	return nil
+	{{- end}}
+}
+
+// Add{{.Entity}} adds a {{toSnakeCase .Entity}} to this {{$.DomainSnake}}
+func (m *{{$.ModelConfig.Name}}) Add{{.Entity}}({{toSnakeCase .Entity}} *{{.Entity}}) {
+	{{- if $.Generation.PreserveCustomCode}}
+	// @gohex:begin:custom:add_{{toSnakeCase .Entity}}
+	{{toSnakeCase .Entity}}.{{$.ModelConfig.Name}}ID = m.ID
+	m.{{pluralize .Entity}} = append(m.{{pluralize .Entity}}, *{{toSnakeCase .Entity}})
+	// @gohex:end:custom:add_{{toSnakeCase .Entity}}
+	{{- end}}
+}
+{{- else if eq .Type "manyToMany"}}
+
+// Add{{.Entity}} adds a {{toSnakeCase .Entity}} to this {{$.DomainSnake}} (many-to-many)
+func (m *{{$.ModelConfig.Name}}) Add{{.Entity}}({{toSnakeCase .Entity}} *{{.Entity}}) {
+	{{- if $.Generation.PreserveCustomCode}}
+	// @gohex:begin:custom:add_{{toSnakeCase .Entity}}_many_to_many
+	m.{{pluralize .Entity}} = append(m.{{pluralize .Entity}}, *{{toSnakeCase .Entity}})
+	// @gohex:end:custom:add_{{toSnakeCase .Entity}}_many_to_many
+	{{- end}}
+}
+
+// Remove{{.Entity}} removes a {{toSnakeCase .Entity}} from this {{$.DomainSnake}} (many-to-many)
+func (m *{{$.ModelConfig.Name}}) Remove{{.Entity}}({{toSnakeCase .Entity}}ID uuid.UUID) {
+	{{- if $.Generation.PreserveCustomCode}}
+	// @gohex:begin:custom:remove_{{toSnakeCase .Entity}}_many_to_many
+	for i, {{toSnakeCase .Entity}} := range m.{{pluralize .Entity}} {
+		if {{toSnakeCase .Entity}}.ID == {{toSnakeCase .Entity}}ID {
+			m.{{pluralize .Entity}} = append(m.{{pluralize .Entity}}[:i], m.{{pluralize .Entity}}[i+1:]...)
+			break
+		}
+	}
+	// @gohex:end:custom:remove_{{toSnakeCase .Entity}}_many_to_many
+	{{- end}}
+}
+{{- end}}
+{{- end}}
+{{- end}}
+
+{{- if .Generation.PreserveCustomCode}}
+
+// Custom business logic methods
+// @gohex:begin:custom:business_methods
+// Add your custom business logic methods here
+// @gohex:end:custom:business_methods
+{{- end}}

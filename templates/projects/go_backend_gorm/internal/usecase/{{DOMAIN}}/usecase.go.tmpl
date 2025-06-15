@@ -1,0 +1,95 @@
+package {{.DomainSnake}}
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/google/uuid"
+	"github.com/samber/do"
+
+	entityPkg "go_backend_gorm/internal/core/entity/{{.DomainSnake}}"
+	repoPkg "go_backend_gorm/internal/repository/{{.DomainSnake}}"
+	"go_backend_gorm/internal/repository"
+	"go_backend_gorm/internal/utils"
+)
+
+// I{{.Entity}}UseCase defines the interface for {{.DomainSnake}} use cases
+type I{{.Entity}}UseCase interface {
+	// Create creates a new {{.DomainSnake}}
+	Create(ctx context.Context, {{.EntitySnake}} *entityPkg.{{.Entity}}) error
+
+	// GetByID retrieves a {{.DomainSnake}} by ID
+	GetByID(ctx context.Context, id uuid.UUID) (*entityPkg.{{.Entity}}, error)
+
+	// List retrieves a list of {{.EntitiesSnake}} with optional filtering
+	List(ctx context.Context, filters map[string]interface{}, limit, offset int) ([]*entityPkg.{{.Entity}}, error)
+
+	// Update updates an existing {{.DomainSnake}}
+	Update(ctx context.Context, {{.EntitySnake}} *entityPkg.{{.Entity}}) error
+
+	// Delete deletes a {{.DomainSnake}} by ID
+	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+// {{.Entity}}UseCase implements the {{.DomainSnake}} use case interface
+type {{.Entity}}UseCase struct {
+	{{.EntitySnake}}Repo repoPkg.I{{.Entity}}Repository
+	logger     *utils.Logger
+}
+
+// Ensure {{.Entity}}UseCase implements the I{{.Entity}}UseCase interface
+var _ I{{.Entity}}UseCase = (*{{.Entity}}UseCase)(nil)
+
+// New{{.Entity}}UseCase creates a new {{.DomainSnake}} use case
+func New{{.Entity}}UseCase(injector *do.Injector) (*{{.Entity}}UseCase, error) {
+	// Get dependencies from injector
+	repositories := do.MustInvoke[*repository.Repositories](injector)
+	log := do.MustInvoke[*utils.Logger](injector)
+
+	// Get the {{.DomainSnake}} repository from the repositories container
+	// This field is dynamically added by the Register{{.Entity}}Repository function
+	repoField, ok := repository.GetField(repositories, "{{.Entity}}")
+	if !ok {
+		return nil, fmt.Errorf("failed to get {{.DomainSnake}} repository from container")
+	}
+	
+	{{.EntitySnake}}Repo, ok := repoField.(repoPkg.I{{.Entity}}Repository)
+	if !ok {
+		return nil, fmt.Errorf("failed to cast {{.DomainSnake}} repository to correct type")
+	}
+
+	return &{{.Entity}}UseCase{
+		{{.EntitySnake}}Repo: {{.EntitySnake}}Repo,
+		logger:     log,
+	}, nil
+}
+
+// Create creates a new {{.DomainSnake}}
+func (uc *{{.Entity}}UseCase) Create(ctx context.Context, {{.EntitySnake}} *entityPkg.{{.Entity}}) error {
+	uc.logger.Debug(fmt.Sprintf("creating {{.DomainSnake}} %+v", {{.EntitySnake}}))
+	return uc.{{.EntitySnake}}Repo.Create(ctx, {{.EntitySnake}})
+}
+
+// GetByID retrieves a {{.DomainSnake}} by ID
+func (uc *{{.Entity}}UseCase) GetByID(ctx context.Context, id uuid.UUID) (*entityPkg.{{.Entity}}, error) {
+	uc.logger.Debug(fmt.Sprintf("getting {{.DomainSnake}} by ID %s", id))
+	return uc.{{.EntitySnake}}Repo.GetByID(ctx, id)
+}
+
+// List retrieves a list of {{.EntitiesSnake}} with optional filtering
+func (uc *{{.Entity}}UseCase) List(ctx context.Context, filters map[string]interface{}, limit, offset int) ([]*entityPkg.{{.Entity}}, error) {
+	uc.logger.Debug(fmt.Sprintf("listing {{.EntitiesSnake}} with filters %+v, limit %d, offset %d", filters, limit, offset))
+	return uc.{{.EntitySnake}}Repo.List(ctx, filters, limit, offset)
+}
+
+// Update updates an existing {{.DomainSnake}}
+func (uc *{{.Entity}}UseCase) Update(ctx context.Context, {{.EntitySnake}} *entityPkg.{{.Entity}}) error {
+	uc.logger.Debug(fmt.Sprintf("updating {{.DomainSnake}} %+v", {{.EntitySnake}}))
+	return uc.{{.EntitySnake}}Repo.Update(ctx, {{.EntitySnake}})
+}
+
+// Delete deletes a {{.DomainSnake}} by ID
+func (uc *{{.Entity}}UseCase) Delete(ctx context.Context, id uuid.UUID) error {
+	uc.logger.Debug(fmt.Sprintf("deleting {{.DomainSnake}} with ID %s", id))
+	return uc.{{.EntitySnake}}Repo.Delete(ctx, id)
+}

@@ -1,0 +1,26 @@
+package {{.DomainSnake}}
+
+import (
+	"github.com/samber/do"
+
+	"go_backend_gorm/internal/usecase"
+)
+
+// Register{{.Entity}}UseCase registers the {{.DomainSnake}} use case in the dependency injection container
+func Register{{.Entity}}UseCase(injector *do.Injector) {
+	// Register the use case implementation
+	do.Provide(injector, New{{.Entity}}UseCase)
+	
+	// Register a callback to add the use case to the UseCases struct
+	do.ProvideNamedValue(injector, "register_{{.EntitySnake}}_usecase", func(uc *usecase.UseCases) {
+		// This will be called after UseCases is created
+		// Add the {{.Entity}} use case to the UseCases struct
+		useCase, err := do.Invoke[*{{.Entity}}UseCase](injector)
+		if err != nil {
+			panic(err)
+		}
+		
+		// Add the field dynamically using reflection
+		usecase.AddField(uc, "{{.Entity}}", useCase)
+	})
+}

@@ -1,0 +1,59 @@
+version: "1.0"
+domain: "user"
+description: "User management domain"
+module: "go_backend_gorm"
+
+entity:
+  name: "User"
+  description: "represents a user entity in the system"
+  fields:
+    - name: "Email"
+      type: "string"
+      tags: 'json:"email"'
+      description: "User email address"
+      unique: true
+      
+    - name: "FirstName"
+      type: "string"
+      tags: 'json:"first_name"'
+      description: "User first name"
+      
+    - name: "LastName"
+      type: "string"
+      tags: 'json:"last_name"'
+      description: "User last name"
+      
+    - name: "FullName"
+      type: "string"
+      tags: 'json:"full_name"'
+      description: "Computed full name"
+      computed: true
+      
+    - name: "IsActive"
+      type: "bool"
+      tags: 'json:"is_active"'
+      description: "User account status"
+      default: true
+      
+  computed_fields:
+    - name: "FullName"
+      type: "string"
+      description: "Returns the user's full name"
+      formula: "e.FirstName + \" \" + e.LastName"
+      
+  custom_methods:
+    - name: "IsEmailValid"
+      description: "Validates if the email format is correct"
+      returns: ["bool"]
+      
+    - name: "UpdateLastLogin"
+      description: "Updates the last login timestamp"
+      parameters:
+        - name: "loginTime"
+          type: "time.Time"
+      returns: ["error"]
+
+generation:
+  preserve_custom_code: true
+  uuid_primary_key: true
+  generate_tests: true

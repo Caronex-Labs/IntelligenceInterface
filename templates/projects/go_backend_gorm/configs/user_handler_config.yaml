@@ -1,0 +1,493 @@
+version: "1.0"
+domain: "user"
+description: "User management domain with comprehensive handler configuration"
+module: "go_backend_gorm"
+
+# Handler configuration
+handlers:
+  description: "REST API handlers for user management"
+  
+  # Handler settings
+  handler:
+    name: "Handler"
+    description: "Handles user HTTP requests"
+    base_path: "/api/v1"
+    dependencies:
+      - "IUserUseCase"
+      - "*utils.Logger"
+    middleware:
+      - "cors"
+      - "rate_limit"
+      - "request_id"
+    
+  # Standard CRUD endpoints
+  standard_endpoints:
+    create:
+      enabled: true
+      method: "POST"
+      path: "/users"
+      request_type: "*CreateUserRequest"
+      response_type: "*UserResponse"
+      use_case_method: "Create"
+      status_code: 201
+      validation:
+        - "required_fields"
+        - "email_format"
+        - "password_strength"
+      
+    list:
+      enabled: true
+      method: "GET"
+      path: "/users"
+      response_type: "*UserListResponse"
+      use_case_method: "List"
+      status_code: 200
+      query_params:
+        - name: "limit"
+          type: "int"
+          default: 10
+          max: 100
+          description: "Number of users to return"
+        - name: "offset"
+          type: "int"
+          default: 0
+          description: "Number of users to skip"
+        - name: "search"
+          type: "string"
+          description: "Search term for filtering users"
+        - name: "is_active"
+          type: "bool"
+          description: "Filter by active status"
+      pagination:
+        enabled: true
+        default_limit: 10
+        max_limit: 100
+      filtering:
+        enabled: true
+        fields: ["is_active", "created_at"]
+      
+    get_by_id:
+      enabled: true
+      method: "GET"
+      path: "/users/{id}"
+      response_type: "*UserResponse"
+      use_case_method: "GetByID"
+      status_code: 200
+      path_params:
+        - name: "id"
+          type: "uuid.UUID"
+          description: "User ID"
+          required: true
+      
+    update:
+      enabled: true
+      method: "PUT"
+      path: "/users/{id}"
+      request_type: "*UpdateUserRequest"
+      response_type: "*UserResponse"
+      use_case_method: "Update"
+      status_code: 200
+      path_params:
+        - name: "id"
+          type: "uuid.UUID"
+          description: "User ID"
+          required: true
+      validation:
+        - "required_fields"
+        - "email_format"
+      authorization:
+        - "authenticated"
+        - "self_or_admin"
+      
+    delete:
+      enabled: true
+      method: "DELETE"
+      path: "/users/{id}"
+      use_case_method: "Delete"
+      status_code: 204
+      path_params:
+        - name: "id"
+          type: "uuid.UUID"
+          description: "User ID"
+          required: true
+      authorization:
+        - "authenticated"
+        - "admin_only"
+
+  # Custom business endpoints
+  custom_endpoints:
+    - name: "authenticate"
+      description: "Authenticate user with email and password"
+      method: "POST"
+      path: "/auth/login"
+      request_type: "*LoginRequest"
+      response_type: "*AuthResponse"
+      use_case_method: "AuthenticateUser"
+      status_code: 200
+      validation:
+        - "email_format"
+        - "password_required"
+      rate_limiting:
+        enabled: true
+        requests_per_minute: 5
+        
+    - name: "change_password"
+      description: "Change user password"
+      method: "PUT"
+      path: "/users/{id}/password"
+      request_type: "*ChangePasswordRequest"
+      use_case_method: "ChangePassword"
+      status_code: 204
+      path_params:
+        - name: "id"
+          type: "uuid.UUID"
+          description: "User ID"
+          required: true
+      validation:
+        - "current_password_required"
+        - "new_password_strength"
+      authorization:
+        - "authenticated"
+        - "self_or_admin"
+        
+    - name: "deactivate"
+      description: "Deactivate user account"
+      method: "POST"
+      path: "/users/{id}/deactivate"
+      use_case_method: "DeactivateUser"
+      status_code: 204
+      path_params:
+        - name: "id"
+          type: "uuid.UUID"
+          description: "User ID"
+          required: true
+      authorization:
+        - "authenticated"
+        - "admin_only"
+        
+    - name: "register"
+      description: "Register new user account"
+      method: "POST"
+      path: "/auth/register"
+      request_type: "*RegisterRequest"
+      response_type: "*UserResponse"
+      use_case_method: "RegisterUser"
+      status_code: 201
+      validation:
+        - "email_unique"
+        - "password_strength"
+        - "terms_accepted"
+      rate_limiting:
+        enabled: true
+        requests_per_minute: 3
+        
+    - name: "update_profile"
+      description: "Update user profile information"
+      method: "PUT"
+      path: "/users/{id}/profile"
+      request_type: "*ProfileUpdateRequest"
+      response_type: "*UserProfileResponse"
+      use_case_method: "UpdateProfile"
+      status_code: 200
+      path_params:
+        - name: "id"
+          type: "uuid.UUID"
+          description: "User ID"
+          required: true
+      validation:
+        - "profile_fields"
+      authorization:
+        - "authenticated"
+        - "self_or_admin"
+
+  # Request/Response DTOs
+  request_types:
+    - name: "CreateUserRequest"
+      description: "Request payload for creating a user"
+      fields:
+        - name: "Email"
+          type: "string"
+          json_tag: "email"
+          validation: ["required", "email"]
+          description: "User email address"
+        - name: "FirstName"
+          type: "string"
+          json_tag: "first_name"
+          validation: ["required", "min=2", "max=100"]
+          description: "User first name"
+        - name: "LastName"
+          type: "string"
+          json_tag: "last_name"
+          validation: ["required", "min=2", "max=100"]
+          description: "User last name"
+        - name: "Password"
+          type: "string"
+          json_tag: "password"
+          validation: ["required", "min=8"]
+          description: "User password"
+          
+    - name: "UpdateUserRequest"
+      description: "Request payload for updating a user"
+      fields:
+        - name: "FirstName"
+          type: "string"
+          json_tag: "first_name"
+          validation: ["min=2", "max=100"]
+          description: "User first name"
+        - name: "LastName"
+          type: "string"
+          json_tag: "last_name"
+          validation: ["min=2", "max=100"]
+          description: "User last name"
+        - name: "ProfilePictureURL"
+          type: "string"
+          json_tag: "profile_picture_url"
+          validation: ["url"]
+          description: "User profile picture URL"
+          optional: true
+          
+    - name: "LoginRequest"
+      description: "Request payload for user authentication"
+      fields:
+        - name: "Email"
+          type: "string"
+          json_tag: "email"
+          validation: ["required", "email"]
+          description: "User email address"
+        - name: "Password"
+          type: "string"
+          json_tag: "password"
+          validation: ["required"]
+          description: "User password"
+          
+    - name: "ChangePasswordRequest"
+      description: "Request payload for changing password"
+      fields:
+        - name: "CurrentPassword"
+          type: "string"
+          json_tag: "current_password"
+          validation: ["required"]
+          description: "Current password"
+        - name: "NewPassword"
+          type: "string"
+          json_tag: "new_password"
+          validation: ["required", "min=8"]
+          description: "New password"
+          
+    - name: "RegisterRequest"
+      description: "Request payload for user registration"
+      fields:
+        - name: "Email"
+          type: "string"
+          json_tag: "email"
+          validation: ["required", "email"]
+          description: "User email address"
+        - name: "FirstName"
+          type: "string"
+          json_tag: "first_name"
+          validation: ["required", "min=2", "max=100"]
+          description: "User first name"
+        - name: "LastName"
+          type: "string"
+          json_tag: "last_name"
+          validation: ["required", "min=2", "max=100"]
+          description: "User last name"
+        - name: "Password"
+          type: "string"
+          json_tag: "password"
+          validation: ["required", "min=8"]
+          description: "User password"
+        - name: "TermsAccepted"
+          type: "bool"
+          json_tag: "terms_accepted"
+          validation: ["required", "eq=true"]
+          description: "Terms and conditions acceptance"
+          
+    - name: "ProfileUpdateRequest"
+      description: "Request payload for profile updates"
+      fields:
+        - name: "FirstName"
+          type: "string"
+          json_tag: "first_name"
+          validation: ["min=2", "max=100"]
+          description: "User first name"
+          optional: true
+        - name: "LastName"
+          type: "string"
+          json_tag: "last_name"
+          validation: ["min=2", "max=100"]
+          description: "User last name"
+          optional: true
+        - name: "ProfilePictureURL"
+          type: "string"
+          json_tag: "profile_picture_url"
+          validation: ["url"]
+          description: "User profile picture URL"
+          optional: true
+
+  # Response DTOs
+  response_types:
+    - name: "UserResponse"
+      description: "User response payload"
+      fields:
+        - name: "ID"
+          type: "uuid.UUID"
+          json_tag: "id"
+          description: "User ID"
+        - name: "Email"
+          type: "string"
+          json_tag: "email"
+          description: "User email address"
+        - name: "FirstName"
+          type: "string"
+          json_tag: "first_name"
+          description: "User first name"
+        - name: "LastName"
+          type: "string"
+          json_tag: "last_name"
+          description: "User last name"
+        - name: "IsActive"
+          type: "bool"
+          json_tag: "is_active"
+          description: "User active status"
+        - name: "ProfilePictureURL"
+          type: "string"
+          json_tag: "profile_picture_url"
+          description: "User profile picture URL"
+          optional: true
+        - name: "CreatedAt"
+          type: "time.Time"
+          json_tag: "created_at"
+          description: "Creation timestamp"
+        - name: "UpdatedAt"
+          type: "time.Time"
+          json_tag: "updated_at"
+          description: "Last update timestamp"
+          
+    - name: "UserListResponse"
+      description: "User list response with pagination"
+      fields:
+        - name: "Users"
+          type: "[]UserResponse"
+          json_tag: "users"
+          description: "List of users"
+        - name: "Total"
+          type: "int64"
+          json_tag: "total"
+          description: "Total number of users"
+        - name: "Limit"
+          type: "int"
+          json_tag: "limit"
+          description: "Number of users returned"
+        - name: "Offset"
+          type: "int"
+          json_tag: "offset"
+          description: "Number of users skipped"
+          
+    - name: "AuthResponse"
+      description: "Authentication response payload"
+      fields:
+        - name: "User"
+          type: "UserResponse"
+          json_tag: "user"
+          description: "Authenticated user data"
+        - name: "Token"
+          type: "string"
+          json_tag: "token"
+          description: "JWT authentication token"
+        - name: "ExpiresAt"
+          type: "time.Time"
+          json_tag: "expires_at"
+          description: "Token expiration timestamp"
+          
+    - name: "UserProfileResponse"
+      description: "User profile response payload"
+      fields:
+        - name: "ID"
+          type: "uuid.UUID"
+          json_tag: "id"
+          description: "User ID"
+        - name: "Email"
+          type: "string"
+          json_tag: "email"
+          description: "User email address"
+        - name: "FirstName"
+          type: "string"
+          json_tag: "first_name"
+          description: "User first name"
+        - name: "LastName"
+          type: "string"
+          json_tag: "last_name"
+          description: "User last name"
+        - name: "ProfilePictureURL"
+          type: "string"
+          json_tag: "profile_picture_url"
+          description: "User profile picture URL"
+          optional: true
+
+  # Error handling configuration
+  error_handling:
+    enabled: true
+    custom_errors:
+      - code: "USER_NOT_FOUND"
+        status: 404
+        message: "User not found"
+      - code: "EMAIL_ALREADY_EXISTS"
+        status: 409
+        message: "Email address already exists"
+      - code: "INVALID_CREDENTIALS"
+        status: 401
+        message: "Invalid email or password"
+      - code: "INSUFFICIENT_PERMISSIONS"
+        status: 403
+        message: "Insufficient permissions to perform this action"
+    
+  # Middleware configuration
+  middleware:
+    cors:
+      enabled: true
+      allowed_origins: ["*"]
+      allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+      allowed_headers: ["Content-Type", "Authorization"]
+      
+    rate_limiting:
+      enabled: true
+      global_limit: 1000 # requests per minute
+      per_ip_limit: 100
+      
+    authentication:
+      enabled: true
+      exclude_paths: ["/auth/login", "/auth/register", "/health"]
+      jwt_secret_env: "JWT_SECRET"
+      
+    request_logging:
+      enabled: true
+      include_body: false
+      include_headers: false
+      
+    request_id:
+      enabled: true
+      header: "X-Request-ID"
+
+  # OpenAPI documentation
+  openapi:
+    enabled: true
+    title: "User Management API"
+    description: "REST API for user management operations"
+    version: "1.0.0"
+    contact:
+      name: "API Support"
+      email: "api-support@example.com"
+    tags:
+      - name: "users"
+        description: "User management operations"
+      - name: "auth"
+        description: "Authentication operations"
+
+# Generation options
+generation:
+  preserve_custom_code: true
+  generate_tests: true
+  generate_docs: true
+  generate_middleware: true
+  generate_dtos: true

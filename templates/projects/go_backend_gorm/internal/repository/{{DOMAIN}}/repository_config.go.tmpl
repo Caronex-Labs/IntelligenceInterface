@@ -1,0 +1,388 @@
+package {{.DomainSnake}}
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"github.com/google/uuid"
+	"github.com/samber/do"
+	"gorm.io/gorm"
+
+	"{{.Module}}/external/postgres"
+	entityPkg "{{.Module}}/internal/core/entity/{{.DomainSnake}}"
+	modelsPkg "{{.Module}}/internal/core/models/{{.DomainSnake}}"
+	"{{.Module}}/internal/utils"
+)
+
+// {{.Repository.Interface.Name}} defines the interface for {{.DomainSnake}} repository operations
+type {{.Repository.Interface.Name}} interface {
+	{{- /* Standard CRUD Methods */}}
+	{{- if .Repository.Interface.StandardMethods.Create}}
+	// Create creates a new {{.DomainSnake}}
+	Create(ctx context.Context, {{.EntitySnake}} *entityPkg.{{.Entity}}) error
+	{{- end}}
+
+	{{- if .Repository.Interface.StandardMethods.GetByID}}
+	// GetByID retrieves a {{.DomainSnake}} by ID
+	GetByID(ctx context.Context, id uuid.UUID) (*entityPkg.{{.Entity}}, error)
+	{{- end}}
+
+	{{- if .Repository.Interface.StandardMethods.List}}
+	// List retrieves a list of {{.EntitiesSnake}}{{if .Repository.Filtering.Enabled}} with optional filtering{{end}}{{if .Repository.Pagination.Enabled}} and pagination{{end}}
+	List(ctx context.Context{{if .Repository.Filtering.Enabled}}, filters map[string]interface{}{{end}}{{if .Repository.Pagination.Enabled}}, limit, offset int{{end}}) ([]*entityPkg.{{.Entity}}, error)
+	{{- end}}
+
+	{{- if .Repository.Interface.StandardMethods.Update}}
+	// Update updates an existing {{.DomainSnake}}
+	Update(ctx context.Context, {{.EntitySnake}} *entityPkg.{{.Entity}}) error
+	{{- end}}
+
+	{{- if .Repository.Interface.StandardMethods.Delete}}
+	// Delete deletes a {{.DomainSnake}} by ID
+	Delete(ctx context.Context, id uuid.UUID) error
+	{{- end}}
+
+	{{- if .Repository.Interface.StandardMethods.Count}}
+	// Count returns the total number of {{.EntitiesSnake}}{{if .Repository.Filtering.Enabled}} matching the filters{{end}}
+	Count(ctx context.Context{{if .Repository.Filtering.Enabled}}, filters map[string]interface{}{{end}}) (int64, error)
+	{{- end}}
+
+	{{- if .Repository.Interface.StandardMethods.Exists}}
+	// Exists checks if a {{.DomainSnake}} exists by ID
+	Exists(ctx context.Context, id uuid.UUID) (bool, error)
+	{{- end}}
+
+	{{- if .Repository.Interface.StandardMethods.GetByField}}
+	// GetByField retrieves {{.EntitiesSnake}} by a specific field
+	GetByField(ctx context.Context, field string, value interface{}) ([]*entityPkg.{{.Entity}}, error)
+	{{- end}}
+
+	{{- /* Custom Methods */}}
+	{{- range .Repository.Interface.CustomMethods}}
+	// {{.Name}} {{.Description}}
+	{{.Name}}(ctx context.Context{{range .Parameters}}, {{.Name}} {{.Type}}{{end}}) {{.Returns}}
+	{{- end}}
+
+	{{- /* Custom Queries */}}
+	{{- range .Repository.Queries}}
+	// {{.Name}} {{.Description}}
+	{{.Name}}(ctx context.Context{{range .Parameters}}, {{.Name}} {{.Type}}{{end}}) {{.Returns}}
+	{{- end}}
+}
+
+// {{.Repository.Implementation.Name}} implements the {{.DomainSnake}} repository interface
+type {{.Repository.Implementation.Name}} struct {
+	{{- range .Repository.Implementation.Dependencies}}
+	{{- if eq . "*postgres.DB"}}
+	db     *postgres.DB
+	{{- else if eq . "*utils.Logger"}}
+	logger *utils.Logger
+	{{- else}}
+	{{toSnakeCase .}} {{.}}
+	{{- end}}
+	{{- end}}
+}
+
+// Ensure {{.Repository.Implementation.Name}} implements the {{.Repository.Interface.Name}} interface
+var _ {{.Repository.Interface.Name}} = (*{{.Repository.Implementation.Name}})(nil)
+
+// New{{.Repository.Implementation.Name}} creates a new {{.DomainSnake}} repository
+func New{{.Repository.Implementation.Name}}(injector *do.Injector) ({{.Repository.Interface.Name}}, error) {
+	// Get dependencies from injector
+	{{- range .Repository.Implementation.Dependencies}}
+	{{- if eq . "*postgres.DB"}}
+	db := do.MustInvoke[*postgres.DB](injector)
+	{{- else if eq . "*utils.Logger"}}
+	log := do.MustInvoke[*utils.Logger](injector)
+	{{- else}}
+	{{toSnakeCase .}} := do.MustInvoke[{{.}}](injector)
+	{{- end}}
+	{{- end}}
+
+	return &{{.Repository.Implementation.Name}}{
+		{{- range .Repository.Implementation.Dependencies}}
+		{{- if eq . "*postgres.DB"}}
+		db:     db,
+		{{- else if eq . "*utils.Logger"}}
+		logger: log,
+		{{- else}}
+		{{toSnakeCase .}}: {{toSnakeCase .}},
+		{{- end}}
+		{{- end}}
+	}, nil
+}
+
+{{- /* Standard Method Implementations */}}
+{{- if .Repository.Interface.StandardMethods.Create}}
+
+// Create creates a new {{.DomainSnake}}
+func (r *{{.Repository.Implementation.Name}}) Create(ctx context.Context, {{.EntitySnake}} *entityPkg.{{.Entity}}) error {
+	{{- if .Repository.Logging.Enabled}}
+	r.logger.{{toPascalCase .Repository.Logging.Level}}(fmt.Sprintf("creating {{.DomainSnake}} %+v", {{.EntitySnake}}))
+	{{- end}}
+	
+	// Convert entity to model
+	model := {{.EntitySnake}}.To{{.Entity}}Model()
+	
+	{{- if .Repository.Transactions.Enabled}}
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		return tx.Create(model).Error
+	})
+	{{- else}}
+	return r.db.WithContext(ctx).Create(model).Error
+	{{- end}}
+}
+{{- end}}
+
+{{- if .Repository.Interface.StandardMethods.GetByID}}
+
+// GetByID retrieves a {{.DomainSnake}} by ID
+func (r *{{.Repository.Implementation.Name}}) GetByID(ctx context.Context, id uuid.UUID) (*entityPkg.{{.Entity}}, error) {
+	{{- if .Repository.Logging.Enabled}}
+	r.logger.{{toPascalCase .Repository.Logging.Level}}(fmt.Sprintf("getting {{.DomainSnake}} by ID %s", id))
+	{{- end}}
+	
+	var model modelsPkg.{{.Entity}}
+	err := r.db.WithContext(ctx).First(&model, "id = ?", id).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("{{.DomainSnake}} not found: %w", err)
+		}
+		return nil, err
+	}
+	
+	// Convert model to entity
+	entity := entityPkg.From{{.Entity}}Model(&model)
+	return entity, nil
+}
+{{- end}}
+
+{{- if .Repository.Interface.StandardMethods.List}}
+
+// List retrieves a list of {{.EntitiesSnake}}{{if .Repository.Filtering.Enabled}} with optional filtering{{end}}{{if .Repository.Pagination.Enabled}} and pagination{{end}}
+func (r *{{.Repository.Implementation.Name}}) List(ctx context.Context{{if .Repository.Filtering.Enabled}}, filters map[string]interface{}{{end}}{{if .Repository.Pagination.Enabled}}, limit, offset int{{end}}) ([]*entityPkg.{{.Entity}}, error) {
+	{{- if .Repository.Logging.Enabled}}
+	r.logger.{{toPascalCase .Repository.Logging.Level}}(fmt.Sprintf("listing {{.EntitiesSnake}}{{if .Repository.Filtering.Enabled}} with filters %+v{{end}}{{if .Repository.Pagination.Enabled}}, limit %d, offset %d{{end}}"{{if .Repository.Filtering.Enabled}}, filters{{end}}{{if .Repository.Pagination.Enabled}}, limit, offset{{end}}))
+	{{- end}}
+	
+	var models []modelsPkg.{{.Entity}}
+	
+	query := r.db.WithContext(ctx)
+	
+	{{- if .Repository.Filtering.Enabled}}
+	// Apply filters if provided
+	if filters != nil {
+		for key, value := range filters {
+			query = query.Where(key, value)
+		}
+	}
+	{{- end}}
+	
+	{{- if .Repository.Pagination.Enabled}}
+	// Apply pagination
+	if limit > 0 {
+		if limit > {{.Repository.Pagination.MaxLimit}} {
+			limit = {{.Repository.Pagination.MaxLimit}}
+		}
+		query = query.Limit(limit)
+	} else {
+		query = query.Limit({{.Repository.Pagination.DefaultLimit}})
+	}
+	if offset > 0 {
+		query = query.Offset(offset)
+	}
+	{{- end}}
+	
+	err := query.Find(&models).Error
+	if err != nil {
+		return nil, err
+	}
+	
+	// Convert models to entities
+	entities := make([]*entityPkg.{{.Entity}}, len(models))
+	for i, model := range models {
+		modelCopy := model // Create a copy to avoid reference issues
+		entities[i] = entityPkg.From{{.Entity}}Model(&modelCopy)
+	}
+	
+	return entities, nil
+}
+{{- end}}
+
+{{- if .Repository.Interface.StandardMethods.Update}}
+
+// Update updates an existing {{.DomainSnake}}
+func (r *{{.Repository.Implementation.Name}}) Update(ctx context.Context, {{.EntitySnake}} *entityPkg.{{.Entity}}) error {
+	{{- if .Repository.Logging.Enabled}}
+	r.logger.{{toPascalCase .Repository.Logging.Level}}(fmt.Sprintf("updating {{.DomainSnake}} %+v", {{.EntitySnake}}))
+	{{- end}}
+	
+	// Convert entity to model
+	model := {{.EntitySnake}}.To{{.Entity}}Model()
+	
+	{{- if .Repository.Transactions.Enabled}}
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		return tx.Save(model).Error
+	})
+	{{- else}}
+	return r.db.WithContext(ctx).Save(model).Error
+	{{- end}}
+}
+{{- end}}
+
+{{- if .Repository.Interface.StandardMethods.Delete}}
+
+// Delete deletes a {{.DomainSnake}} by ID
+func (r *{{.Repository.Implementation.Name}}) Delete(ctx context.Context, id uuid.UUID) error {
+	{{- if .Repository.Logging.Enabled}}
+	r.logger.{{toPascalCase .Repository.Logging.Level}}(fmt.Sprintf("deleting {{.DomainSnake}} with ID %s", id))
+	{{- end}}
+	
+	{{- if .Repository.Transactions.Enabled}}
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		return tx.Delete(&modelsPkg.{{.Entity}}{}, "id = ?", id).Error
+	})
+	{{- else}}
+	return r.db.WithContext(ctx).Delete(&modelsPkg.{{.Entity}}{}, "id = ?", id).Error
+	{{- end}}
+}
+{{- end}}
+
+{{- if .Repository.Interface.StandardMethods.Count}}
+
+// Count returns the total number of {{.EntitiesSnake}}{{if .Repository.Filtering.Enabled}} matching the filters{{end}}
+func (r *{{.Repository.Implementation.Name}}) Count(ctx context.Context{{if .Repository.Filtering.Enabled}}, filters map[string]interface{}{{end}}) (int64, error) {
+	{{- if .Repository.Logging.Enabled}}
+	r.logger.{{toPascalCase .Repository.Logging.Level}}("counting {{.EntitiesSnake}}{{if .Repository.Filtering.Enabled}} with filters{{end}}")
+	{{- end}}
+	
+	var count int64
+	query := r.db.WithContext(ctx).Model(&modelsPkg.{{.Entity}}{})
+	
+	{{- if .Repository.Filtering.Enabled}}
+	// Apply filters if provided
+	if filters != nil {
+		for key, value := range filters {
+			query = query.Where(key, value)
+		}
+	}
+	{{- end}}
+	
+	err := query.Count(&count).Error
+	return count, err
+}
+{{- end}}
+
+{{- if .Repository.Interface.StandardMethods.Exists}}
+
+// Exists checks if a {{.DomainSnake}} exists by ID
+func (r *{{.Repository.Implementation.Name}}) Exists(ctx context.Context, id uuid.UUID) (bool, error) {
+	{{- if .Repository.Logging.Enabled}}
+	r.logger.{{toPascalCase .Repository.Logging.Level}}(fmt.Sprintf("checking if {{.DomainSnake}} exists with ID %s", id))
+	{{- end}}
+	
+	var count int64
+	err := r.db.WithContext(ctx).Model(&modelsPkg.{{.Entity}}{}).Where("id = ?", id).Count(&count).Error
+	return count > 0, err
+}
+{{- end}}
+
+{{- if .Repository.Interface.StandardMethods.GetByField}}
+
+// GetByField retrieves {{.EntitiesSnake}} by a specific field
+func (r *{{.Repository.Implementation.Name}}) GetByField(ctx context.Context, field string, value interface{}) ([]*entityPkg.{{.Entity}}, error) {
+	{{- if .Repository.Logging.Enabled}}
+	r.logger.{{toPascalCase .Repository.Logging.Level}}(fmt.Sprintf("getting {{.EntitiesSnake}} by field %s = %v", field, value))
+	{{- end}}
+	
+	var models []modelsPkg.{{.Entity}}
+	err := r.db.WithContext(ctx).Where(field+" = ?", value).Find(&models).Error
+	if err != nil {
+		return nil, err
+	}
+	
+	// Convert models to entities
+	entities := make([]*entityPkg.{{.Entity}}, len(models))
+	for i, model := range models {
+		modelCopy := model // Create a copy to avoid reference issues
+		entities[i] = entityPkg.From{{.Entity}}Model(&modelCopy)
+	}
+	
+	return entities, nil
+}
+{{- end}}
+
+{{- /* Custom Method Implementations */}}
+{{- range .Repository.Interface.CustomMethods}}
+
+// {{.Name}} {{.Description}}
+func (r *{{$.Repository.Implementation.Name}}) {{.Name}}(ctx context.Context{{range .Parameters}}, {{.Name}} {{.Type}}{{end}}) {{.Returns}} {
+	{{- if $.Repository.Logging.Enabled}}
+	r.logger.{{toPascalCase $.Repository.Logging.Level}}("executing custom method {{.Name}}")
+	{{- end}}
+	
+	{{- if .Implementation}}
+	{{.Implementation}}
+	{{- else}}
+	{{- if $.Generation.PreserveCustomCode}}
+	// @gohex:begin:custom:{{toSnakeCase .Name}}
+	{{- if contains .Returns "error"}}
+	return nil, fmt.Errorf("{{.Name}} not implemented")
+	{{- else if eq .Returns "bool"}}
+	return false
+	{{- else if contains .Returns "int"}}
+	return 0
+	{{- else if contains .Returns "*"}}
+	return nil
+	{{- else}}
+	panic("{{.Name}} not implemented")
+	{{- end}}
+	// @gohex:end:custom:{{toSnakeCase .Name}}
+	{{- end}}
+	{{- end}}
+}
+{{- end}}
+
+{{- /* Custom Query Implementations */}}
+{{- range .Repository.Queries}}
+
+// {{.Name}} {{.Description}}
+func (r *{{$.Repository.Implementation.Name}}) {{.Name}}(ctx context.Context{{range .Parameters}}, {{.Name}} {{.Type}}{{end}}) {{.Returns}} {
+	{{- if $.Repository.Logging.Enabled}}
+	r.logger.{{toPascalCase $.Repository.Logging.Level}}("executing query {{.Name}}")
+	{{- end}}
+	
+	{{- if .GORM}}
+	// GORM query implementation
+	{{.GORM}}
+	{{- else if .SQL}}
+	// Raw SQL query implementation
+	{{.SQL}}
+	{{- else}}
+	{{- if $.Generation.PreserveCustomCode}}
+	// @gohex:begin:custom:query_{{toSnakeCase .Name}}
+	{{- if contains .Returns "error"}}
+	return nil, fmt.Errorf("{{.Name}} query not implemented")
+	{{- else if eq .Returns "bool"}}
+	return false
+	{{- else if contains .Returns "int"}}
+	return 0
+	{{- else if contains .Returns "*"}}
+	return nil
+	{{- else}}
+	panic("{{.Name}} query not implemented")
+	{{- end}}
+	// @gohex:end:custom:query_{{toSnakeCase .Name}}
+	{{- end}}
+	{{- end}}
+}
+{{- end}}
+
+{{- if .Generation.PreserveCustomCode}}
+
+// Custom repository methods
+// @gohex:begin:custom:repository_methods
+// Add your custom repository methods here
+// @gohex:end:custom:repository_methods
+{{- end}}
