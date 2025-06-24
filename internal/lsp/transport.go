@@ -8,8 +8,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/opencode-ai/opencode/internal/core/config"
-	"github.com/opencode-ai/opencode/internal/core/logging"
+	"github.com/caronex/intelligence-interface/internal/core/config"
+	"github.com/caronex/intelligence-interface/internal/core/logging"
 )
 
 // Write writes an LSP message to the given writer

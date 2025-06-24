@@ -6,13 +6,17 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/opencode-ai/opencode/internal/core/config"
+	"github.com/caronex/intelligence-interface/internal/core/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestGetContextFromPaths(t *testing.T) {
 	t.Parallel()
+
+	// Set up test environment variables for providers
+	os.Setenv("OPENAI_API_KEY", "test-key-for-tests")
+	defer os.Unsetenv("OPENAI_API_KEY")
 
 	tmpDir := t.TempDir()
 	_, err := config.Load(tmpDir, false)

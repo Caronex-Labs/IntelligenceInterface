@@ -1,15 +1,14 @@
-package agent
+package base
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 
-	"github.com/opencode-ai/opencode/internal/core/config"
-	"github.com/opencode-ai/opencode/internal/llm/tools"
-	"github.com/opencode-ai/opencode/internal/lsp"
-	"github.com/opencode-ai/opencode/internal/message"
-	"github.com/opencode-ai/opencode/internal/session"
+	"github.com/caronex/intelligence-interface/internal/llm/tools"
+	"github.com/caronex/intelligence-interface/internal/lsp"
+	"github.com/caronex/intelligence-interface/internal/message"
+	"github.com/caronex/intelligence-interface/internal/session"
 )
 
 type agentTool struct {
@@ -29,7 +28,7 @@ type AgentParams struct {
 func (b *agentTool) Info() tools.ToolInfo {
 	return tools.ToolInfo{
 		Name:        AgentToolName,
-		Description: "Launch a new agent that has access to the following tools: GlobTool, GrepTool, LS, View. When you are searching for a keyword or file and are not confident that you will find the right match on the first try, use the Agent tool to perform the search for you. For example:\n\n- If you are searching for a keyword like \"config\" or \"logger\", or for questions like \"which file does X?\", the Agent tool is strongly recommended\n- If you want to read a specific file path, use the View or GlobTool tool instead of the Agent tool, to find the match more quickly\n- If you are searching for a specific class definition like \"class Foo\", use the GlobTool tool instead, to find the match more quickly\n\nUsage notes:\n1. Launch multiple agents concurrently whenever possible, to maximize performance; to do that, use a single message with multiple tool uses\n2. When the agent is done, it will return a single message back to you. The result returned by the agent is not visible to the user. To show the user the result, you should send a text message back to the user with a concise summary of the result.\n3. Each agent invocation is stateless. You will not be able to send additional messages to the agent, nor will the agent be able to communicate with you outside of its final report. Therefore, your prompt should contain a highly detailed task description for the agent to perform autonomously and you should specify exactly what information the agent should return back to you in its final and only message to you.\n4. The agent's outputs should generally be trusted\n5. IMPORTANT: The agent can not use Bash, Replace, Edit, so can not modify files. If you want to use these tools, use them directly instead of going through the agent.",
+		Description: "Launch a new Caronex sub-agent for specialized tasks. This tool is temporarily disabled pending Caronex coordination implementation.",
 		Parameters: map[string]any{
 			"prompt": map[string]any{
 				"type":        "string",
@@ -54,11 +53,10 @@ func (b *agentTool) Run(ctx context.Context, call tools.ToolCall) (tools.ToolRes
 		return tools.ToolResponse{}, fmt.Errorf("session_id and message_id are required")
 	}
 
-	agent, err := NewAgent(config.AgentTask, b.sessions, b.messages, TaskAgentTools(b.lspClients))
-	if err != nil {
-		return tools.ToolResponse{}, fmt.Errorf("error creating agent: %s", err)
-	}
+	// TODO: For now, sub-agents are disabled until Caronex agent coordination is implemented
+	return tools.ToolResponse{}, fmt.Errorf("sub-agent spawning is temporarily disabled pending Caronex coordination implementation")
 
+	/* Disabled pending Caronex coordination implementation
 	session, err := b.sessions.CreateTaskSession(ctx, call.ID, sessionID, "New Agent Session")
 	if err != nil {
 		return tools.ToolResponse{}, fmt.Errorf("error creating session: %s", err)
@@ -94,6 +92,7 @@ func (b *agentTool) Run(ctx context.Context, call tools.ToolCall) (tools.ToolRes
 		return tools.ToolResponse{}, fmt.Errorf("error saving parent session: %s", err)
 	}
 	return tools.NewTextResponse(response.Content().String()), nil
+	*/
 }
 
 func NewAgentTool(

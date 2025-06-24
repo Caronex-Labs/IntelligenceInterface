@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/opencode-ai/opencode/internal/core/config"
-	"github.com/opencode-ai/opencode/internal/llm/models"
+	"github.com/caronex/intelligence-interface/internal/core/config"
+	"github.com/caronex/intelligence-interface/internal/llm/models"
 )
 
 // JSONSchemaType represents a JSON Schema type
@@ -38,8 +38,8 @@ func main() {
 func generateSchema() map[string]any {
 	schema := map[string]any{
 		"$schema":     "http://json-schema.org/draft-07/schema#",
-		"title":       "OpenCode Configuration",
-		"description": "Configuration schema for the OpenCode application",
+		"title":       "Intelligence Interface Configuration",
+		"description": "Configuration schema for the Intelligence Interface application",
 		"type":        "object",
 		"properties":  map[string]any{},
 	}
@@ -52,7 +52,7 @@ func generateSchema() map[string]any {
 			"directory": map[string]any{
 				"type":        "string",
 				"description": "Directory where application data is stored",
-				"default":     ".opencode",
+				"default":     ".intelligence-interface",
 			},
 		},
 		"required": []string{"directory"},
@@ -89,10 +89,10 @@ func generateSchema() map[string]any {
 			".cursor/rules/",
 			"CLAUDE.md",
 			"CLAUDE.local.md",
-			"opencode.md",
-			"opencode.local.md",
-			"OpenCode.md",
-			"OpenCode.local.md",
+			"intelligenceinterface.md",
+			"intelligenceinterface.local.md",
+			"Intelligence Interface.md",
+			"Intelligence Interface.local.md",
 			"OPENCODE.md",
 			"OPENCODE.local.md",
 		},
@@ -105,9 +105,9 @@ func generateSchema() map[string]any {
 			"theme": map[string]any{
 				"type":        "string",
 				"description": "TUI theme name",
-				"default":     "opencode",
+				"default":     "intelligence-interface",
 				"enum": []string{
-					"opencode",
+					"intelligence-interface",
 					"catppuccin",
 					"dracula",
 					"flexoki",
@@ -247,9 +247,7 @@ func generateSchema() map[string]any {
 	// Add specific agent properties
 	agentProperties := map[string]any{}
 	knownAgents := []string{
-		string(config.AgentCoder),
-		string(config.AgentTask),
-		string(config.AgentTitle),
+		string(config.AgentCaronex),
 	}
 
 	for _, agentName := range knownAgents {

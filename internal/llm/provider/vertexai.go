@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/opencode-ai/opencode/internal/core/logging"
+	"github.com/caronex/intelligence-interface/internal/core/logging"
 	"google.golang.org/genai"
 )
 

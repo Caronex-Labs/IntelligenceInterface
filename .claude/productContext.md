@@ -126,7 +126,7 @@ Intelligence Interface: Human Intent → Caronex → Agent Orchestra → Space-B
 ## Implementation Strategy
 
 ### Phase 1: Foundation (Current)
-- Fork and understand OpenCode architecture
+- Fork and understand Intelligence Interface architecture
 - Establish testing and quality baselines
 - Validate core functionality
 

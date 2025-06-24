@@ -9,42 +9,42 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	zone "github.com/lrstanley/bubblezone"
-	"github.com/opencode-ai/opencode/internal/app"
-	"github.com/opencode-ai/opencode/internal/core/config"
-	"github.com/opencode-ai/opencode/internal/db"
-	"github.com/opencode-ai/opencode/internal/format"
-	"github.com/opencode-ai/opencode/internal/llm/agent"
-	"github.com/opencode-ai/opencode/internal/core/logging"
-	"github.com/opencode-ai/opencode/internal/pubsub"
-	"github.com/opencode-ai/opencode/internal/tui"
-	"github.com/opencode-ai/opencode/internal/version"
+	"github.com/caronex/intelligence-interface/internal/app"
+	"github.com/caronex/intelligence-interface/internal/core/config"
+	"github.com/caronex/intelligence-interface/internal/db"
+	"github.com/caronex/intelligence-interface/internal/format"
+	"github.com/caronex/intelligence-interface/internal/llm/agent"
+	"github.com/caronex/intelligence-interface/internal/core/logging"
+	"github.com/caronex/intelligence-interface/internal/pubsub"
+	"github.com/caronex/intelligence-interface/internal/tui"
+	"github.com/caronex/intelligence-interface/internal/version"
 	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "opencode",
-	Short: "Terminal-based AI assistant for software development",
-	Long: `OpenCode is a powerful terminal-based AI assistant that helps with software development tasks.
-It provides an interactive chat interface with AI capabilities, code analysis, and LSP integration
-to assist developers in writing, debugging, and understanding code directly from the terminal.`,
+	Use:   "ii",
+	Short: "Intelligence Interface - AI-powered desktop environment meta-system",
+	Long: `Intelligence Interface is an AI-powered desktop environment meta-system that evolves through conversation.
+It provides an interactive interface with Caronex orchestration, specialized agents, and space-based computing
+to create persistent, customizable environments that adapt and improve over time.`,
 	Example: `
   # Run in interactive mode
-  opencode
+  ii
 
   # Run with debug logging
-  opencode -d
+  ii -d
 
   # Run with debug logging in a specific directory
-  opencode -d -c /path/to/project
+  ii -d -c /path/to/project
 
   # Print version
-  opencode -v
+  ii -v
 
   # Run a single non-interactive prompt
-  opencode -p "Explain the use of context in Go"
+  ii -p "Explain the use of context in Go"
 
   # Run a single non-interactive prompt with JSON output format
-  opencode -p "Explain the use of context in Go" -f json
+  ii -p "Explain the use of context in Go" -f json
   `,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// If the help flag is set, show the help message
@@ -256,7 +256,7 @@ func setupSubscriptions(app *app.App, parentCtx context.Context) (chan tea.Msg, 
 	setupSubscriber(ctx, &wg, "sessions", app.Sessions.Subscribe, ch)
 	setupSubscriber(ctx, &wg, "messages", app.Messages.Subscribe, ch)
 	setupSubscriber(ctx, &wg, "permissions", app.Permissions.Subscribe, ch)
-	setupSubscriber(ctx, &wg, "coderAgent", app.CoderAgent.Subscribe, ch)
+	setupSubscriber(ctx, &wg, "caronexAgent", app.CaronexAgent.Subscribe, ch)
 
 	cleanupFunc := func() {
 		logging.Info("Cancelling all subscriptions")

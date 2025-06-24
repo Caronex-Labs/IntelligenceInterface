@@ -8,19 +8,20 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/opencode-ai/opencode/internal/core/config"
-	"github.com/opencode-ai/opencode/internal/diff"
-	"github.com/opencode-ai/opencode/internal/history"
-	"github.com/opencode-ai/opencode/internal/pubsub"
-	"github.com/opencode-ai/opencode/internal/session"
-	"github.com/opencode-ai/opencode/internal/tui/styles"
-	"github.com/opencode-ai/opencode/internal/tui/theme"
+	"github.com/caronex/intelligence-interface/internal/core/config"
+	"github.com/caronex/intelligence-interface/internal/diff"
+	"github.com/caronex/intelligence-interface/internal/history"
+	"github.com/caronex/intelligence-interface/internal/pubsub"
+	"github.com/caronex/intelligence-interface/internal/session"
+	"github.com/caronex/intelligence-interface/internal/tui/styles"
+	"github.com/caronex/intelligence-interface/internal/tui/theme"
 )
 
 type sidebarCmp struct {
 	width, height int
 	session       session.Session
 	history       history.Service
+	agentMode     AgentModeInfo
 	modFiles      map[string]struct {
 		additions int
 		removals  int
@@ -77,6 +78,10 @@ func (m *sidebarCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return <-filesCh
 			}
 		}
+	case AgentSwitchedMsg:
+		if agentMode, ok := msg.AgentMode.(AgentModeInfo); ok {
+			m.agentMode = agentMode
+		}
 	}
 	return m, nil
 }
@@ -92,7 +97,7 @@ func (m *sidebarCmp) View() string {
 		Render(
 			lipgloss.JoinVertical(
 				lipgloss.Top,
-				header(m.width),
+				headerWithMode(m.width, m.agentMode),
 				" ",
 				m.sessionSection(),
 				" ",
@@ -239,6 +244,7 @@ func NewSidebarCmp(session session.Session, history history.Service) tea.Model {
 	return &sidebarCmp{
 		session: session,
 		history: history,
+		agentMode: AgentModeInfo{Mode: "Coder", IsManagerMode: false}, // Default to Coder mode
 	}
 }
 

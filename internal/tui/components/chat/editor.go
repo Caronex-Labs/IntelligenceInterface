@@ -12,15 +12,15 @@ import (
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/opencode-ai/opencode/internal/app"
-	"github.com/opencode-ai/opencode/internal/core/logging"
-	"github.com/opencode-ai/opencode/internal/message"
-	"github.com/opencode-ai/opencode/internal/session"
-	"github.com/opencode-ai/opencode/internal/tui/components/dialog"
-	"github.com/opencode-ai/opencode/internal/tui/layout"
-	"github.com/opencode-ai/opencode/internal/tui/styles"
-	"github.com/opencode-ai/opencode/internal/tui/theme"
-	"github.com/opencode-ai/opencode/internal/tui/util"
+	"github.com/caronex/intelligence-interface/internal/app"
+	"github.com/caronex/intelligence-interface/internal/core/logging"
+	"github.com/caronex/intelligence-interface/internal/message"
+	"github.com/caronex/intelligence-interface/internal/session"
+	"github.com/caronex/intelligence-interface/internal/tui/components/dialog"
+	"github.com/caronex/intelligence-interface/internal/tui/layout"
+	"github.com/caronex/intelligence-interface/internal/tui/styles"
+	"github.com/caronex/intelligence-interface/internal/tui/theme"
+	"github.com/caronex/intelligence-interface/internal/tui/util"
 )
 
 type editorCmp struct {
@@ -31,6 +31,7 @@ type editorCmp struct {
 	textarea    textarea.Model
 	attachments []message.Attachment
 	deleteMode  bool
+	agentMode   AgentModeInfo // Current agent mode for display
 }
 
 type EditorKeyMaps struct {
@@ -120,7 +121,7 @@ func (m *editorCmp) Init() tea.Cmd {
 }
 
 func (m *editorCmp) send() tea.Cmd {
-	if m.app.CoderAgent.IsSessionBusy(m.session.ID) {
+	if m.app.CaronexAgent.IsSessionBusy(m.session.ID) {
 		return util.ReportWarn("Agent is working, please wait...")
 	}
 
@@ -144,12 +145,24 @@ func (m *editorCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
 	case dialog.ThemeChangedMsg:
-		m.textarea = CreateTextArea(&m.textarea)
+		m.textarea = CreateTextAreaWithMode(&m.textarea, m.agentMode)
 	case dialog.CompletionSelectedMsg:
 		existingValue := m.textarea.Value()
 		modifiedValue := strings.Replace(existingValue, msg.SearchString, msg.CompletionValue, 1)
 
 		m.textarea.SetValue(modifiedValue)
+		return m, nil
+	case AgentSwitchedMsg:
+		// Handle agent mode changes
+		if agentMode, ok := msg.AgentMode.(interface {
+			String() string
+			IsManagerAgent() bool
+		}); ok {
+			m.agentMode.Mode = agentMode.String()
+			m.agentMode.IsManagerMode = agentMode.IsManagerAgent()
+			// Update textarea styling and placeholder based on mode
+			m.textarea = CreateTextAreaWithMode(&m.textarea, m.agentMode)
+		}
 		return m, nil
 	case SessionSelectedMsg:
 		if msg.ID != m.session.ID {
@@ -189,7 +202,7 @@ func (m *editorCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if key.Matches(msg, editorMaps.OpenEditor) {
-			if m.app.CoderAgent.IsSessionBusy(m.session.ID) {
+			if m.app.CaronexAgent.IsSessionBusy(m.session.ID) {
 				return m, util.ReportWarn("Agent is working, please wait...")
 			}
 			return m, m.openEditor()
@@ -280,10 +293,20 @@ func (m *editorCmp) BindingKeys() []key.Binding {
 }
 
 func CreateTextArea(existing *textarea.Model) textarea.Model {
+	return CreateTextAreaWithMode(existing, AgentModeInfo{Mode: "Coder", IsManagerMode: false})
+}
+
+func CreateTextAreaWithMode(existing *textarea.Model, modeInfo AgentModeInfo) textarea.Model {
 	t := theme.CurrentTheme()
 	bgColor := t.Background()
 	textColor := t.Text()
 	textMutedColor := t.TextMuted()
+	
+	// Use Caronex colors for manager mode
+	if modeInfo.IsManagerMode {
+		bgColor = t.CaronexBackground()
+		textColor = t.CaronexPrimary()
+	}
 
 	ta := textarea.New()
 	ta.BlurredStyle.Base = styles.BaseStyle().Background(bgColor).Foreground(textColor)
@@ -294,6 +317,19 @@ func CreateTextArea(existing *textarea.Model) textarea.Model {
 	ta.FocusedStyle.CursorLine = styles.BaseStyle().Background(bgColor)
 	ta.FocusedStyle.Placeholder = styles.BaseStyle().Background(bgColor).Foreground(textMutedColor)
 	ta.FocusedStyle.Text = styles.BaseStyle().Background(bgColor).Foreground(textColor)
+
+	// Set different border colors for manager mode
+	if modeInfo.IsManagerMode {
+		ta.FocusedStyle.Base = ta.FocusedStyle.Base.BorderForeground(t.CaronexBorder())
+		ta.BlurredStyle.Base = ta.BlurredStyle.Base.BorderForeground(t.CaronexBorder())
+	}
+
+	// Set mode-specific placeholder text
+	if modeInfo.IsManagerMode {
+		ta.Placeholder = "Ask Caronex for coordination, planning, or delegation..."
+	} else {
+		ta.Placeholder = "Ask for implementation help..."
+	}
 
 	ta.Prompt = " "
 	ta.ShowLineNumbers = false
@@ -310,9 +346,11 @@ func CreateTextArea(existing *textarea.Model) textarea.Model {
 }
 
 func NewEditorCmp(app *app.App) tea.Model {
-	ta := CreateTextArea(nil)
+	defaultMode := AgentModeInfo{Mode: "Coder", IsManagerMode: false}
+	ta := CreateTextAreaWithMode(nil, defaultMode)
 	return &editorCmp{
-		app:      app,
-		textarea: ta,
+		app:       app,
+		textarea:  ta,
+		agentMode: defaultMode,
 	}
 }

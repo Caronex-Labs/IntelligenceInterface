@@ -3,23 +3,21 @@ package app
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"maps"
 	"sync"
 	"time"
 
-	"github.com/opencode-ai/opencode/internal/core/config"
-	"github.com/opencode-ai/opencode/internal/db"
-	"github.com/opencode-ai/opencode/internal/format"
-	"github.com/opencode-ai/opencode/internal/history"
-	"github.com/opencode-ai/opencode/internal/llm/agent"
-	"github.com/opencode-ai/opencode/internal/core/logging"
-	"github.com/opencode-ai/opencode/internal/lsp"
-	"github.com/opencode-ai/opencode/internal/message"
-	"github.com/opencode-ai/opencode/internal/permission"
-	"github.com/opencode-ai/opencode/internal/session"
-	"github.com/opencode-ai/opencode/internal/tui/theme"
+	"github.com/caronex/intelligence-interface/internal/core/config"
+	"github.com/caronex/intelligence-interface/internal/db"
+	"github.com/caronex/intelligence-interface/internal/format"
+	"github.com/caronex/intelligence-interface/internal/history"
+	"github.com/caronex/intelligence-interface/internal/core/logging"
+	"github.com/caronex/intelligence-interface/internal/lsp"
+	"github.com/caronex/intelligence-interface/internal/message"
+	"github.com/caronex/intelligence-interface/internal/permission"
+	"github.com/caronex/intelligence-interface/internal/session"
+	"github.com/caronex/intelligence-interface/internal/tui/theme"
 )
 
 type App struct {
@@ -27,8 +25,6 @@ type App struct {
 	Messages    message.Service
 	History     history.Service
 	Permissions permission.Service
-
-	CoderAgent agent.Service
 
 	LSPClients map[string]*lsp.Client
 
@@ -58,24 +54,6 @@ func New(ctx context.Context, conn *sql.DB) (*App, error) {
 
 	// Initialize LSP clients in the background
 	go app.initLSPClients(ctx)
-
-	var err error
-	app.CoderAgent, err = agent.NewAgent(
-		config.AgentCoder,
-		app.Sessions,
-		app.Messages,
-		agent.CoderAgentTools(
-			app.Permissions,
-			app.Sessions,
-			app.Messages,
-			app.History,
-			app.LSPClients,
-		),
-	)
-	if err != nil {
-		logging.Error("Failed to create coder agent", err)
-		return nil, err
-	}
 
 	return app, nil
 }
@@ -128,36 +106,8 @@ func (a *App) RunNonInteractive(ctx context.Context, prompt string, outputFormat
 	// Automatically approve all permission requests for this non-interactive session
 	a.Permissions.AutoApproveSession(sess.ID)
 
-	done, err := a.CoderAgent.Run(ctx, sess.ID, prompt)
-	if err != nil {
-		return fmt.Errorf("failed to start agent processing stream: %w", err)
-	}
-
-	result := <-done
-	if result.Error != nil {
-		if errors.Is(result.Error, context.Canceled) || errors.Is(result.Error, agent.ErrRequestCancelled) {
-			logging.Info("Agent processing cancelled", "session_id", sess.ID)
-			return nil
-		}
-		return fmt.Errorf("agent processing failed: %w", result.Error)
-	}
-
-	// Stop spinner before printing output
-	if !quiet && spinner != nil {
-		spinner.Stop()
-	}
-
-	// Get the text content from the response
-	content := "No content available"
-	if result.Message.Content().String() != "" {
-		content = result.Message.Content().String()
-	}
-
-	fmt.Println(format.FormatOutput(content, outputFormat))
-
-	logging.Info("Non-interactive run completed", "session_id", sess.ID)
-
-	return nil
+	// TODO: Initialize Caronex agent for non-interactive mode
+	return fmt.Errorf("non-interactive mode requires Caronex agent initialization")
 }
 
 // Shutdown performs a clean shutdown of the application

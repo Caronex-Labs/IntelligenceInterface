@@ -10,15 +10,20 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/opencode-ai/opencode/internal/app"
-	"github.com/opencode-ai/opencode/internal/message"
-	"github.com/opencode-ai/opencode/internal/pubsub"
-	"github.com/opencode-ai/opencode/internal/session"
-	"github.com/opencode-ai/opencode/internal/tui/components/dialog"
-	"github.com/opencode-ai/opencode/internal/tui/styles"
-	"github.com/opencode-ai/opencode/internal/tui/theme"
-	"github.com/opencode-ai/opencode/internal/tui/util"
+	"github.com/caronex/intelligence-interface/internal/app"
+	"github.com/caronex/intelligence-interface/internal/message"
+	"github.com/caronex/intelligence-interface/internal/pubsub"
+	"github.com/caronex/intelligence-interface/internal/session"
+	"github.com/caronex/intelligence-interface/internal/tui/components/dialog"
+	"github.com/caronex/intelligence-interface/internal/tui/styles"
+	"github.com/caronex/intelligence-interface/internal/tui/theme"
+	"github.com/caronex/intelligence-interface/internal/tui/util"
 )
+
+// AgentSwitchedMsg is sent when the current agent mode changes
+type AgentSwitchedMsg struct {
+	AgentMode interface{}
+}
 
 type cacheItem struct {
 	width   int
@@ -36,6 +41,7 @@ type messagesCmp struct {
 	spinner       spinner.Model
 	rendering     bool
 	attachments   viewport.Model
+	agentMode     AgentModeInfo // Current agent mode for display
 }
 type renderFinishedMsg struct{}
 
@@ -86,6 +92,20 @@ func (m *messagesCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.messages = make([]message.Message, 0)
 		m.currentMsgID = ""
 		m.rendering = false
+		return m, nil
+		
+	// Handle agent mode changes from TUI
+	case AgentSwitchedMsg:
+		// Check if AgentMode has String() and IsManagerAgent() methods
+		if agentMode, ok := msg.AgentMode.(interface {
+			String() string
+			IsManagerAgent() bool
+		}); ok {
+			m.agentMode.Mode = agentMode.String()
+			m.agentMode.IsManagerMode = agentMode.IsManagerAgent()
+			// Clear cached content to force re-render with new styling
+			m.rerender()
+		}
 		return m, nil
 
 	case tea.KeyMsg:
@@ -169,7 +189,7 @@ func (m *messagesCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *messagesCmp) IsAgentWorking() bool {
-	return m.app.CoderAgent.IsSessionBusy(m.session.ID)
+	return m.app.CaronexAgent.IsSessionBusy(m.session.ID)
 }
 
 func formatTimeDifference(unixTime1, unixTime2 int64) string {
@@ -377,7 +397,7 @@ func (m *messagesCmp) help() string {
 
 	text := ""
 
-	if m.app.CoderAgent.IsBusy() {
+	if m.app.CaronexAgent.IsBusy() {
 		text += lipgloss.JoinHorizontal(
 			lipgloss.Left,
 			baseStyle.Foreground(t.TextMuted()).Bold(true).Render("press "),
@@ -406,7 +426,7 @@ func (m *messagesCmp) initialScreen() string {
 	return baseStyle.Width(m.width).Render(
 		lipgloss.JoinVertical(
 			lipgloss.Top,
-			header(m.width),
+			headerWithMode(m.width, m.agentMode),
 			"",
 			lspsConfigured(m.width),
 		),
@@ -483,5 +503,6 @@ func NewMessagesCmp(app *app.App) tea.Model {
 		viewport:      vp,
 		spinner:       s,
 		attachments:   attachmets,
+		agentMode:     AgentModeInfo{Mode: "Coder", IsManagerMode: false}, // Default mode
 	}
 }

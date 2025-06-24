@@ -5,7 +5,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/opencode-ai/opencode/internal/pubsub"
+	"github.com/caronex/intelligence-interface/internal/pubsub"
 )
 
 func TestNewPermissionService(t *testing.T) {

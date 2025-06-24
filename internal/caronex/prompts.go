@@ -1,7 +1,7 @@
 package caronex
 
 import (
-	"github.com/opencode-ai/opencode/internal/llm/models"
+	"github.com/caronex/intelligence-interface/internal/llm/models"
 )
 
 // CaronexPrompt returns the system prompt for the Caronex manager agent

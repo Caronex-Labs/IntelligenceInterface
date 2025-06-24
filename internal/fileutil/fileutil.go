@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/bmatcuk/doublestar/v4"
-	"github.com/opencode-ai/opencode/internal/core/logging"
+	"github.com/caronex/intelligence-interface/internal/core/logging"
 )
 
 var (

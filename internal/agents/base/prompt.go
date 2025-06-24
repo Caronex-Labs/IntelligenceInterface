@@ -7,33 +7,26 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/opencode-ai/opencode/internal/core/config"
-	"github.com/opencode-ai/opencode/internal/llm/models"
-	"github.com/opencode-ai/opencode/internal/core/logging"
+	"github.com/caronex/intelligence-interface/internal/core/config"
+	"github.com/caronex/intelligence-interface/internal/llm/models"
+	"github.com/caronex/intelligence-interface/internal/core/logging"
 )
 
 func GetAgentPrompt(agentName config.AgentName, provider models.ModelProvider) string {
 	basePrompt := ""
 	switch agentName {
-	case config.AgentCoder:
-		basePrompt = CoderPrompt(provider)
-	case config.AgentTitle:
-		basePrompt = TitlePrompt(provider)
-	case config.AgentTask:
-		basePrompt = TaskPrompt(provider)
-	case config.AgentSummarizer:
-		basePrompt = SummarizerPrompt(provider)
+	case config.AgentCaronex:
+		// TODO: Add Caronex-specific prompt
+		basePrompt = "You are Caronex, the central orchestrator of the Intelligence Interface meta-system."
 	default:
 		basePrompt = "You are a helpful assistant"
 	}
 
-	if agentName == config.AgentCoder || agentName == config.AgentTask {
-		// Add context from project-specific instruction files if they exist
-		contextContent := getContextFromPaths()
-		logging.Debug("Context content", "Context", contextContent)
-		if contextContent != "" {
-			return fmt.Sprintf("%s\n\n# Project-Specific Context\n Make sure to follow the instructions in the context below\n%s", basePrompt, contextContent)
-		}
+	// Add context from project-specific instruction files if they exist
+	contextContent := getContextFromPaths()
+	logging.Debug("Context content", "Context", contextContent)
+	if contextContent != "" {
+		return fmt.Sprintf("%s\n\n# Project-Specific Context\n Make sure to follow the instructions in the context below\n%s", basePrompt, contextContent)
 	}
 	return basePrompt
 }

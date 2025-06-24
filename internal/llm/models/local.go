@@ -10,7 +10,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/opencode-ai/opencode/internal/core/logging"
+	"github.com/caronex/intelligence-interface/internal/core/logging"
 	"github.com/spf13/viper"
 )
 

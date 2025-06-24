@@ -48,7 +48,7 @@ This creates a **bootstrap compiler** effect where the system continuously impro
 ## Success Criteria
 
 ### Phase 1 (Setup) - Current
-- ✅ Successfully fork and understand OpenCode architecture
+- ✅ Successfully fork and understand Intelligence Interface architecture
 - ✅ Document features, logic, and directory structure
 - ⏳ Achieve 100% test coverage
 - ⏳ Validate system functionality
@@ -85,7 +85,7 @@ This creates a **bootstrap compiler** effect where the system continuously impro
 
 ## Technical Foundation
 
-Built on OpenCode's proven architecture:
+Built on Intelligence Interface's proven architecture:
 - **Language**: Go with Bubble Tea TUI framework
 - **Database**: SQLite with automatic migrations
 - **Protocols**: LSP and MCP for tool integration
@@ -102,7 +102,7 @@ Built on OpenCode's proven architecture:
 6. **Agent-Everything**: Every capability is an intelligent agent that can evolve
 
 ### Competitive Advantages
-- Forked from proven OpenCode foundation
+- Forked from proven Intelligence Interface foundation
 - Designed specifically for AI-first workflows
 - Template system eliminates repetitive AI coding
 - Future-proof architecture for emerging AI capabilities
@@ -110,7 +110,7 @@ Built on OpenCode's proven architecture:
 ## Constraints & Considerations
 
 1. **Token Optimization**: Must minimize AI token usage without sacrificing quality
-2. **Backward Compatibility**: Maintain OpenCode feature parity during refactor
+2. **Backward Compatibility**: Maintain Intelligence Interface feature parity during refactor
 3. **Learning Curve**: Balance power with usability for different user types
 4. **Resource Usage**: Keep system lightweight and responsive
 

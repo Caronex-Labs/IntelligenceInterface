@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/opencode-ai/opencode/internal/llm/models"
-	"github.com/opencode-ai/opencode/internal/core/logging"
+	"github.com/caronex/intelligence-interface/internal/llm/models"
+	"github.com/caronex/intelligence-interface/internal/core/logging"
 	"github.com/spf13/viper"
 )
 
@@ -36,11 +36,7 @@ type MCPServer struct {
 type AgentName string
 
 const (
-	AgentCoder      AgentName = "coder"
-	AgentSummarizer AgentName = "summarizer"
-	AgentTask       AgentName = "task"
-	AgentTitle      AgentName = "title"
-	AgentCaronex    AgentName = "caronex"
+	AgentCaronex AgentName = "caronex"
 )
 
 // Agent defines configuration for different LLM models and their token limits.
@@ -48,6 +44,99 @@ type Agent struct {
 	Model           models.ModelID `json:"model"`
 	MaxTokens       int64          `json:"maxTokens"`
 	ReasoningEffort string         `json:"reasoningEffort"` // For openai models low,medium,heigh
+	Specialization  *AgentSpecialization `json:"specialization,omitempty"`
+}
+
+// AgentSpecialization defines advanced configuration for agent specialization
+type AgentSpecialization struct {
+	LearningRate       float64 `json:"learning_rate,omitempty"`
+	CoordinationMode   string  `json:"coordination_mode,omitempty"`
+	EvolutionCapable   bool    `json:"evolution_capable,omitempty"`
+	MetaSystemAware    bool    `json:"meta_system_aware,omitempty"`
+}
+
+// CoordinationConfig defines Caronex coordination settings
+type CoordinationConfig struct {
+	MaxConcurrentAgents   int                    `json:"max_concurrent_agents,omitempty"`
+	SpaceMemoryLimit      string                 `json:"space_memory_limit,omitempty"`
+	EvolutionCycle        string                 `json:"evolution_cycle,omitempty"`
+	AgentSpawningEnabled  bool                   `json:"agent_spawning_enabled,omitempty"`
+	CommunicationProtocol string                 `json:"communication_protocol,omitempty"`
+	LoadBalancing         map[string]interface{} `json:"load_balancing,omitempty"`
+}
+
+// SpaceManagementConfig defines space management settings for Caronex
+type SpaceManagementConfig struct {
+	MaxSpaces              int    `json:"max_spaces,omitempty"`
+	DefaultSpaceTemplate   string `json:"default_space_template,omitempty"`
+	SpaceIsolationLevel    string `json:"space_isolation_level,omitempty"`
+	AutoSpaceCleanup       bool   `json:"auto_space_cleanup,omitempty"`
+	SpacePersistencePolicy string `json:"space_persistence_policy,omitempty"`
+}
+
+// EvolutionConfig defines system evolution settings
+type EvolutionConfig struct {
+	Enabled                bool   `json:"enabled,omitempty"`
+	BootstrapCompilerPath  string `json:"bootstrap_compiler_path,omitempty"`
+	GoldenRepositoryURL    string `json:"golden_repository_url,omitempty"`
+	SafetyChecksEnabled    bool   `json:"safety_checks_enabled,omitempty"`
+	RollbackCapability     bool   `json:"rollback_capability,omitempty"`
+}
+
+// LearningConfig defines agent learning settings
+type LearningConfig struct {
+	Enabled              bool    `json:"enabled,omitempty"`
+	PatternRecognition   bool    `json:"pattern_recognition,omitempty"`
+	KnowledgeRetention   string  `json:"knowledge_retention,omitempty"`
+	AdaptationThreshold  float64 `json:"adaptation_threshold,omitempty"`
+	LearningHistoryLimit int     `json:"learning_history_limit,omitempty"`
+}
+
+// UILayoutConfig defines UI layout configuration for spaces
+type UILayoutConfig struct {
+	Type          string                 `json:"type,omitempty"`
+	Panels        []PanelConfig          `json:"panels,omitempty"`
+	DefaultTheme  string                 `json:"default_theme,omitempty"`
+	Customizable  bool                   `json:"customizable,omitempty"`
+	Configuration map[string]interface{} `json:"configuration,omitempty"`
+}
+
+// PanelConfig defines individual panel configuration
+type PanelConfig struct {
+	ID       string                 `json:"id"`
+	Type     string                 `json:"type"`
+	Position string                 `json:"position"`
+	Size     string                 `json:"size"`
+	Config   map[string]interface{} `json:"config,omitempty"`
+}
+
+// PersistenceConfig defines space persistence settings
+type PersistenceConfig struct {
+	Enabled        bool   `json:"enabled,omitempty"`
+	StorageBackend string `json:"storage_backend,omitempty"`
+	RetentionDays  int    `json:"retention_days,omitempty"`
+	BackupEnabled  bool   `json:"backup_enabled,omitempty"`
+}
+
+// ResourceLimitsConfig defines resource limits for spaces
+type ResourceLimitsConfig struct {
+	MaxMemoryMB   int64 `json:"max_memory_mb,omitempty"`
+	MaxCPUPercent int   `json:"max_cpu_percent,omitempty"`
+	MaxAgents     int   `json:"max_agents,omitempty"`
+	MaxTools      int   `json:"max_tools,omitempty"`
+}
+
+// SpaceConfig defines configuration for persistent desktop environments
+type SpaceConfig struct {
+	ID                 string                 `json:"id"`
+	Name               string                 `json:"name"`
+	Type               string                 `json:"type"`
+	UILayout           UILayoutConfig         `json:"ui_layout,omitempty"`
+	AssignedAgents     []string               `json:"assigned_agents,omitempty"`
+	Persistence        PersistenceConfig      `json:"persistence,omitempty"`
+	ResourceLimits     ResourceLimitsConfig   `json:"resource_limits,omitempty"`
+	EvolutionEnabled   bool                   `json:"evolution_enabled,omitempty"`
+	Configuration      map[string]interface{} `json:"configuration,omitempty"`
 }
 
 // Provider defines configuration for an LLM provider.
@@ -80,6 +169,17 @@ type ShellConfig struct {
 	Args []string `json:"args,omitempty"`
 }
 
+// CaronexConfig defines the central orchestrator configuration
+type CaronexConfig struct {
+	Enabled           bool                    `json:"enabled,omitempty"`
+	Coordination      CoordinationConfig      `json:"coordination,omitempty"`
+	SpaceManagement   SpaceManagementConfig   `json:"space_management,omitempty"`
+	Evolution         EvolutionConfig         `json:"evolution,omitempty"`
+	Learning          LearningConfig          `json:"learning,omitempty"`
+	ManagementMode    bool                    `json:"management_mode,omitempty"`
+	Hotkey            string                  `json:"hotkey,omitempty"`
+}
+
 // Config is the main configuration structure for the application.
 type Config struct {
 	Data         Data                              `json:"data"`
@@ -88,6 +188,8 @@ type Config struct {
 	Providers    map[models.ModelProvider]Provider `json:"providers,omitempty"`
 	LSP          map[string]LSPConfig              `json:"lsp,omitempty"`
 	Agents       map[AgentName]Agent               `json:"agents,omitempty"`
+	Caronex      CaronexConfig                     `json:"caronex,omitempty"`
+	Spaces       map[string]SpaceConfig            `json:"spaces,omitempty"`
 	Debug        bool                              `json:"debug,omitempty"`
 	DebugLSP     bool                              `json:"debugLSP,omitempty"`
 	ContextPaths []string                          `json:"contextPaths,omitempty"`
@@ -98,9 +200,9 @@ type Config struct {
 
 // Application constants
 const (
-	defaultDataDirectory = ".opencode"
+	defaultDataDirectory = ".intelligence-interface"
 	defaultLogLevel      = "info"
-	appName              = "opencode"
+	appName              = "intelligence-interface"
 
 	MaxTokensFallbackDefault = 4096
 )
@@ -113,8 +215,10 @@ var defaultContextPaths = []string{
 	"CLAUDE.local.md",
 	"opencode.md",
 	"opencode.local.md",
-	"OpenCode.md",
-	"OpenCode.local.md",
+	"intelligence-interface.md",
+	"intelligence-interface.local.md",
+	"Intelligence Interface.md",
+	"Intelligence Interface.local.md",
 	"OPENCODE.md",
 	"OPENCODE.local.md",
 }
@@ -135,6 +239,7 @@ func Load(workingDir string, debug bool) (*Config, error) {
 		MCPServers: make(map[string]MCPServer),
 		Providers:  make(map[models.ModelProvider]Provider),
 		LSP:        make(map[string]LSPConfig),
+		Spaces:     make(map[string]SpaceConfig),
 	}
 
 	configureViper()
@@ -199,11 +304,6 @@ func Load(workingDir string, debug bool) (*Config, error) {
 		cfg.Agents = make(map[AgentName]Agent)
 	}
 
-	// Override the max tokens for title agent
-	cfg.Agents[AgentTitle] = Agent{
-		Model:     cfg.Agents[AgentTitle].Model,
-		MaxTokens: 80,
-	}
 	return cfg, nil
 }
 
@@ -222,7 +322,7 @@ func configureViper() {
 func setDefaults(debug bool) {
 	viper.SetDefault("data.directory", defaultDataDirectory)
 	viper.SetDefault("contextPaths", defaultContextPaths)
-	viper.SetDefault("tui.theme", "opencode")
+	viper.SetDefault("tui.theme", "intelligence-interface")
 	viper.SetDefault("autoCompact", true)
 
 	// Set default shell from environment or fallback to /bin/bash
@@ -233,6 +333,9 @@ func setDefaults(debug bool) {
 	viper.SetDefault("shell.path", shellPath)
 	viper.SetDefault("shell.args", []string{"-l"})
 
+	// Meta-system defaults
+	setMetaSystemDefaults()
+
 	if debug {
 		viper.SetDefault("debug", true)
 		viper.Set("log.level", "debug")
@@ -240,6 +343,40 @@ func setDefaults(debug bool) {
 		viper.SetDefault("debug", false)
 		viper.SetDefault("log.level", defaultLogLevel)
 	}
+}
+
+// setMetaSystemDefaults configures default values for meta-system features
+func setMetaSystemDefaults() {
+	// Caronex defaults
+	viper.SetDefault("caronex.enabled", true)
+	viper.SetDefault("caronex.management_mode", false)
+	viper.SetDefault("caronex.hotkey", "ctrl+m")
+	
+	// Coordination defaults
+	viper.SetDefault("caronex.coordination.max_concurrent_agents", 10)
+	viper.SetDefault("caronex.coordination.space_memory_limit", "1GB")
+	viper.SetDefault("caronex.coordination.evolution_cycle", "24h")
+	viper.SetDefault("caronex.coordination.agent_spawning_enabled", true)
+	viper.SetDefault("caronex.coordination.communication_protocol", "pubsub")
+	
+	// Space management defaults
+	viper.SetDefault("caronex.space_management.max_spaces", 20)
+	viper.SetDefault("caronex.space_management.default_space_template", "development")
+	viper.SetDefault("caronex.space_management.space_isolation_level", "standard")
+	viper.SetDefault("caronex.space_management.auto_space_cleanup", true)
+	viper.SetDefault("caronex.space_management.space_persistence_policy", "session")
+	
+	// Evolution defaults
+	viper.SetDefault("caronex.evolution.enabled", false) // Disabled by default for safety
+	viper.SetDefault("caronex.evolution.safety_checks_enabled", true)
+	viper.SetDefault("caronex.evolution.rollback_capability", true)
+	
+	// Learning defaults
+	viper.SetDefault("caronex.learning.enabled", true)
+	viper.SetDefault("caronex.learning.pattern_recognition", true)
+	viper.SetDefault("caronex.learning.knowledge_retention", "session")
+	viper.SetDefault("caronex.learning.adaptation_threshold", 0.8)
+	viper.SetDefault("caronex.learning.learning_history_limit", 1000)
 }
 
 // setProviderDefaults configures LLM provider defaults based on provider provided by
@@ -281,82 +418,55 @@ func setProviderDefaults() {
 
 	// Anthropic configuration
 	if key := viper.GetString("providers.anthropic.apiKey"); strings.TrimSpace(key) != "" {
-		viper.SetDefault("agents.coder.model", models.Claude4Sonnet)
-		viper.SetDefault("agents.summarizer.model", models.Claude4Sonnet)
-		viper.SetDefault("agents.task.model", models.Claude4Sonnet)
-		viper.SetDefault("agents.title.model", models.Claude4Sonnet)
+		viper.SetDefault("agents.caronex.model", models.Claude4Sonnet)
 		return
 	}
 
 	// OpenAI configuration
 	if key := viper.GetString("providers.openai.apiKey"); strings.TrimSpace(key) != "" {
-		viper.SetDefault("agents.coder.model", models.GPT41)
-		viper.SetDefault("agents.summarizer.model", models.GPT41)
-		viper.SetDefault("agents.task.model", models.GPT41Mini)
-		viper.SetDefault("agents.title.model", models.GPT41Mini)
+		viper.SetDefault("agents.caronex.model", models.GPT41)
 		return
 	}
 
 	// Google Gemini configuration
 	if key := viper.GetString("providers.gemini.apiKey"); strings.TrimSpace(key) != "" {
-		viper.SetDefault("agents.coder.model", models.Gemini25)
-		viper.SetDefault("agents.summarizer.model", models.Gemini25)
-		viper.SetDefault("agents.task.model", models.Gemini25Flash)
-		viper.SetDefault("agents.title.model", models.Gemini25Flash)
+		viper.SetDefault("agents.caronex.model", models.Gemini25)
 		return
 	}
 
 	// Groq configuration
 	if key := viper.GetString("providers.groq.apiKey"); strings.TrimSpace(key) != "" {
-		viper.SetDefault("agents.coder.model", models.QWENQwq)
-		viper.SetDefault("agents.summarizer.model", models.QWENQwq)
-		viper.SetDefault("agents.task.model", models.QWENQwq)
-		viper.SetDefault("agents.title.model", models.QWENQwq)
+		viper.SetDefault("agents.caronex.model", models.QWENQwq)
 		return
 	}
 
 	// OpenRouter configuration
 	if key := viper.GetString("providers.openrouter.apiKey"); strings.TrimSpace(key) != "" {
-		viper.SetDefault("agents.coder.model", models.OpenRouterClaude37Sonnet)
-		viper.SetDefault("agents.summarizer.model", models.OpenRouterClaude37Sonnet)
-		viper.SetDefault("agents.task.model", models.OpenRouterClaude37Sonnet)
-		viper.SetDefault("agents.title.model", models.OpenRouterClaude35Haiku)
+		viper.SetDefault("agents.caronex.model", models.OpenRouterClaude37Sonnet)
 		return
 	}
 
 	// XAI configuration
 	if key := viper.GetString("providers.xai.apiKey"); strings.TrimSpace(key) != "" {
-		viper.SetDefault("agents.coder.model", models.XAIGrok3Beta)
-		viper.SetDefault("agents.summarizer.model", models.XAIGrok3Beta)
-		viper.SetDefault("agents.task.model", models.XAIGrok3Beta)
-		viper.SetDefault("agents.title.model", models.XAiGrok3MiniFastBeta)
+		viper.SetDefault("agents.caronex.model", models.XAIGrok3Beta)
 		return
 	}
 
 	// AWS Bedrock configuration
 	if hasAWSCredentials() {
-		viper.SetDefault("agents.coder.model", models.BedrockClaude37Sonnet)
-		viper.SetDefault("agents.summarizer.model", models.BedrockClaude37Sonnet)
-		viper.SetDefault("agents.task.model", models.BedrockClaude37Sonnet)
-		viper.SetDefault("agents.title.model", models.BedrockClaude37Sonnet)
+		viper.SetDefault("agents.caronex.model", models.BedrockClaude37Sonnet)
 		return
 	}
 
 	// Azure OpenAI configuration
 	if os.Getenv("AZURE_OPENAI_ENDPOINT") != "" {
-		viper.SetDefault("agents.coder.model", models.AzureGPT41)
-		viper.SetDefault("agents.summarizer.model", models.AzureGPT41)
-		viper.SetDefault("agents.task.model", models.AzureGPT41Mini)
-		viper.SetDefault("agents.title.model", models.AzureGPT41Mini)
+		viper.SetDefault("agents.caronex.model", models.AzureGPT41)
 		return
 	}
 
 	// Google Cloud VertexAI configuration
 	if hasVertexAICredentials() {
-		viper.SetDefault("agents.coder.model", models.VertexAIGemini25)
-		viper.SetDefault("agents.summarizer.model", models.VertexAIGemini25)
-		viper.SetDefault("agents.task.model", models.VertexAIGemini25Flash)
-		viper.SetDefault("agents.title.model", models.VertexAIGemini25Flash)
+		viper.SetDefault("agents.caronex.model", models.VertexAIGemini25)
 		return
 	}
 }
@@ -435,6 +545,45 @@ func applyDefaultValues() {
 			v.Type = MCPStdio
 			cfg.MCPServers[k] = v
 		}
+	}
+	
+	// Apply Caronex defaults if not set
+	if cfg.Caronex.Coordination.MaxConcurrentAgents == 0 {
+		cfg.Caronex.Coordination.MaxConcurrentAgents = 10
+	}
+	if cfg.Caronex.Coordination.SpaceMemoryLimit == "" {
+		cfg.Caronex.Coordination.SpaceMemoryLimit = "1GB"
+	}
+	if cfg.Caronex.Coordination.EvolutionCycle == "" {
+		cfg.Caronex.Coordination.EvolutionCycle = "24h"
+	}
+	if cfg.Caronex.Coordination.CommunicationProtocol == "" {
+		cfg.Caronex.Coordination.CommunicationProtocol = "pubsub"
+	}
+	
+	// Apply space management defaults
+	if cfg.Caronex.SpaceManagement.MaxSpaces == 0 {
+		cfg.Caronex.SpaceManagement.MaxSpaces = 20
+	}
+	if cfg.Caronex.SpaceManagement.DefaultSpaceTemplate == "" {
+		cfg.Caronex.SpaceManagement.DefaultSpaceTemplate = "development"
+	}
+	if cfg.Caronex.SpaceManagement.SpaceIsolationLevel == "" {
+		cfg.Caronex.SpaceManagement.SpaceIsolationLevel = "standard"
+	}
+	if cfg.Caronex.SpaceManagement.SpacePersistencePolicy == "" {
+		cfg.Caronex.SpaceManagement.SpacePersistencePolicy = "session"
+	}
+	
+	// Apply learning defaults
+	if cfg.Caronex.Learning.KnowledgeRetention == "" {
+		cfg.Caronex.Learning.KnowledgeRetention = "session"
+	}
+	if cfg.Caronex.Learning.AdaptationThreshold == 0 {
+		cfg.Caronex.Learning.AdaptationThreshold = 0.8
+	}
+	if cfg.Caronex.Learning.LearningHistoryLimit == 0 {
+		cfg.Caronex.Learning.LearningHistoryLimit = 1000
 	}
 }
 
@@ -600,6 +749,213 @@ func Validate() error {
 		}
 	}
 
+	// Validate meta-system configurations
+	if err := validateMetaSystemConfig(); err != nil {
+		return fmt.Errorf("meta-system config validation failed: %w", err)
+	}
+
+	return nil
+}
+
+// validateMetaSystemConfig validates meta-system specific configurations
+func validateMetaSystemConfig() error {
+	// Validate Caronex configuration
+	if err := validateCaronexConfig(); err != nil {
+		return fmt.Errorf("Caronex config validation failed: %w", err)
+	}
+
+	// Validate space configurations
+	if err := validateSpaceConfigs(); err != nil {
+		return fmt.Errorf("space config validation failed: %w", err)
+	}
+
+	// Validate agent specializations
+	if err := validateAgentSpecializations(); err != nil {
+		return fmt.Errorf("agent specialization validation failed: %w", err)
+	}
+
+	return nil
+}
+
+// validateCaronexConfig validates Caronex configuration parameters
+func validateCaronexConfig() error {
+	caronex := &cfg.Caronex
+
+	// Validate coordination settings
+	if caronex.Coordination.MaxConcurrentAgents < 0 {
+		logging.Warn("invalid max concurrent agents, setting to default", "value", caronex.Coordination.MaxConcurrentAgents)
+		caronex.Coordination.MaxConcurrentAgents = 10
+	}
+	if caronex.Coordination.MaxConcurrentAgents > 100 {
+		logging.Warn("max concurrent agents exceeds reasonable limit, adjusting", "value", caronex.Coordination.MaxConcurrentAgents)
+		caronex.Coordination.MaxConcurrentAgents = 100
+	}
+
+	// Validate communication protocol
+	validProtocols := []string{"pubsub", "direct", "queue", ""}
+	if caronex.Coordination.CommunicationProtocol != "" {
+		valid := false
+		for _, protocol := range validProtocols {
+			if caronex.Coordination.CommunicationProtocol == protocol {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			logging.Warn("invalid communication protocol, setting to default", "protocol", caronex.Coordination.CommunicationProtocol)
+			caronex.Coordination.CommunicationProtocol = "pubsub"
+		}
+	}
+
+	// Validate space management settings
+	if caronex.SpaceManagement.MaxSpaces < 0 {
+		logging.Warn("invalid max spaces, setting to default", "value", caronex.SpaceManagement.MaxSpaces)
+		caronex.SpaceManagement.MaxSpaces = 20
+	}
+	if caronex.SpaceManagement.MaxSpaces > 1000 {
+		logging.Warn("max spaces exceeds reasonable limit, adjusting", "value", caronex.SpaceManagement.MaxSpaces)
+		caronex.SpaceManagement.MaxSpaces = 1000
+	}
+
+	// Validate space isolation level
+	validIsolationLevels := []string{"none", "basic", "standard", "strict", ""}
+	if caronex.SpaceManagement.SpaceIsolationLevel != "" {
+		valid := false
+		for _, level := range validIsolationLevels {
+			if caronex.SpaceManagement.SpaceIsolationLevel == level {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			logging.Warn("invalid space isolation level, setting to default", "level", caronex.SpaceManagement.SpaceIsolationLevel)
+			caronex.SpaceManagement.SpaceIsolationLevel = "standard"
+		}
+	}
+
+	// Validate learning configuration
+	if caronex.Learning.AdaptationThreshold < 0.0 || caronex.Learning.AdaptationThreshold > 1.0 {
+		logging.Warn("adaptation threshold out of range, setting to default", "threshold", caronex.Learning.AdaptationThreshold)
+		caronex.Learning.AdaptationThreshold = 0.8
+	}
+
+	if caronex.Learning.LearningHistoryLimit < 0 {
+		logging.Warn("invalid learning history limit, setting to default", "limit", caronex.Learning.LearningHistoryLimit)
+		caronex.Learning.LearningHistoryLimit = 1000
+	}
+
+	return nil
+}
+
+// validateSpaceConfigs validates space configuration parameters
+func validateSpaceConfigs() error {
+	for spaceID, spaceConfig := range cfg.Spaces {
+		if spaceConfig.ID == "" {
+			logging.Warn("space missing ID, setting from key", "space_key", spaceID)
+			updatedConfig := spaceConfig
+			updatedConfig.ID = spaceID
+			cfg.Spaces[spaceID] = updatedConfig
+		}
+
+		if spaceConfig.Name == "" {
+			logging.Warn("space missing name, setting default", "space_id", spaceID)
+			updatedConfig := spaceConfig
+			updatedConfig.Name = fmt.Sprintf("Space %s", spaceID)
+			cfg.Spaces[spaceID] = updatedConfig
+		}
+
+		// Validate space type
+		validTypes := []string{"development", "knowledge_base", "social", "custom", ""}
+		if spaceConfig.Type != "" {
+			valid := false
+			for _, spaceType := range validTypes {
+				if spaceConfig.Type == spaceType {
+					valid = true
+					break
+				}
+			}
+			if !valid {
+				logging.Warn("invalid space type, setting to default", "space_id", spaceID, "type", spaceConfig.Type)
+				updatedConfig := spaceConfig
+				updatedConfig.Type = "custom"
+				cfg.Spaces[spaceID] = updatedConfig
+			}
+		}
+
+		// Validate resource limits
+		if spaceConfig.ResourceLimits.MaxMemoryMB < 0 {
+			logging.Warn("invalid memory limit, disabling", "space_id", spaceID, "memory_mb", spaceConfig.ResourceLimits.MaxMemoryMB)
+			updatedConfig := spaceConfig
+			updatedConfig.ResourceLimits.MaxMemoryMB = 0
+			cfg.Spaces[spaceID] = updatedConfig
+		}
+
+		if spaceConfig.ResourceLimits.MaxCPUPercent < 0 || spaceConfig.ResourceLimits.MaxCPUPercent > 100 {
+			logging.Warn("invalid CPU limit, disabling", "space_id", spaceID, "cpu_percent", spaceConfig.ResourceLimits.MaxCPUPercent)
+			updatedConfig := spaceConfig
+			updatedConfig.ResourceLimits.MaxCPUPercent = 0
+			cfg.Spaces[spaceID] = updatedConfig
+		}
+
+		// Validate persistence settings
+		validStorageBackends := []string{"memory", "disk", "database", ""}
+		if spaceConfig.Persistence.StorageBackend != "" {
+			valid := false
+			for _, backend := range validStorageBackends {
+				if spaceConfig.Persistence.StorageBackend == backend {
+					valid = true
+					break
+				}
+			}
+			if !valid {
+				logging.Warn("invalid storage backend, setting to default", "space_id", spaceID, "backend", spaceConfig.Persistence.StorageBackend)
+				updatedConfig := spaceConfig
+				updatedConfig.Persistence.StorageBackend = "memory"
+				cfg.Spaces[spaceID] = updatedConfig
+			}
+		}
+	}
+
+	return nil
+}
+
+// validateAgentSpecializations validates agent specialization configurations
+func validateAgentSpecializations() error {
+	for agentName, agent := range cfg.Agents {
+		if agent.Specialization == nil {
+			continue
+		}
+
+		spec := agent.Specialization
+
+		// Validate learning rate
+		if spec.LearningRate < 0.0 || spec.LearningRate > 1.0 {
+			logging.Warn("learning rate out of range, setting to default", "agent", agentName, "rate", spec.LearningRate)
+			spec.LearningRate = 0.1
+		}
+
+		// Validate coordination mode
+		validModes := []string{"cooperative", "competitive", "independent", "hierarchical", ""}
+		if spec.CoordinationMode != "" {
+			valid := false
+			for _, mode := range validModes {
+				if spec.CoordinationMode == mode {
+					valid = true
+					break
+				}
+			}
+			if !valid {
+				logging.Warn("invalid coordination mode, setting to default", "agent", agentName, "mode", spec.CoordinationMode)
+				spec.CoordinationMode = "cooperative"
+			}
+		}
+
+		// Update the agent with validated specialization
+		updatedAgent := agent
+		updatedAgent.Specialization = spec
+		cfg.Agents[agentName] = updatedAgent
+	}
+
 	return nil
 }
 
@@ -634,10 +990,7 @@ func getProviderAPIKey(provider models.ModelProvider) string {
 func setDefaultModelForAgent(agent AgentName) bool {
 	// Check providers in order of preference
 	if apiKey := os.Getenv("ANTHROPIC_API_KEY"); apiKey != "" {
-		maxTokens := int64(5000)
-		if agent == AgentTitle {
-			maxTokens = 80
-		}
+		maxTokens := int64(8000) // Higher token limit for Caronex manager agent
 		cfg.Agents[agent] = Agent{
 			Model:     models.Claude37Sonnet,
 			MaxTokens: maxTokens,
@@ -646,19 +999,9 @@ func setDefaultModelForAgent(agent AgentName) bool {
 	}
 
 	if apiKey := os.Getenv("OPENAI_API_KEY"); apiKey != "" {
-		var model models.ModelID
-		maxTokens := int64(5000)
+		model := models.GPT41
+		maxTokens := int64(8000) // Higher token limit for Caronex manager agent
 		reasoningEffort := ""
-
-		switch agent {
-		case AgentTitle:
-			model = models.GPT41Mini
-			maxTokens = 80
-		case AgentTask:
-			model = models.GPT41Mini
-		default:
-			model = models.GPT41
-		}
 
 		// Check if model supports reasoning
 		if modelInfo, ok := models.SupportedModels[model]; ok && modelInfo.CanReason {
@@ -674,19 +1017,9 @@ func setDefaultModelForAgent(agent AgentName) bool {
 	}
 
 	if apiKey := os.Getenv("OPENROUTER_API_KEY"); apiKey != "" {
-		var model models.ModelID
-		maxTokens := int64(5000)
+		model := models.OpenRouterClaude37Sonnet
+		maxTokens := int64(8000) // Higher token limit for Caronex manager agent
 		reasoningEffort := ""
-
-		switch agent {
-		case AgentTitle:
-			model = models.OpenRouterClaude35Haiku
-			maxTokens = 80
-		case AgentTask:
-			model = models.OpenRouterClaude37Sonnet
-		default:
-			model = models.OpenRouterClaude37Sonnet
-		}
 
 		// Check if model supports reasoning
 		if modelInfo, ok := models.SupportedModels[model]; ok && modelInfo.CanReason {
@@ -702,15 +1035,8 @@ func setDefaultModelForAgent(agent AgentName) bool {
 	}
 
 	if apiKey := os.Getenv("GEMINI_API_KEY"); apiKey != "" {
-		var model models.ModelID
-		maxTokens := int64(5000)
-
-		if agent == AgentTitle {
-			model = models.Gemini25Flash
-			maxTokens = 80
-		} else {
-			model = models.Gemini25
-		}
+		model := models.Gemini25
+		maxTokens := int64(8000) // Higher token limit for Caronex manager agent
 
 		cfg.Agents[agent] = Agent{
 			Model:     model,
@@ -720,10 +1046,7 @@ func setDefaultModelForAgent(agent AgentName) bool {
 	}
 
 	if apiKey := os.Getenv("GROQ_API_KEY"); apiKey != "" {
-		maxTokens := int64(5000)
-		if agent == AgentTitle {
-			maxTokens = 80
-		}
+		maxTokens := int64(8000) // Higher token limit for Caronex manager agent
 
 		cfg.Agents[agent] = Agent{
 			Model:     models.QWENQwq,
@@ -733,10 +1056,7 @@ func setDefaultModelForAgent(agent AgentName) bool {
 	}
 
 	if hasAWSCredentials() {
-		maxTokens := int64(5000)
-		if agent == AgentTitle {
-			maxTokens = 80
-		}
+		maxTokens := int64(8000) // Higher token limit for Caronex manager agent
 
 		cfg.Agents[agent] = Agent{
 			Model:           models.BedrockClaude37Sonnet,
@@ -747,15 +1067,8 @@ func setDefaultModelForAgent(agent AgentName) bool {
 	}
 
 	if hasVertexAICredentials() {
-		var model models.ModelID
-		maxTokens := int64(5000)
-
-		if agent == AgentTitle {
-			model = models.VertexAIGemini25Flash
-			maxTokens = 80
-		} else {
-			model = models.VertexAIGemini25
-		}
+		model := models.VertexAIGemini25
+		maxTokens := int64(8000) // Higher token limit for Caronex manager agent
 
 		cfg.Agents[agent] = Agent{
 			Model:     model,

@@ -1,4 +1,4 @@
-package tools
+package builtin
 
 import (
 	"context"
@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opencode-ai/opencode/internal/lsp"
-	"github.com/opencode-ai/opencode/internal/lsp/protocol"
+	"github.com/caronex/intelligence-interface/internal/lsp"
+	"github.com/caronex/intelligence-interface/internal/lsp/protocol"
 )
 
 type DiagnosticsParams struct {

@@ -2,9 +2,9 @@
 
 ## Overview
 
-This document provides a comprehensive mapping from the current OpenCode directory structure to the new Intelligence Interface meta-system architecture, ensuring that all existing functionality is preserved while enabling the transformation to an AI-powered desktop environment.
+This document provides a comprehensive mapping from the current Intelligence Interface directory structure to the new Intelligence Interface meta-system architecture, ensuring that all existing functionality is preserved while enabling the transformation to an AI-powered desktop environment.
 
-## Current OpenCode Structure Analysis
+## Current Intelligence Interface Structure Analysis
 
 ### **Root Level Components**
 ```
@@ -408,10 +408,10 @@ Each migration phase will require systematic import statement updates:
 ```go
 // Example transformation
 // Before:
-import "github.com/opencode-ai/opencode/internal/llm/agent"
+import "github.com/ii-ai/ii/internal/llm/agent"
 
 // After:
-import "github.com/opencode-ai/opencode/internal/agents/base"
+import "github.com/ii-ai/ii/internal/agents/base"
 ```
 
 ### **Configuration Migration**
@@ -465,7 +465,7 @@ Each phase includes:
 
 ### **Completion Criteria**
 
-1. **Functionality Preservation**: 100% of existing OpenCode functionality working
+1. **Functionality Preservation**: 100% of existing Intelligence Interface functionality working
 2. **New Capabilities**: Caronex manager operational
 3. **Architecture Compliance**: All components in correct new locations
 4. **Performance**: No significant performance degradation
@@ -479,4 +479,4 @@ Each phase includes:
 - All new components must have proper documentation
 - Performance metrics must be maintained or improved
 
-This migration mapping ensures a systematic, safe transformation from OpenCode to Intelligence Interface while preserving all existing functionality and enabling the powerful meta-system capabilities of the new architecture.
+This migration mapping ensures a systematic, safe transformation from Intelligence Interface to Intelligence Interface while preserving all existing functionality and enabling the powerful meta-system capabilities of the new architecture.

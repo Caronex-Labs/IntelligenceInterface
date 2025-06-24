@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/opencode-ai/opencode/internal/llm/models"
-	"github.com/opencode-ai/opencode/internal/core/logging"
+	"github.com/caronex/intelligence-interface/internal/llm/models"
+	"github.com/caronex/intelligence-interface/internal/core/logging"
 	"github.com/spf13/viper"
 )
 
@@ -36,11 +36,7 @@ type MCPServer struct {
 type AgentName string
 
 const (
-	AgentCoder      AgentName = "coder"
-	AgentSummarizer AgentName = "summarizer"
-	AgentTask       AgentName = "task"
-	AgentTitle      AgentName = "title"
-	AgentCaronex    AgentName = "caronex"
+	AgentCaronex AgentName = "caronex"
 )
 
 // Agent defines configuration for different LLM models and their token limits.
@@ -113,8 +109,8 @@ var defaultContextPaths = []string{
 	"CLAUDE.local.md",
 	"opencode.md",
 	"opencode.local.md",
-	"OpenCode.md",
-	"OpenCode.local.md",
+	"Intelligence Interface.md",
+	"Intelligence Interface.local.md",
 	"OPENCODE.md",
 	"OPENCODE.local.md",
 }
@@ -199,11 +195,6 @@ func Load(workingDir string, debug bool) (*Config, error) {
 		cfg.Agents = make(map[AgentName]Agent)
 	}
 
-	// Override the max tokens for title agent
-	cfg.Agents[AgentTitle] = Agent{
-		Model:     cfg.Agents[AgentTitle].Model,
-		MaxTokens: 80,
-	}
 	return cfg, nil
 }
 
@@ -632,12 +623,11 @@ func getProviderAPIKey(provider models.ModelProvider) string {
 
 // setDefaultModelForAgent sets a default model for an agent based on available providers
 func setDefaultModelForAgent(agent AgentName) bool {
+	// For Caronex, we use higher token limits
+	maxTokens := int64(8000)
+	
 	// Check providers in order of preference
 	if apiKey := os.Getenv("ANTHROPIC_API_KEY"); apiKey != "" {
-		maxTokens := int64(5000)
-		if agent == AgentTitle {
-			maxTokens = 80
-		}
 		cfg.Agents[agent] = Agent{
 			Model:     models.Claude37Sonnet,
 			MaxTokens: maxTokens,
@@ -646,19 +636,8 @@ func setDefaultModelForAgent(agent AgentName) bool {
 	}
 
 	if apiKey := os.Getenv("OPENAI_API_KEY"); apiKey != "" {
-		var model models.ModelID
-		maxTokens := int64(5000)
+		model := models.GPT41
 		reasoningEffort := ""
-
-		switch agent {
-		case AgentTitle:
-			model = models.GPT41Mini
-			maxTokens = 80
-		case AgentTask:
-			model = models.GPT41Mini
-		default:
-			model = models.GPT41
-		}
 
 		// Check if model supports reasoning
 		if modelInfo, ok := models.SupportedModels[model]; ok && modelInfo.CanReason {
@@ -674,19 +653,8 @@ func setDefaultModelForAgent(agent AgentName) bool {
 	}
 
 	if apiKey := os.Getenv("OPENROUTER_API_KEY"); apiKey != "" {
-		var model models.ModelID
-		maxTokens := int64(5000)
+		model := models.OpenRouterClaude37Sonnet
 		reasoningEffort := ""
-
-		switch agent {
-		case AgentTitle:
-			model = models.OpenRouterClaude35Haiku
-			maxTokens = 80
-		case AgentTask:
-			model = models.OpenRouterClaude37Sonnet
-		default:
-			model = models.OpenRouterClaude37Sonnet
-		}
 
 		// Check if model supports reasoning
 		if modelInfo, ok := models.SupportedModels[model]; ok && modelInfo.CanReason {
@@ -702,15 +670,7 @@ func setDefaultModelForAgent(agent AgentName) bool {
 	}
 
 	if apiKey := os.Getenv("GEMINI_API_KEY"); apiKey != "" {
-		var model models.ModelID
-		maxTokens := int64(5000)
-
-		if agent == AgentTitle {
-			model = models.Gemini25Flash
-			maxTokens = 80
-		} else {
-			model = models.Gemini25
-		}
+		model := models.Gemini25
 
 		cfg.Agents[agent] = Agent{
 			Model:     model,
@@ -720,11 +680,6 @@ func setDefaultModelForAgent(agent AgentName) bool {
 	}
 
 	if apiKey := os.Getenv("GROQ_API_KEY"); apiKey != "" {
-		maxTokens := int64(5000)
-		if agent == AgentTitle {
-			maxTokens = 80
-		}
-
 		cfg.Agents[agent] = Agent{
 			Model:     models.QWENQwq,
 			MaxTokens: maxTokens,
@@ -733,11 +688,6 @@ func setDefaultModelForAgent(agent AgentName) bool {
 	}
 
 	if hasAWSCredentials() {
-		maxTokens := int64(5000)
-		if agent == AgentTitle {
-			maxTokens = 80
-		}
-
 		cfg.Agents[agent] = Agent{
 			Model:           models.BedrockClaude37Sonnet,
 			MaxTokens:       maxTokens,
@@ -747,15 +697,7 @@ func setDefaultModelForAgent(agent AgentName) bool {
 	}
 
 	if hasVertexAICredentials() {
-		var model models.ModelID
-		maxTokens := int64(5000)
-
-		if agent == AgentTitle {
-			model = models.VertexAIGemini25Flash
-			maxTokens = 80
-		} else {
-			model = models.VertexAIGemini25
-		}
+		model := models.VertexAIGemini25
 
 		cfg.Agents[agent] = Agent{
 			Model:     model,

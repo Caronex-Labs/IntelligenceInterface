@@ -74,6 +74,13 @@ type Theme interface {
 	SyntaxType() lipgloss.AdaptiveColor
 	SyntaxOperator() lipgloss.AdaptiveColor
 	SyntaxPunctuation() lipgloss.AdaptiveColor
+
+	// Caronex Manager mode colors
+	CaronexPrimary() lipgloss.AdaptiveColor
+	CaronexSecondary() lipgloss.AdaptiveColor
+	CaronexAccent() lipgloss.AdaptiveColor
+	CaronexBorder() lipgloss.AdaptiveColor
+	CaronexBackground() lipgloss.AdaptiveColor
 }
 
 // BaseTheme provides a default implementation of the Theme interface
@@ -145,6 +152,13 @@ type BaseTheme struct {
 	SyntaxTypeColor    lipgloss.AdaptiveColor
 	SyntaxOperatorColor lipgloss.AdaptiveColor
 	SyntaxPunctuationColor lipgloss.AdaptiveColor
+
+	// Caronex Manager mode colors
+	CaronexPrimaryColor lipgloss.AdaptiveColor
+	CaronexSecondaryColor lipgloss.AdaptiveColor
+	CaronexAccentColor lipgloss.AdaptiveColor
+	CaronexBorderColor lipgloss.AdaptiveColor
+	CaronexBackgroundColor lipgloss.AdaptiveColor
 }
 
 // Implement the Theme interface for BaseTheme
@@ -206,3 +220,9 @@ func (t *BaseTheme) SyntaxNumber() lipgloss.AdaptiveColor { return t.SyntaxNumbe
 func (t *BaseTheme) SyntaxType() lipgloss.AdaptiveColor { return t.SyntaxTypeColor }
 func (t *BaseTheme) SyntaxOperator() lipgloss.AdaptiveColor { return t.SyntaxOperatorColor }
 func (t *BaseTheme) SyntaxPunctuation() lipgloss.AdaptiveColor { return t.SyntaxPunctuationColor }
+
+func (t *BaseTheme) CaronexPrimary() lipgloss.AdaptiveColor { return t.CaronexPrimaryColor }
+func (t *BaseTheme) CaronexSecondary() lipgloss.AdaptiveColor { return t.CaronexSecondaryColor }
+func (t *BaseTheme) CaronexAccent() lipgloss.AdaptiveColor { return t.CaronexAccentColor }
+func (t *BaseTheme) CaronexBorder() lipgloss.AdaptiveColor { return t.CaronexBorderColor }
+func (t *BaseTheme) CaronexBackground() lipgloss.AdaptiveColor { return t.CaronexBackgroundColor }

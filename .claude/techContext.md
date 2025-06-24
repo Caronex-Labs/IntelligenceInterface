@@ -254,10 +254,10 @@ go test ./...
 sqlc generate
 
 # Run migrations
-goose -dir internal/db/migrations sqlite3 ./opencode.db up
+goose -dir internal/db/migrations sqlite3 ./ii.db up
 
 # Build for production
-go build -ldflags="-s -w" -o opencode
+go build -ldflags="-s -w" -o ii
 ```
 
 ## Security Considerations

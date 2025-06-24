@@ -1,6 +1,6 @@
 package builtin
 
-import "github.com/opencode-ai/opencode/internal/llm/models"
+import "github.com/caronex/intelligence-interface/internal/llm/models"
 
 func SummarizerPrompt(_ models.ModelProvider) string {
 	return `You are a helpful AI assistant tasked with summarizing conversations.

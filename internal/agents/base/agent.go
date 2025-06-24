@@ -1,4 +1,4 @@
-package agent
+package base
 
 import (
 	"context"
@@ -8,16 +8,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/opencode-ai/opencode/internal/core/config"
-	"github.com/opencode-ai/opencode/internal/llm/models"
-	"github.com/opencode-ai/opencode/internal/llm/prompt"
-	"github.com/opencode-ai/opencode/internal/llm/provider"
-	"github.com/opencode-ai/opencode/internal/llm/tools"
-	"github.com/opencode-ai/opencode/internal/core/logging"
-	"github.com/opencode-ai/opencode/internal/message"
-	"github.com/opencode-ai/opencode/internal/permission"
-	"github.com/opencode-ai/opencode/internal/pubsub"
-	"github.com/opencode-ai/opencode/internal/session"
+	"github.com/caronex/intelligence-interface/internal/core/config"
+	"github.com/caronex/intelligence-interface/internal/llm/models"
+	"github.com/caronex/intelligence-interface/internal/llm/prompt"
+	"github.com/caronex/intelligence-interface/internal/llm/provider"
+	"github.com/caronex/intelligence-interface/internal/llm/tools"
+	"github.com/caronex/intelligence-interface/internal/core/logging"
+	"github.com/caronex/intelligence-interface/internal/message"
+	"github.com/caronex/intelligence-interface/internal/permission"
+	"github.com/caronex/intelligence-interface/internal/pubsub"
+	"github.com/caronex/intelligence-interface/internal/session"
 )
 
 // Common errors
@@ -81,19 +81,15 @@ func NewAgent(
 		return nil, err
 	}
 	var titleProvider provider.Provider
-	// Only generate titles for the coder agent
-	if agentName == config.AgentCoder {
-		titleProvider, err = createAgentProvider(config.AgentTitle)
-		if err != nil {
-			return nil, err
-		}
+	// Only generate titles for the Caronex agent
+	if agentName == config.AgentCaronex {
+		// For now, use the same provider for title generation
+		titleProvider = agentProvider
 	}
 	var summarizeProvider provider.Provider
-	if agentName == config.AgentCoder {
-		summarizeProvider, err = createAgentProvider(config.AgentSummarizer)
-		if err != nil {
-			return nil, err
-		}
+	if agentName == config.AgentCaronex {
+		// For now, use the same provider for summarization
+		summarizeProvider = agentProvider
 	}
 
 	agent := &agent{
@@ -722,7 +718,7 @@ func createAgentProvider(agentName config.AgentName) (provider.Provider, error) 
 				provider.WithReasoningEffort(agentConfig.ReasoningEffort),
 			),
 		)
-	} else if model.Provider == models.ProviderAnthropic && model.CanReason && agentName == config.AgentCoder {
+	} else if model.Provider == models.ProviderAnthropic && model.CanReason && agentName == config.AgentCaronex {
 		opts = append(
 			opts,
 			provider.WithAnthropicOptions(

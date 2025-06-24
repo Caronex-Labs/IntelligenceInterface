@@ -1,4 +1,4 @@
-package tools
+package builtin
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/caronex/intelligence-interface/internal/core/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,10 +25,17 @@ func TestLsTool_Info(t *testing.T) {
 }
 
 func TestLsTool_Run(t *testing.T) {
+	// Set up test environment and config
+	os.Setenv("OPENAI_API_KEY", "test-key-for-tests")
+	defer os.Unsetenv("OPENAI_API_KEY")
+	
 	// Create a temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "ls_tool_test")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
+	
+	// Load config for this test directory
+	config.Load(tempDir, false)
 
 	// Create a test directory structure
 	testDirs := []string{

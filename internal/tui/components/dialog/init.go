@@ -5,9 +5,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/opencode-ai/opencode/internal/tui/styles"
-	"github.com/opencode-ai/opencode/internal/tui/theme"
-	"github.com/opencode-ai/opencode/internal/tui/util"
+	"github.com/caronex/intelligence-interface/internal/tui/styles"
+	"github.com/caronex/intelligence-interface/internal/tui/theme"
+	"github.com/caronex/intelligence-interface/internal/tui/util"
 )
 
 // InitDialogCmp is a component that asks the user if they want to initialize the project.
@@ -110,7 +110,7 @@ func (m InitDialogCmp) View() string {
 		Foreground(t.Text()).
 		Width(maxWidth).
 		Padding(0, 1).
-		Render("Initialization generates a new OpenCode.md file that contains information about your codebase, this file serves as memory for each project, you can freely add to it to help the agents be better at their job.")
+		Render("Initialization generates a new Intelligence Interface.md file that contains information about your codebase, this file serves as memory for each project, you can freely add to it to help the agents be better at their job.")
 
 	question := baseStyle.
 		Foreground(t.Text()).

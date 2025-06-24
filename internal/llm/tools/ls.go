@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/opencode-ai/opencode/internal/core/config"
+	"github.com/caronex/intelligence-interface/internal/core/config"
 )
 
 type LSParams struct {
@@ -100,7 +100,11 @@ func (l *lsTool) Run(ctx context.Context, call ToolCall) (ToolResponse, error) {
 	}
 
 	if !filepath.IsAbs(searchPath) {
-		searchPath = filepath.Join(config.WorkingDirectory(), searchPath)
+		currentDir, err := os.Getwd()
+		if err != nil {
+			return NewTextErrorResponse(fmt.Sprintf("error getting current directory: %s", err)), nil
+		}
+		searchPath = filepath.Join(currentDir, searchPath)
 	}
 
 	if _, err := os.Stat(searchPath); os.IsNotExist(err) {

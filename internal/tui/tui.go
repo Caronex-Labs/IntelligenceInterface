@@ -8,20 +8,20 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/opencode-ai/opencode/internal/app"
-	"github.com/opencode-ai/opencode/internal/core/config"
-	"github.com/opencode-ai/opencode/internal/llm/agent"
-	"github.com/opencode-ai/opencode/internal/core/logging"
-	"github.com/opencode-ai/opencode/internal/permission"
-	"github.com/opencode-ai/opencode/internal/pubsub"
-	"github.com/opencode-ai/opencode/internal/session"
-	"github.com/opencode-ai/opencode/internal/tui/components/chat"
-	"github.com/opencode-ai/opencode/internal/tui/components/core"
-	"github.com/opencode-ai/opencode/internal/tui/components/dialog"
-	"github.com/opencode-ai/opencode/internal/tui/layout"
-	"github.com/opencode-ai/opencode/internal/tui/page"
-	"github.com/opencode-ai/opencode/internal/tui/theme"
-	"github.com/opencode-ai/opencode/internal/tui/util"
+	"github.com/caronex/intelligence-interface/internal/app"
+	"github.com/caronex/intelligence-interface/internal/core/config"
+	"github.com/caronex/intelligence-interface/internal/llm/agent"
+	"github.com/caronex/intelligence-interface/internal/core/logging"
+	"github.com/caronex/intelligence-interface/internal/permission"
+	"github.com/caronex/intelligence-interface/internal/pubsub"
+	"github.com/caronex/intelligence-interface/internal/session"
+	"github.com/caronex/intelligence-interface/internal/tui/components/chat"
+	"github.com/caronex/intelligence-interface/internal/tui/components/core"
+	"github.com/caronex/intelligence-interface/internal/tui/components/dialog"
+	"github.com/caronex/intelligence-interface/internal/tui/layout"
+	"github.com/caronex/intelligence-interface/internal/tui/page"
+	"github.com/caronex/intelligence-interface/internal/tui/theme"
+	"github.com/caronex/intelligence-interface/internal/tui/util"
 )
 
 type keyMap struct {
@@ -33,6 +33,7 @@ type keyMap struct {
 	Filepicker    key.Binding
 	Models        key.Binding
 	SwitchTheme   key.Binding
+	CaronexManager key.Binding
 }
 
 type startCompactSessionMsg struct{}
@@ -77,6 +78,11 @@ var keys = keyMap{
 	SwitchTheme: key.NewBinding(
 		key.WithKeys("ctrl+t"),
 		key.WithHelp("ctrl+t", "switch theme"),
+	),
+
+	CaronexManager: key.NewBinding(
+		key.WithKeys("ctrl+m"),
+		key.WithHelp("ctrl+m", "manager mode"),
 	),
 }
 
@@ -316,7 +322,7 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Start the summarization process
 		return a, func() tea.Msg {
 			ctx := context.Background()
-			a.app.CoderAgent.Summarize(ctx, a.selectedSession.ID)
+			a.app.CaronexAgent.Summarize(ctx, a.selectedSession.ID)
 			return nil
 		}
 
@@ -333,7 +339,7 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.isCompacting = false
 			return a, util.ReportInfo("Session summarization complete")
 		} else if payload.Done && payload.Type == agent.AgentEventTypeResponse && a.selectedSession.ID != "" {
-			model := a.app.CoderAgent.Model()
+			model := a.app.CaronexAgent.Model()
 			contextWindow := model.ContextWindow
 			tokens := a.selectedSession.CompletionTokens + a.selectedSession.PromptTokens
 			if (tokens >= int64(float64(contextWindow)*0.95)) && config.Get().AutoCompact {
@@ -359,7 +365,7 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case dialog.ModelSelectedMsg:
 		a.showModelDialog = false
 
-		model, err := a.app.CoderAgent.Update(config.AgentCoder, msg.Model.ID)
+		model, err := a.app.CaronexAgent.Update(config.AgentCaronex, msg.Model.ID)
 		if err != nil {
 			return a, util.ReportError(err)
 		}
@@ -558,7 +564,7 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.showHelp = !a.showHelp
 			return a, nil
 		case key.Matches(msg, helpEsc):
-			if a.app.CoderAgent.IsBusy() {
+			if a.app.CaronexAgent.IsBusy() {
 				if a.showQuit {
 					return a, nil
 				}
@@ -568,6 +574,15 @@ func (a appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Filepicker):
 			a.showFilepicker = !a.showFilepicker
 			a.filepicker.ToggleFilepicker(a.showFilepicker)
+			return a, nil
+		case key.Matches(msg, keys.CaronexManager):
+			if a.currentPage == page.ChatPage && !a.showQuit && !a.showPermissions && !a.showSessionDialog && !a.showCommandDialog {
+				// Switch to Caronex manager mode
+				return a, util.CmdHandler(page.AgentSwitchedMsg{
+					AgentMode: page.ManagerMode{},
+					Agent:     a.app.CaronexAgent,
+				})
+			}
 			return a, nil
 		}
 	default:
@@ -678,7 +693,7 @@ func (a *appModel) findCommand(id string) (dialog.Command, bool) {
 }
 
 func (a *appModel) moveToPage(pageID page.PageID) tea.Cmd {
-	if a.app.CoderAgent.IsBusy() {
+	if a.app.CaronexAgent.IsBusy() {
 		// For now we don't move to any page if the agent is busy
 		return util.ReportWarn("Agent is busy, please wait...")
 	}
@@ -775,7 +790,7 @@ func (a appModel) View() string {
 		if a.currentPage == page.LogsPage {
 			bindings = append(bindings, logsKeyReturnKey)
 		}
-		if !a.app.CoderAgent.IsBusy() {
+		if !a.app.CaronexAgent.IsBusy() {
 			bindings = append(bindings, helpEsc)
 		}
 		a.help.SetBindings(bindings)

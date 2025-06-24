@@ -1,4 +1,4 @@
-package tools
+package builtin
 
 import (
 	"bufio"
@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opencode-ai/opencode/internal/core/config"
-	"github.com/opencode-ai/opencode/internal/fileutil"
+	"github.com/caronex/intelligence-interface/internal/core/config"
+	"github.com/caronex/intelligence-interface/internal/fileutil"
 )
 
 type GrepParams struct {

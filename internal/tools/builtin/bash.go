@@ -1,4 +1,4 @@
-package tools
+package builtin
 
 import (
 	"context"
@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opencode-ai/opencode/internal/core/config"
-	"github.com/opencode-ai/opencode/internal/llm/tools/shell"
-	"github.com/opencode-ai/opencode/internal/permission"
+	"github.com/caronex/intelligence-interface/internal/core/config"
+	"github.com/caronex/intelligence-interface/internal/llm/tools/shell"
+	"github.com/caronex/intelligence-interface/internal/permission"
 )
 
 type BashParams struct {
@@ -122,16 +122,16 @@ When the user asks you to create a new git commit, follow these steps carefully:
 </commit_analysis>
 
 4. Create the commit with a message ending with:
-🤖 Generated with opencode
-Co-Authored-By: opencode <noreply@opencode.ai>
+🤖 Generated with Intelligence Interface
+Co-Authored-By: Intelligence Interface <noreply@intelligenceinterface.ai>
 
 - In order to ensure good formatting, ALWAYS pass the commit message via a HEREDOC, a la this example:
 <example>
 git commit -m "$(cat <<'EOF'
  Commit message here.
 
- 🤖 Generated with opencode
- Co-Authored-By: opencode <noreply@opencode.ai>
+ 🤖 Generated with Intelligence Interface
+ Co-Authored-By: Intelligence Interface <noreply@intelligenceinterface.ai>
  EOF
  )"
 </example>
@@ -193,7 +193,7 @@ gh pr create --title "the pr title" --body "$(cat <<'EOF'
 ## Test plan
 [Checklist of TODOs for testing the pull request...]
 
-🤖 Generated with opencode
+🤖 Generated with Intelligence Interface
 EOF
 )"
 </example>

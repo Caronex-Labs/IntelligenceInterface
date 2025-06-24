@@ -7,17 +7,22 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/opencode-ai/opencode/internal/core/config"
-	"github.com/opencode-ai/opencode/internal/llm/models"
-	"github.com/opencode-ai/opencode/internal/lsp"
-	"github.com/opencode-ai/opencode/internal/lsp/protocol"
-	"github.com/opencode-ai/opencode/internal/pubsub"
-	"github.com/opencode-ai/opencode/internal/session"
-	"github.com/opencode-ai/opencode/internal/tui/components/chat"
-	"github.com/opencode-ai/opencode/internal/tui/styles"
-	"github.com/opencode-ai/opencode/internal/tui/theme"
-	"github.com/opencode-ai/opencode/internal/tui/util"
+	"github.com/caronex/intelligence-interface/internal/core/config"
+	"github.com/caronex/intelligence-interface/internal/llm/models"
+	"github.com/caronex/intelligence-interface/internal/lsp"
+	"github.com/caronex/intelligence-interface/internal/lsp/protocol"
+	"github.com/caronex/intelligence-interface/internal/pubsub"
+	"github.com/caronex/intelligence-interface/internal/session"
+	"github.com/caronex/intelligence-interface/internal/tui/components/chat"
+	"github.com/caronex/intelligence-interface/internal/tui/styles"
+	"github.com/caronex/intelligence-interface/internal/tui/theme"
+	"github.com/caronex/intelligence-interface/internal/tui/util"
 )
+
+// AgentModeChangedMsg is sent when the agent mode changes
+type AgentModeChangedMsg struct {
+	AgentMode string
+}
 
 type StatusCmp interface {
 	tea.Model
@@ -29,6 +34,7 @@ type statusCmp struct {
 	messageTTL time.Duration
 	lspClients map[string]*lsp.Client
 	session    session.Session
+	agentMode  string // Current agent mode for display
 }
 
 // clearMessageCmd is a command that clears status messages after a timeout
@@ -51,6 +57,8 @@ func (m statusCmp) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.session = msg
 	case chat.SessionClearedMsg:
 		m.session = session.Session{}
+	case AgentModeChangedMsg:
+		m.agentMode = msg.AgentMode
 	case pubsub.Event[session.Session]:
 		if msg.Type == pubsub.UpdatedEvent {
 			if m.session.ID == msg.Payload.ID {
@@ -84,7 +92,7 @@ func getHelpWidget() string {
 		Render(helpText)
 }
 
-func formatTokensAndCost(tokens, contextWindow int64, cost float64) string {
+func formatTokensAndCost(tokens, contextWindow int64, cost float64, isManagerMode bool) string {
 	// Format tokens in human-readable format (e.g., 110K, 1.2M)
 	var formattedTokens string
 	switch {
@@ -113,24 +121,39 @@ func formatTokensAndCost(tokens, contextWindow int64, cost float64) string {
 		formattedTokens = fmt.Sprintf("%s(%d%%)", styles.WarningIcon, int(percentage))
 	}
 
-	return fmt.Sprintf("Context: %s, Cost: %s", formattedTokens, formattedCost)
+	// Add context label based on mode
+	contextLabel := "Context"
+	if isManagerMode {
+		contextLabel = "Coordination"
+	}
+
+	return fmt.Sprintf("%s: %s, Cost: %s", contextLabel, formattedTokens, formattedCost)
 }
 
 func (m statusCmp) View() string {
 	t := theme.CurrentTheme()
-	modelID := config.Get().Agents[config.AgentCoder].Model
+	modelID := config.Get().Agents[config.AgentCaronex].Model
 	model := models.SupportedModels[modelID]
 
 	// Initialize the help widget
 	status := getHelpWidget()
 
 	tokenInfoWidth := 0
+	isManagerMode := m.agentMode == "Caronex Manager"
 	if m.session.ID != "" {
 		totalTokens := m.session.PromptTokens + m.session.CompletionTokens
-		tokens := formatTokensAndCost(totalTokens, model.ContextWindow, m.session.Cost)
+		tokens := formatTokensAndCost(totalTokens, model.ContextWindow, m.session.Cost, isManagerMode)
 		tokensStyle := styles.Padded().
 			Background(t.Text()).
 			Foreground(t.BackgroundSecondary())
+		
+		// Use Caronex colors for manager mode
+		if isManagerMode {
+			tokensStyle = tokensStyle.
+				Background(t.CaronexSecondary()).
+				Foreground(t.Background())
+		}
+		
 		percentage := (float64(totalTokens) / float64(model.ContextWindow)) * 100
 		if percentage > 80 {
 			tokensStyle = tokensStyle.Background(t.Warning())
@@ -271,16 +294,45 @@ func (m statusCmp) model() string {
 
 	cfg := config.Get()
 
-	coder, ok := cfg.Agents[config.AgentCoder]
+	// Determine which agent config to use based on current mode
+	var agentName config.AgentName
+	var displayName string
+	var icon string
+	isManagerMode := false
+
+	if m.agentMode == "Caronex Manager" {
+		agentName = config.AgentCaronex
+		displayName = "Caronex Manager"
+		icon = "⚡ " // Lightning bolt for coordination
+		isManagerMode = true
+	} else {
+		agentName = config.AgentCaronex
+		displayName = "Coder"
+		icon = "💻 " // Computer for implementation
+	}
+
+	agent, ok := cfg.Agents[agentName]
 	if !ok {
 		return "Unknown"
 	}
-	model := models.SupportedModels[coder.Model]
+	model := models.SupportedModels[agent.Model]
+
+	// Show agent name and model for clarity
+	label := fmt.Sprintf("%s%s (%s)", icon, displayName, model.Name)
+
+	// Use different styling for manager mode
+	if isManagerMode {
+		return styles.Padded().
+			Background(t.CaronexPrimary()).
+			Foreground(t.Background()).
+			Bold(true).
+			Render(label)
+	}
 
 	return styles.Padded().
 		Background(t.Secondary()).
 		Foreground(t.Background()).
-		Render(model.Name)
+		Render(label)
 }
 
 func NewStatusCmp(lspClients map[string]*lsp.Client) StatusCmp {
@@ -289,5 +341,6 @@ func NewStatusCmp(lspClients map[string]*lsp.Client) StatusCmp {
 	return &statusCmp{
 		messageTTL: 10 * time.Second,
 		lspClients: lspClients,
+		agentMode:  "Coder", // Default to Coder mode
 	}
 }

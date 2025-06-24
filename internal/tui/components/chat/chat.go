@@ -6,12 +6,12 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
-	"github.com/opencode-ai/opencode/internal/core/config"
-	"github.com/opencode-ai/opencode/internal/message"
-	"github.com/opencode-ai/opencode/internal/session"
-	"github.com/opencode-ai/opencode/internal/tui/styles"
-	"github.com/opencode-ai/opencode/internal/tui/theme"
-	"github.com/opencode-ai/opencode/internal/version"
+	"github.com/caronex/intelligence-interface/internal/core/config"
+	"github.com/caronex/intelligence-interface/internal/message"
+	"github.com/caronex/intelligence-interface/internal/session"
+	"github.com/caronex/intelligence-interface/internal/tui/styles"
+	"github.com/caronex/intelligence-interface/internal/tui/theme"
+	"github.com/caronex/intelligence-interface/internal/version"
 )
 
 type SendMsg struct {
@@ -25,13 +25,46 @@ type SessionClearedMsg struct{}
 
 type EditorFocusMsg bool
 
+// AgentModeInfo contains information about the current agent mode
+type AgentModeInfo struct {
+	Mode          string
+	IsManagerMode bool
+}
+
 func header(width int) string {
-	return lipgloss.JoinVertical(
-		lipgloss.Top,
+	return headerWithMode(width, AgentModeInfo{Mode: "Coder", IsManagerMode: false})
+}
+
+// headerWithMode creates a header with agent mode awareness
+func headerWithMode(width int, modeInfo AgentModeInfo) string {
+	t := theme.CurrentTheme()
+	baseStyle := styles.BaseStyle()
+	
+	// Create mode indicator
+	var modeIndicator string
+	if modeInfo.IsManagerMode {
+		modeStyle := baseStyle.
+			Background(t.CaronexPrimary()).
+			Foreground(t.Background()).
+			Bold(true).
+			Padding(0, 2)
+		modeIndicator = modeStyle.Render("⚡ CARONEX COORDINATION MODE")
+	}
+	
+	components := []string{
 		logo(width),
 		repo(width),
-		"",
-		cwd(width),
+	}
+	
+	if modeIndicator != "" {
+		components = append(components, "", modeIndicator)
+	}
+	
+	components = append(components, "", cwd(width))
+	
+	return lipgloss.JoinVertical(
+		lipgloss.Top,
+		components...,
 	)
 }
 
@@ -98,7 +131,7 @@ func lspsConfigured(width int) string {
 }
 
 func logo(width int) string {
-	logo := fmt.Sprintf("%s %s", styles.OpenCodeIcon, "OpenCode")
+	logo := fmt.Sprintf("%s %s", styles.IntelligenceInterfaceIcon, "Intelligence Interface")
 	t := theme.CurrentTheme()
 	baseStyle := styles.BaseStyle()
 
@@ -120,7 +153,7 @@ func logo(width int) string {
 }
 
 func repo(width int) string {
-	repo := "https://github.com/opencode-ai/opencode"
+	repo := "https://github.com/caronex/intelligence-interface"
 	t := theme.CurrentTheme()
 
 	return styles.BaseStyle().

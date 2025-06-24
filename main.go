@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/opencode-ai/opencode/cmd"
-	"github.com/opencode-ai/opencode/internal/core/logging"
+	"github.com/caronex/intelligence-interface/cmd"
+	"github.com/caronex/intelligence-interface/internal/core/logging"
 )
 
 func main() {

@@ -389,9 +389,9 @@ root/
 - MCP integration for external capabilities
 - Template-based code generation and customization
 
-## Migration from OpenCode
+## Migration from Intelligence Interface
 
-This structure represents an evolution from the original OpenCode architecture:
+This structure represents an evolution from the original Intelligence Interface architecture:
 
 ### **Preserved Components**
 - TUI framework and user interface patterns

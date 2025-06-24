@@ -2,7 +2,9 @@
 
 ## Architectural Philosophy
 
-Intelligence Interface implements a **space-based meta-system architecture** where Caronex orchestrates intelligent spaces that can evolve and reconfigure themselves. This represents a fundamental departure from traditional architectures:
+Intelligence Interface implements a **space-based meta-system architecture** where Caronex orchestrates intelligent
+spaces that can evolve and reconfigure themselves. This represents a fundamental departure from traditional
+architectures:
 
 - **Space-Based Architecture**: Dynamic, configurable execution environments
 - **Meta-System Design**: System that can modify its own architecture
@@ -53,13 +55,15 @@ Intelligence Interface implements a **space-based meta-system architecture** whe
                     └─────────────────────┘
 ```
 
-**Critical Distinction**: 
+**Critical Distinction**:
+
 - **Base System**: TUI, Caronex, agents, tools (system infrastructure)
 - **User Spaces**: Knowledge base, development, social (user-defined environments)
 
 ### 2. Caronex-Orchestrated Communication
 
 **User Space Management Pattern**:
+
 ```go
 // Caronex manages persistent user spaces
 caronex.EvolveUserSpace(spaceID string, enhancement SpaceEnhancement)
@@ -75,6 +79,7 @@ enhancementAgent.EvolveSpace(existingConfig, nvimEnhancements, newSidebarCards)
 ```
 
 **Benefits**:
+
 - Persistent workspace evolution
 - Dynamic enhancement through conversation
 - Hotkey space switching between established environments
@@ -84,14 +89,15 @@ enhancementAgent.EvolveSpace(existingConfig, nvimEnhancements, newSidebarCards)
 
 ```go
 type Provider interface {
-    Chat(ctx context.Context, params ChatParams) (*ChatResponse, error)
-    ListModels() ([]Model, error)
-    SupportsStreaming() bool
-    GetCapabilities() Capabilities
+Chat(ctx context.Context, params ChatParams) (*ChatResponse, error)
+ListModels() ([]Model, error)
+SupportsStreaming() bool
+GetCapabilities() Capabilities
 }
 ```
 
 **Implementation Strategy**:
+
 - Unified interface across 9+ providers
 - Provider-specific adapters in `external/`
 - Capability discovery and feature detection
@@ -101,23 +107,24 @@ type Provider interface {
 
 ```go
 type IntelligentAgent interface {
-    Identity() AgentID
-    Capabilities() []Capability
-    Learn(experience Experience) error
-    Evolve(improvement Improvement) error
-    Coordinate(other_agents []Agent) CoordinationResult
-    ReportToCaronex(status Status) error
+Identity() AgentID
+Capabilities() []Capability
+Learn(experience Experience) error
+Evolve(improvement Improvement) error
+Coordinate(other_agents []Agent) CoordinationResult
+ReportToCaronex(status Status) error
 }
 
 type CaronexOrchestrator interface {
-    SpawnAgent(agent_type AgentType, space Space) Agent
-    CoordinateAgents(agents []Agent, task Task) Result
-    EvolveSystem(improvement_opportunity Opportunity) Evolution
-    ManageSpaces(spaces []Space) SpaceConfiguration
+SpawnAgent(agent_type AgentType, space Space) Agent
+CoordinateAgents(agents []Agent, task Task) Result
+EvolveSystem(improvement_opportunity Opportunity) Evolution
+ManageSpaces(spaces []Space) SpaceConfiguration
 }
 ```
 
 **Agent Integration Flow**:
+
 1. Caronex identifies need for new capability
 2. Caronext spawns appropriate agent in suitable space
 3. Agent registers capabilities with Caronex
@@ -129,12 +136,13 @@ type CaronexOrchestrator interface {
 ```
 Priority Order (highest to lowest):
 1. Environment Variables
-2. Project-local config (./.opencode.json)
-3. Global config (~/.opencode.json)
+2. Project-local config (./.ii.json)
+3. Global config (~/.ii.json)
 4. Default values
 ```
 
 **Benefits**:
+
 - Flexible configuration management
 - Environment-specific overrides
 - Project-specific customization
@@ -151,6 +159,7 @@ Parent Session
 ```
 
 **Auto-Compaction Strategy**:
+
 - Monitor token usage approaching limits
 - Summarize older messages
 - Preserve context while reducing tokens
@@ -160,15 +169,16 @@ Parent Session
 
 ```go
 type Agent struct {
-    Role        string
-    Model       Model
-    Tools       []Tool
-    TokenLimit  int
-    Temperature float64
+Role        string
+Model       Model
+Tools       []Tool
+TokenLimit  int
+Temperature float64
 }
 ```
 
 **Specialized Agents**:
+
 - **Coder Agent**: High token limit, code-focused tools
 - **Summarizer Agent**: Efficient model, compression focus
 - **Title Agent**: Fast model, creative temperature
@@ -182,7 +192,7 @@ bootstrap_compiler:
   name: "system_improvement_generator"
   target_component: "{{component_name}}"
   improvement_type: "{{improvement_category}}"
-  
+
 evolution_generation:
   - analysis:
       current_capability: "{{current_state}}"
@@ -199,6 +209,7 @@ evolution_generation:
 ```
 
 **Benefits**:
+
 - System generates its own improvements
 - Continuous evolution capability
 - Collective intelligence contribution
@@ -207,27 +218,32 @@ evolution_generation:
 ## Design Principles
 
 ### 1. Separation of Concerns
+
 - Each layer has single, well-defined responsibility
 - No business logic in presentation layer
 - No UI concerns in service layer
 - Clear boundaries between layers
 
 ### 2. Dependency Inversion
+
 - High-level modules don't depend on low-level modules
 - Both depend on abstractions (interfaces)
 - Abstractions don't depend on details
 
 ### 3. Open/Closed Principle
+
 - Open for extension (new tools, providers, agents)
 - Closed for modification (stable interfaces)
 - Plugin architecture for extensibility
 
 ### 4. Interface Segregation
+
 - Small, focused interfaces
 - Role-specific contracts
 - No "fat" interfaces with unused methods
 
 ### 5. Single Responsibility
+
 - Each component has one reason to change
 - Focused modules with clear purpose
 - Cohesive functionality
@@ -235,30 +251,32 @@ evolution_generation:
 ## Error Handling Patterns
 
 ### Layered Error Handling
+
 ```go
 // Repository layer
 type RepoError struct {
-    Code    string
-    Message string
-    Cause   error
+Code    string
+Message string
+Cause   error
 }
 
 // Service layer wraps and adds context
 type ServiceError struct {
-    Operation string
-    RepoError error
-    Context   map[string]interface{}
+Operation string
+RepoError error
+Context   map[string]interface{}
 }
 
 // Presentation layer formats for user
 type UIError struct {
-    UserMessage string
-    Technical   string
-    Suggestion  string
+UserMessage string
+Technical   string
+Suggestion  string
 }
 ```
 
 ### Error Recovery Strategies
+
 1. **Retry with Backoff**: For transient failures
 2. **Circuit Breaker**: For provider failures
 3. **Fallback**: Alternative providers or degraded mode
@@ -267,22 +285,25 @@ type UIError struct {
 ## Security Patterns
 
 ### 1. Permission-Based Tool Execution
+
 ```go
 type Permission struct {
-    Tool      string
-    Action    string
-    Resource  string
-    Granted   bool
+Tool      string
+Action    string
+Resource  string
+Granted   bool
 }
 ```
 
 ### 2. Secure Configuration
+
 - API keys in environment variables
 - Encrypted storage for sensitive data
 - No secrets in code or configs
 - Audit logging for security events
 
 ### 3. Input Validation
+
 - Layer-specific validation
 - Sanitization at boundaries
 - Type-safe operations
@@ -291,22 +312,26 @@ type Permission struct {
 ## Performance Patterns
 
 ### 1. Lazy Loading
+
 - Load resources on demand
 - Defer expensive operations
 - Progressive enhancement
 
 ### 2. Caching Strategy
+
 - Multi-level caching (memory, disk)
 - Cache invalidation policies
 - Provider response caching
 - Configuration caching
 
 ### 3. Connection Pooling
+
 - Database connection pools
 - HTTP client reuse
 - Provider connection management
 
 ### 4. Async Processing
+
 - Non-blocking UI updates
 - Background task processing
 - Parallel tool execution
@@ -315,6 +340,7 @@ type Permission struct {
 ## Testing Patterns
 
 ### 1. Test Pyramid
+
 ```
          /\
         /UI\        <- Few E2E tests
@@ -326,12 +352,14 @@ type Permission struct {
 ```
 
 ### 2. Mock Strategies
+
 - Interface-based mocking
 - Provider mocks for testing
 - Tool execution mocks
 - Database transaction rollback
 
 ### 3. Test Data Patterns
+
 - Fixtures for consistent testing
 - Factories for test object creation
 - Seed data for integration tests
@@ -339,16 +367,19 @@ type Permission struct {
 ## Deployment Patterns
 
 ### 1. Binary Distribution
+
 - Single executable with embedded assets
 - Cross-platform compilation
 - Version management
 
 ### 2. Configuration Management
+
 - Environment-specific configs
 - Secret rotation support
 - Feature flags
 
 ### 3. Update Strategy
+
 - Self-update capability
 - Backward compatibility
 - Migration scripts
@@ -356,24 +387,28 @@ type Permission struct {
 ## Future Meta-System Patterns
 
 ### 1. Multi-Instance Caronex Orchestra
+
 - Network of interconnected Intelligence Interface systems
 - Distributed coordination across instances
 - Collective learning and evolution
 - Global pattern recognition and sharing
 
 ### 2. Quantum Space Architecture
+
 - Superposition spaces for parallel evolution paths
 - Quantum entanglement between related spaces
 - Quantum coherence in system state management
 - Quantum learning across multiple realities
 
 ### 3. Emergent Intelligence Patterns
+
 - Swarm intelligence from agent collectives
 - Emergent capabilities from agent interactions
 - Collective problem-solving across agent networks
 - Meta-learning about learning itself
 
 ### 4. Universal Bootstrap Compiler
+
 - System capable of generating any type of system
 - Self-replicating and self-improving architectures
 - Universal pattern recognition and application
