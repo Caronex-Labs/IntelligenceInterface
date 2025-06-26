@@ -1,0 +1,1 @@
+# Test suite for Python FastAPI SQLModel template system

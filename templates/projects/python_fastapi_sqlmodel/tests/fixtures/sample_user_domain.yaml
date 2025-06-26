@@ -1,0 +1,96 @@
+# Sample User domain configuration for testing
+# This demonstrates a complete configuration for a simple User entity
+
+domain:
+  name: "User"
+  plural: "Users"
+  description: "User management domain for authentication and profiles"
+
+entities:
+  - name: "User"
+    description: "User entity representing system users"
+    fields:
+      - name: "id"
+        type: "int"
+        required: false  # Auto-generated primary key
+        index: true
+        description: "Unique user identifier"
+      
+      - name: "username"
+        type: "str"
+        required: true
+        unique: true
+        index: true
+        description: "Unique username for login"
+      
+      - name: "email"
+        type: "EmailStr"
+        required: true
+        unique: true
+        index: true
+        description: "User email address"
+      
+      - name: "full_name"
+        type: "str"
+        required: true
+        description: "User's full display name"
+      
+      - name: "is_active"
+        type: "bool"
+        required: true
+        default: "true"
+        description: "Whether user account is active"
+      
+      - name: "is_admin"
+        type: "bool"
+        required: true
+        default: "false"
+        description: "Whether user has admin privileges"
+      
+      - name: "created_at"
+        type: "datetime"
+        required: false
+        default: "datetime.utcnow"
+        description: "Account creation timestamp"
+      
+      - name: "updated_at"
+        type: "datetime"
+        required: false
+        default: "datetime.utcnow"
+        description: "Last update timestamp"
+
+endpoints:
+  - method: "POST"
+    path: "/"
+    operation: "create"
+    description: "Create new user account"
+  
+  - method: "GET"
+    path: "/{id}"
+    operation: "get_by_id"
+    description: "Get user by ID"
+  
+  - method: "GET"
+    path: "/"
+    operation: "list"
+    description: "List users with pagination"
+  
+  - method: "PUT"
+    path: "/{id}"
+    operation: "update"
+    description: "Update user information"
+  
+  - method: "DELETE"
+    path: "/{id}"
+    operation: "delete"
+    description: "Deactivate user account"
+  
+  - method: "GET"
+    path: "/search"
+    operation: "search"
+    description: "Search users by criteria"
+
+metadata:
+  version: "1.0.0"
+  author: "Template System"
+  description: "Generated User domain configuration"
