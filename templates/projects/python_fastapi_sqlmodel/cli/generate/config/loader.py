@@ -12,7 +12,7 @@ from typing import Union, Dict, Any, Optional
 import yaml
 from pydantic import ValidationError
 
-from .models import Configuration, EntityDomainConfig, EntityConfig
+from .models import Configuration, EntityDomainConfig, EntityConfig, UseCaseDomainConfig, UseCaseConfig, BusinessRulesConfig
 from .exceptions import ConfigurationError, ConfigurationValidationError, ConfigurationFileError
 
 logger = logging.getLogger(__name__)
@@ -685,3 +685,395 @@ def load_entity_domain_from_strings(domain_yaml: str, entities_yaml: str,
     """
     loader = EntityDomainLoader(strict_mode=strict_mode)
     return loader.load_from_strings(domain_yaml, entities_yaml)
+
+
+class UseCaseLoader:
+    """
+    Specialized loader for use case configurations with separate usecase and business rules files.
+    
+    Loads usecase.yaml and business-rules.yaml files separately and merges them into a unified
+    UseCaseDomainConfig that supports business logic orchestration, dependency injection patterns,
+    and comprehensive business rule validation.
+    """
+    
+    def __init__(self, strict_mode: bool = True):
+        """
+        Initialize use case loader.
+        
+        Args:
+            strict_mode: If True, reject unknown fields and apply strict validation
+        """
+        self.strict_mode = strict_mode
+        self.loader = ConfigurationLoader(strict_mode=strict_mode)
+        logger.info("UseCaseLoader initialized with strict_mode=%s", strict_mode)
+    
+    def load_from_files(self, usecase_file: Union[str, Path], business_rules_file: Union[str, Path]) -> UseCaseDomainConfig:
+        """
+        Load use case domain configuration from separate usecase and business rules files.
+        
+        Args:
+            usecase_file: Path to usecase.yaml file with business logic configuration
+            business_rules_file: Path to business-rules.yaml file with validation rules
+            
+        Returns:
+            Validated UseCaseDomainConfig object
+            
+        Raises:
+            ConfigurationFileError: If files cannot be read
+            ConfigurationValidationError: If validation fails
+        """
+        logger.info("Loading use case domain configuration from separate files")
+        logger.info("  Use case file: %s", usecase_file)
+        logger.info("  Business rules file: %s", business_rules_file)
+        
+        # Load use case configuration
+        usecase_dict = self._load_yaml_file(usecase_file, "usecase")
+        
+        # Load business rules configuration
+        business_rules_dict = self._load_yaml_file(business_rules_file, "business_rules")
+        
+        # Merge configurations
+        merged_config = self._merge_configurations(usecase_dict, business_rules_dict, 
+                                                 str(usecase_file), str(business_rules_file))
+        
+        # Validate merged configuration
+        try:
+            usecase_domain_config = UseCaseDomainConfig(**merged_config)
+            logger.info("Successfully loaded and validated use case domain configuration")
+            
+            # Log configuration summary
+            self._log_usecase_domain_summary(usecase_domain_config)
+            
+            return usecase_domain_config
+            
+        except ValidationError as e:
+            error_msg = f"Use case domain configuration validation failed"
+            logger.error(error_msg)
+            
+            # Create detailed error message from Pydantic validation errors
+            validation_errors = []
+            for error in e.errors():
+                field_path = " -> ".join(str(loc) for loc in error['loc'])
+                error_detail = error['msg']
+                error_type = error['type']
+                
+                validation_errors.append({
+                    'field': field_path,
+                    'error': error_detail,
+                    'type': error_type,
+                    'input': error.get('input')
+                })
+            
+            raise ConfigurationValidationError(
+                error_msg,
+                source_file=f"{usecase_file}, {business_rules_file}",
+                validation_errors=validation_errors,
+                suggestion=self._generate_usecase_domain_suggestion(validation_errors)
+            ) from e
+    
+    def load_from_strings(self, usecase_yaml: str, business_rules_yaml: str) -> UseCaseDomainConfig:
+        """
+        Load use case domain configuration from YAML strings.
+        
+        Args:
+            usecase_yaml: Use case configuration as YAML string
+            business_rules_yaml: Business rules configuration as YAML string
+            
+        Returns:
+            Validated UseCaseDomainConfig object
+            
+        Raises:
+            ConfigurationValidationError: If validation fails
+        """
+        logger.info("Loading use case domain configuration from YAML strings")
+        
+        # Load use case configuration
+        usecase_dict = self._parse_yaml_string(usecase_yaml, "usecase")
+        
+        # Load business rules configuration
+        business_rules_dict = self._parse_yaml_string(business_rules_yaml, "business_rules")
+        
+        # Merge configurations
+        merged_config = self._merge_configurations(usecase_dict, business_rules_dict, "usecase_string", "business_rules_string")
+        
+        # Validate merged configuration
+        try:
+            usecase_domain_config = UseCaseDomainConfig(**merged_config)
+            logger.info("Successfully loaded and validated use case domain configuration from strings")
+            
+            return usecase_domain_config
+            
+        except ValidationError as e:
+            error_msg = "Use case domain configuration validation failed"
+            logger.error(error_msg)
+            
+            validation_errors = []
+            for error in e.errors():
+                field_path = " -> ".join(str(loc) for loc in error['loc'])
+                validation_errors.append({
+                    'field': field_path,
+                    'error': error['msg'],
+                    'type': error['type'],
+                    'input': error.get('input')
+                })
+            
+            raise ConfigurationValidationError(
+                error_msg,
+                validation_errors=validation_errors,
+                suggestion=self._generate_usecase_domain_suggestion(validation_errors)
+            ) from e
+    
+    def validate_usecase_domain_config(self, config: UseCaseDomainConfig) -> bool:
+        """
+        Perform additional validation on use case domain configuration.
+        
+        Args:
+            config: UseCaseDomainConfig object to validate
+            
+        Returns:
+            True if validation passes
+            
+        Raises:
+            ConfigurationValidationError: If validation fails
+        """
+        logger.info("Performing additional use case domain configuration validation")
+        
+        try:
+            # Validate business rule references in use case methods
+            if config.usecase and config.business_rules:
+                rule_names = {rule.name for rule in config.business_rules.rules}
+                for method in config.usecase.methods:
+                    for rule_name in method.business_rules:
+                        if rule_name not in rule_names:
+                            raise ConfigurationValidationError(
+                                f"Use case method '{method.name}' references unknown business rule '{rule_name}'",
+                                suggestion=f"Ensure business rule '{rule_name}' is defined in business rules list"
+                            )
+            
+            # Validate dependency injection interface mappings
+            if config.usecase and config.usecase.dependency_injection:
+                di_config = config.usecase.dependency_injection
+                for interface, implementation in di_config.interface_mappings.items():
+                    if not interface.endswith('Service') and not interface.endswith('Repository'):
+                        logger.warning(
+                            f"Interface '{interface}' does not follow naming convention (should end with 'Service' or 'Repository')"
+                        )
+            
+            # Validate service composition configuration
+            if config.usecase and config.usecase.service_composition:
+                sc_config = config.usecase.service_composition
+                required_services = ['transaction_manager', 'event_publisher']
+                for service in required_services:
+                    if not getattr(sc_config, service):
+                        logger.warning(f"Service composition missing recommended service: {service}")
+            
+            # Validate business rule validation groups
+            if config.business_rules and config.business_rules.validation_groups:
+                rule_names = {rule.name for rule in config.business_rules.rules}
+                for group in config.business_rules.validation_groups:
+                    for rule_name in group.rules:
+                        if rule_name not in rule_names:
+                            raise ConfigurationValidationError(
+                                f"Validation group '{group.name}' references unknown rule '{rule_name}'",
+                                suggestion=f"Ensure rule '{rule_name}' is defined in business rules list"
+                            )
+            
+            logger.info("Use case domain configuration validation completed successfully")
+            return True
+            
+        except Exception as e:
+            logger.error("Use case domain configuration validation failed: %s", e)
+            raise
+    
+    def _load_yaml_file(self, file_path: Union[str, Path], file_type: str) -> Dict[str, Any]:
+        """Load YAML file and return parsed dictionary."""
+        file_path = Path(file_path)
+        
+        if not file_path.exists():
+            error_msg = f"Configuration file not found: {file_path}"
+            logger.error(error_msg)
+            raise ConfigurationFileError(
+                error_msg,
+                file_path=str(file_path),
+                suggestion=f"Create {file_type}.yaml file with required configuration"
+            )
+        
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                return self._parse_yaml_string(content, file_type)
+                
+        except IOError as e:
+            error_msg = f"Failed to read {file_type} configuration file: {file_path}"
+            logger.error(error_msg)
+            raise ConfigurationFileError(
+                error_msg,
+                file_path=str(file_path),
+                suggestion="Check file permissions and ensure file is readable"
+            ) from e
+    
+    def _parse_yaml_string(self, yaml_content: str, source_type: str) -> Dict[str, Any]:
+        """Parse YAML string and return dictionary."""
+        if not yaml_content.strip():
+            error_msg = f"Empty {source_type} configuration"
+            logger.error(error_msg)
+            raise ConfigurationValidationError(
+                error_msg,
+                suggestion=f"Add configuration content to {source_type}.yaml file"
+            )
+        
+        try:
+            # Safe YAML loading to prevent code injection
+            parsed_data = yaml.safe_load(yaml_content)
+            
+            if parsed_data is None:
+                error_msg = f"Empty or invalid {source_type} configuration"
+                logger.error(error_msg)
+                raise ConfigurationValidationError(
+                    error_msg,
+                    suggestion=f"Ensure {source_type}.yaml contains valid YAML content"
+                )
+            
+            if not isinstance(parsed_data, dict):
+                error_msg = f"{source_type.title()} configuration must be a dictionary, got {type(parsed_data).__name__}"
+                logger.error(error_msg)
+                raise ConfigurationValidationError(
+                    error_msg,
+                    suggestion="Ensure YAML root element is a mapping (key-value pairs)"
+                )
+            
+            logger.info("Successfully parsed %s configuration (%d top-level keys)", source_type, len(parsed_data))
+            return parsed_data
+            
+        except yaml.YAMLError as e:
+            error_msg = f"YAML syntax error in {source_type} configuration"
+            logger.error(error_msg)
+            raise ConfigurationValidationError(
+                error_msg,
+                suggestion="Check YAML syntax - ensure proper indentation and quoting"
+            ) from e
+    
+    def _merge_configurations(self, usecase_dict: Dict[str, Any], business_rules_dict: Dict[str, Any], 
+                            usecase_source: str, business_rules_source: str) -> Dict[str, Any]:
+        """Merge use case and business rules configurations into unified configuration."""
+        logger.info("Merging use case and business rules configurations")
+        
+        # Start with use case configuration as base
+        merged_config = usecase_dict.copy()
+        
+        # Add business rules from business-rules.yaml
+        if 'rules' in business_rules_dict or 'validation_groups' in business_rules_dict or 'error_handling' in business_rules_dict:
+            merged_config['business_rules'] = business_rules_dict
+            logger.info("Added business rules configuration")
+        else:
+            logger.warning("No business rules found in business rules configuration")
+        
+        # Wrap usecase configuration if it's not already wrapped
+        if 'usecase' not in merged_config and any(key in merged_config for key in ['methods', 'dependencies', 'service_composition']):
+            # Move use case-specific keys into usecase wrapper
+            usecase_config = {}
+            usecase_keys = ['methods', 'dependencies', 'error_handling', 'service_composition', 'dependency_injection']
+            
+            for key in usecase_keys:
+                if key in merged_config:
+                    usecase_config[key] = merged_config.pop(key)
+            
+            # Ensure name is set for use case
+            if 'name' not in usecase_config and 'name' in merged_config:
+                usecase_config['name'] = merged_config['name']
+            
+            merged_config['usecase'] = usecase_config
+            logger.info("Wrapped use case configuration")
+        
+        logger.info("Configuration merging completed successfully")
+        return merged_config
+    
+    def _log_usecase_domain_summary(self, config: UseCaseDomainConfig) -> None:
+        """Log a summary of the loaded use case domain configuration."""
+        logger.info("Use Case Domain Configuration Summary:")
+        logger.info("  Name: %s", config.name)
+        logger.info("  Package: %s", config.package)
+        
+        if config.usecase:
+            logger.info("  Use case: %s", config.usecase.name)
+            logger.info("  Methods: %d", len(config.usecase.methods))
+            for method in config.usecase.methods:
+                logger.info("    - %s (transaction: %s, rules: %d)", 
+                           method.name, method.transaction_boundary, len(method.business_rules))
+            
+            if hasattr(config.usecase.dependencies, 'services'):
+                logger.info("  Service dependencies: %d", len(config.usecase.dependencies.services))
+            elif isinstance(config.usecase.dependencies, list):
+                logger.info("  Dependencies: %d", len(config.usecase.dependencies))
+        
+        if config.business_rules:
+            logger.info("  Business rules: %d", len(config.business_rules.rules))
+            for rule in config.business_rules.rules:
+                logger.info("    - %s (%s, %s)", rule.name, rule.type, rule.severity)
+            logger.info("  Validation groups: %d", len(config.business_rules.validation_groups))
+        
+        logger.info("  Entity dependencies: %d", len(config.entity_dependencies))
+        logger.info("  Repository dependencies: %d", len(config.repository_dependencies))
+        logger.info("  External dependencies: %d", len(config.external_dependencies))
+    
+    def _generate_usecase_domain_suggestion(self, validation_errors: list) -> str:
+        """Generate helpful suggestion based on use case domain validation errors."""
+        if not validation_errors:
+            return "Check use case domain configuration format and required fields"
+        
+        error_types = {error['type'] for error in validation_errors}
+        error_fields = [error['field'] for error in validation_errors]
+        
+        if 'missing' in error_types:
+            missing_fields = [error['field'] for error in validation_errors if error['type'] == 'missing']
+            if 'name' in missing_fields:
+                return "Use case domain name is required in usecase.yaml"
+            return f"Required fields are missing: {', '.join(missing_fields)}"
+        
+        if any('usecase' in field for field in error_fields):
+            return "Check usecase.yaml format - ensure use case configuration is properly defined"
+        
+        if any('business_rules' in field for field in error_fields):
+            return "Check business-rules.yaml format - ensure business rules are properly defined"
+        
+        if any('methods' in field for field in error_fields):
+            return "Check use case methods configuration - ensure all method definitions are valid"
+        
+        if any('dependencies' in field for field in error_fields):
+            return "Check dependency configurations - ensure all dependency references are valid"
+        
+        return "Review use case domain configuration structure and field requirements"
+
+
+def load_usecase_domain_configuration(usecase_file: Union[str, Path], business_rules_file: Union[str, Path], 
+                                    strict_mode: bool = True) -> UseCaseDomainConfig:
+    """
+    Convenience function to load use case domain configuration from separate files.
+    
+    Args:
+        usecase_file: Path to usecase.yaml file
+        business_rules_file: Path to business-rules.yaml file  
+        strict_mode: If True, apply strict validation
+        
+    Returns:
+        Validated UseCaseDomainConfig object
+    """
+    loader = UseCaseLoader(strict_mode=strict_mode)
+    return loader.load_from_files(usecase_file, business_rules_file)
+
+
+def load_usecase_domain_from_strings(usecase_yaml: str, business_rules_yaml: str, 
+                                   strict_mode: bool = True) -> UseCaseDomainConfig:
+    """
+    Convenience function to load use case domain configuration from YAML strings.
+    
+    Args:
+        usecase_yaml: Use case configuration as YAML string
+        business_rules_yaml: Business rules configuration as YAML string
+        strict_mode: If True, apply strict validation
+        
+    Returns:
+        Validated UseCaseDomainConfig object
+    """
+    loader = UseCaseLoader(strict_mode=strict_mode)
+    return loader.load_from_strings(usecase_yaml, business_rules_yaml)

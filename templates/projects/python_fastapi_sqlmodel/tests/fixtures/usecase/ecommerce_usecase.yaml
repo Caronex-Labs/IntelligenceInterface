@@ -1,0 +1,125 @@
+name: "ECommerceCheckout"
+description: "Complex e-commerce checkout process with advanced dependency injection"
+methods:
+  - name: "process_checkout"
+    input_schema: "CheckoutRequest"
+    output_schema: "CheckoutResponse"
+    transaction_boundary: true
+    dependencies:
+      repositories:
+        - "cart_repository"
+        - "order_repository"
+        - "customer_repository"
+        - "product_repository"
+        - "inventory_repository"
+      services:
+        - "payment_service"
+        - "inventory_service"
+        - "shipping_service"
+        - "tax_service"
+        - "discount_service"
+        - "notification_service"
+      external_apis:
+        - "fraud_detection_api"
+        - "address_validation_api"
+        - "payment_gateway_api"
+      event_handlers:
+        - "order_created_handler"
+        - "inventory_updated_handler"
+        - "payment_processed_handler"
+    business_rules:
+      - "cart_not_empty"
+      - "customer_authenticated"
+      - "payment_method_valid"
+      - "shipping_address_valid"
+      - "inventory_available"
+      - "fraud_check_passed"
+      - "total_amount_valid"
+    orchestration_steps:
+      - "validate_customer_authentication"
+      - "validate_cart_contents"
+      - "verify_inventory_availability"
+      - "calculate_taxes_and_discounts"
+      - "validate_shipping_address"
+      - "perform_fraud_detection"
+      - "process_payment"
+      - "reserve_inventory"
+      - "create_order_record"
+      - "send_confirmation_notifications"
+      - "trigger_fulfillment_process"
+    description: "Complete checkout process with comprehensive validation and orchestration"
+  
+  - name: "calculate_order_total"
+    input_schema: "OrderTotalRequest"
+    output_schema: "OrderTotalResponse"
+    transaction_boundary: false
+    dependencies:
+      repositories: ["cart_repository", "product_repository"]
+      services: ["tax_service", "discount_service", "shipping_service"]
+    business_rules: ["cart_not_empty", "valid_shipping_method"]
+    orchestration_steps:
+      - "calculate_subtotal"
+      - "apply_discounts"
+      - "calculate_taxes"
+      - "calculate_shipping_costs"
+      - "compute_final_total"
+    description: "Calculate order total with taxes, discounts, and shipping"
+
+dependencies:
+  repositories: ["cart_repository", "order_repository", "customer_repository", "product_repository", "inventory_repository"]
+  services: ["payment_service", "inventory_service", "shipping_service", "tax_service", "discount_service", "notification_service"]
+  external_apis: ["fraud_detection_api", "address_validation_api", "payment_gateway_api"]
+
+error_handling:
+  aggregation_strategy: "collect_all_errors"
+  early_termination: false
+  custom_exceptions:
+    - rule: "cart_not_empty"
+      exception: "EmptyCartError"
+    - rule: "customer_authenticated"
+      exception: "AuthenticationRequiredError"
+    - rule: "payment_method_valid"
+      exception: "InvalidPaymentMethodError"
+    - rule: "inventory_available"
+      exception: "InsufficientInventoryError"
+    - rule: "fraud_check_passed"
+      exception: "FraudDetectionError"
+  default_error_response: "ECommerceErrorResponse"
+
+service_composition:
+  transaction_manager: "distributed_transaction_manager"
+  event_publisher: "ecommerce_event_publisher"
+  cache_manager: "redis_cache_manager"
+  logger: "ecommerce_logger"
+  metrics_collector: "checkout_metrics_collector"
+
+dependency_injection:
+  interface_mappings:
+    "PaymentService": "stripe_payment_service"
+    "ShippingService": "fedex_shipping_service"
+    "InventoryService": "warehouse_inventory_service"
+    "TaxService": "avalara_tax_service"
+    "DiscountService": "promotion_discount_service"
+    "NotificationService": "email_sms_notification_service"
+    "FraudDetectionApi": "maxmind_fraud_detection"
+    "AddressValidationApi": "smartystreets_address_validation"
+  scoped_dependencies:
+    - "database_session"
+    - "user_context"
+    - "request_context"
+    - "order_context"
+  singleton_dependencies:
+    - "cache_manager"
+    - "logger"
+    - "metrics_collector"
+    - "event_publisher"
+    - "configuration_manager"
+  transient_dependencies:
+    - "payment_service"
+    - "shipping_service"
+    - "tax_service"
+    - "discount_service"
+
+entity_dependencies: ["Order", "Cart", "Customer", "Product", "Inventory", "Payment", "ShippingAddress"]
+repository_dependencies: ["cart_repository", "order_repository", "customer_repository", "product_repository", "inventory_repository"]
+external_dependencies: ["payment_service", "shipping_service", "tax_service", "fraud_detection_api", "address_validation_api"]

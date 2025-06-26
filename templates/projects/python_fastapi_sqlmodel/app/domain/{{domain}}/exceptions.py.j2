@@ -1,6 +1,6 @@
-"""{{domain|title}} domain exceptions - Generated from Co-located Template.
+"""{{domain.name|title}} domain exceptions - Generated from Co-located Template.
 
-This module contains domain-specific exceptions for the {{domain}} domain following
+This module contains domain-specific exceptions for the {{domain.name}} domain following
 hexagonal architecture principles with co-location pattern implementation.
 
 Generated from:
@@ -50,7 +50,7 @@ class ExceptionCategory(str, Enum):
 
 
 # Base Domain Exception Structure
-class {{domain|title}}ExceptionContext(BaseModel):
+class {{domain.name|title}}ExceptionContext(BaseModel):
     """Exception context for structured error information."""
     
     error_code: str = Field(..., description="Unique error code")
@@ -67,8 +67,8 @@ class {{domain|title}}ExceptionContext(BaseModel):
     # @pyhex:end:custom_context_fields
 
 
-class Base{{domain|title}}Exception(Exception):
-    """Base exception class for {{domain}} domain.
+class Base{{domain.name|title}}Exception(Exception):
+    """Base exception class for {{domain.name}} domain.
     
     This base class provides structured error handling with error codes,
     severity levels, and context information following hexagonal architecture.
@@ -101,7 +101,7 @@ class Base{{domain|title}}Exception(Exception):
         """
         super().__init__(error_message)
         
-        self.context = {{domain|title}}ExceptionContext(
+        self.context = {{domain.name|title}}ExceptionContext(
             error_code=error_code,
             error_message=error_message,
             category=category,
@@ -121,7 +121,7 @@ class Base{{domain|title}}Exception(Exception):
     
     def _log_exception(self):
         """Log exception based on severity level."""
-        logger = logging.getLogger(f"{{domain}}.exceptions")
+        logger = logging.getLogger(f"{{domain.name}}.exceptions")
         
         log_data = {
             "error_code": self.context.error_code,
@@ -208,8 +208,8 @@ class Base{{domain|title}}Exception(Exception):
 
 
 # Specific Domain Exception Classes
-class {{domain|title}}NotFoundError(Base{{domain|title}}Exception):
-    """Exception raised when a {{domain}} entity is not found."""
+class {{domain.name|title}}NotFoundError(Base{{domain.name|title}}Exception):
+    """Exception raised when a {{domain.name}} entity is not found."""
     
     def __init__(
         self,
@@ -226,7 +226,7 @@ class {{domain|title}}NotFoundError(Base{{domain|title}}Exception):
             field_name: Field name if applicable
             context_data: Additional context data
         """
-        error_code = f"{{domain|upper}}_NOT_FOUND"
+        error_code = f"{{domain.name|upper}}_NOT_FOUND"
         
         if entity_id:
             error_message = f"{entity_type} with ID '{entity_id}' not found"
@@ -251,8 +251,8 @@ class {{domain|title}}NotFoundError(Base{{domain|title}}Exception):
         # @pyhex:end:custom_not_found_init
 
 
-class {{domain|title}}ValidationError(Base{{domain|title}}Exception):
-    """Exception raised when {{domain}} validation fails."""
+class {{domain.name|title}}ValidationError(Base{{domain.name|title}}Exception):
+    """Exception raised when {{domain.name}} validation fails."""
     
     def __init__(
         self,
@@ -273,7 +273,7 @@ class {{domain|title}}ValidationError(Base{{domain|title}}Exception):
             entity_id: Entity ID if applicable
             context_data: Additional context data
         """
-        error_code = f"{{domain|upper}}_VALIDATION_ERROR"
+        error_code = f"{{domain.name|upper}}_VALIDATION_ERROR"
         error_message = f"Validation failed for field '{field_name}': {validation_rule}"
         
         validation_context = {
@@ -298,8 +298,8 @@ class {{domain|title}}ValidationError(Base{{domain|title}}Exception):
         # @pyhex:end:custom_validation_init
 
 
-class {{domain|title}}BusinessRuleError(Base{{domain|title}}Exception):
-    """Exception raised when {{domain}} business rules are violated."""
+class {{domain.name|title}}BusinessRuleError(Base{{domain.name|title}}Exception):
+    """Exception raised when {{domain.name}} business rules are violated."""
     
     def __init__(
         self,
@@ -318,7 +318,7 @@ class {{domain|title}}BusinessRuleError(Base{{domain|title}}Exception):
             entity_id: Entity ID if applicable
             context_data: Additional context data
         """
-        error_code = f"{{domain|upper}}_BUSINESS_RULE_ERROR"
+        error_code = f"{{domain.name|upper}}_BUSINESS_RULE_ERROR"
         error_message = f"Business rule '{rule_name}' violated: {rule_description}"
         
         business_context = {
@@ -342,8 +342,8 @@ class {{domain|title}}BusinessRuleError(Base{{domain|title}}Exception):
         # @pyhex:end:custom_business_rule_init
 
 
-class {{domain|title}}AuthorizationError(Base{{domain|title}}Exception):
-    """Exception raised when {{domain}} authorization fails."""
+class {{domain.name|title}}AuthorizationError(Base{{domain.name|title}}Exception):
+    """Exception raised when {{domain.name}} authorization fails."""
     
     def __init__(
         self,
@@ -364,7 +364,7 @@ class {{domain|title}}AuthorizationError(Base{{domain|title}}Exception):
             entity_id: Entity ID if applicable
             context_data: Additional context data
         """
-        error_code = f"{{domain|upper}}_AUTHORIZATION_ERROR"
+        error_code = f"{{domain.name|upper}}_AUTHORIZATION_ERROR"
         error_message = f"User '{user_id}' not authorized to {action} {resource}"
         
         auth_context = {
@@ -389,8 +389,8 @@ class {{domain|title}}AuthorizationError(Base{{domain|title}}Exception):
         # @pyhex:end:custom_authorization_init
 
 
-class {{domain|title}}IntegrationError(Base{{domain|title}}Exception):
-    """Exception raised when {{domain}} integration fails."""
+class {{domain.name|title}}IntegrationError(Base{{domain.name|title}}Exception):
+    """Exception raised when {{domain.name}} integration fails."""
     
     def __init__(
         self,
@@ -411,7 +411,7 @@ class {{domain|title}}IntegrationError(Base{{domain|title}}Exception):
             entity_id: Entity ID if applicable
             context_data: Additional context data
         """
-        error_code = f"{{domain|upper}}_INTEGRATION_ERROR"
+        error_code = f"{{domain.name|upper}}_INTEGRATION_ERROR"
         error_message = f"Integration '{integration_name}' failed during {operation}: {error_details}"
         
         integration_context = {
@@ -436,8 +436,8 @@ class {{domain|title}}IntegrationError(Base{{domain|title}}Exception):
         # @pyhex:end:custom_integration_init
 
 
-class {{domain|title}}SystemError(Base{{domain|title}}Exception):
-    """Exception raised when {{domain}} system errors occur."""
+class {{domain.name|title}}SystemError(Base{{domain.name|title}}Exception):
+    """Exception raised when {{domain.name}} system errors occur."""
     
     def __init__(
         self,
@@ -456,7 +456,7 @@ class {{domain|title}}SystemError(Base{{domain|title}}Exception):
             entity_id: Entity ID if applicable
             context_data: Additional context data
         """
-        error_code = f"{{domain|upper}}_SYSTEM_ERROR"
+        error_code = f"{{domain.name|upper}}_SYSTEM_ERROR"
         error_message = f"System component '{system_component}' failed: {error_details}"
         
         system_context = {
@@ -491,7 +491,7 @@ def create_not_found_error(
     entity_id: Optional[str] = None,
     field_name: Optional[str] = None,
     context_data: Optional[Dict[str, Any]] = None
-) -> {{domain|title}}NotFoundError:
+) -> {{domain.name|title}}NotFoundError:
     """Factory function for creating not found errors.
     
     Args:
@@ -501,13 +501,13 @@ def create_not_found_error(
         context_data: Additional context data
         
     Returns:
-        {{domain|title}}NotFoundError: Configured not found exception
+        {{domain.name|title}}NotFoundError: Configured not found exception
     """
     # @pyhex:begin:custom_not_found_factory
     # Add custom not found factory logic here - preserved during regeneration
     # @pyhex:end:custom_not_found_factory
     
-    return {{domain|title}}NotFoundError(
+    return {{domain.name|title}}NotFoundError(
         entity_type=entity_type,
         entity_id=entity_id,
         field_name=field_name,
@@ -522,7 +522,7 @@ def create_validation_error(
     entity_type: Optional[str] = None,
     entity_id: Optional[str] = None,
     context_data: Optional[Dict[str, Any]] = None
-) -> {{domain|title}}ValidationError:
+) -> {{domain.name|title}}ValidationError:
     """Factory function for creating validation errors.
     
     Args:
@@ -534,13 +534,13 @@ def create_validation_error(
         context_data: Additional context data
         
     Returns:
-        {{domain|title}}ValidationError: Configured validation exception
+        {{domain.name|title}}ValidationError: Configured validation exception
     """
     # @pyhex:begin:custom_validation_factory
     # Add custom validation factory logic here - preserved during regeneration
     # @pyhex:end:custom_validation_factory
     
-    return {{domain|title}}ValidationError(
+    return {{domain.name|title}}ValidationError(
         field_name=field_name,
         field_value=field_value,
         validation_rule=validation_rule,
@@ -556,7 +556,7 @@ def create_business_rule_error(
     entity_type: Optional[str] = None,
     entity_id: Optional[str] = None,
     context_data: Optional[Dict[str, Any]] = None
-) -> {{domain|title}}BusinessRuleError:
+) -> {{domain.name|title}}BusinessRuleError:
     """Factory function for creating business rule errors.
     
     Args:
@@ -567,13 +567,13 @@ def create_business_rule_error(
         context_data: Additional context data
         
     Returns:
-        {{domain|title}}BusinessRuleError: Configured business rule exception
+        {{domain.name|title}}BusinessRuleError: Configured business rule exception
     """
     # @pyhex:begin:custom_business_rule_factory
     # Add custom business rule factory logic here - preserved during regeneration
     # @pyhex:end:custom_business_rule_factory
     
-    return {{domain|title}}BusinessRuleError(
+    return {{domain.name|title}}BusinessRuleError(
         rule_name=rule_name,
         rule_description=rule_description,
         entity_type=entity_type,
@@ -589,7 +589,7 @@ def create_business_rule_error(
 
 # FastAPI Exception Handlers
 async def handle_domain_exception(
-    exception: Base{{domain|title}}Exception
+    exception: Base{{domain.name|title}}Exception
 ) -> HTTPException:
     """Handle domain exceptions for FastAPI.
     
@@ -612,23 +612,23 @@ def register_exception_handlers(app):
     Args:
         app: FastAPI application instance
     """
-    @app.exception_handler(Base{{domain|title}}Exception)
-    async def domain_exception_handler(request, exc: Base{{domain|title}}Exception):
+    @app.exception_handler(Base{{domain.name|title}}Exception)
+    async def domain_exception_handler(request, exc: Base{{domain.name|title}}Exception):
         """Handle domain exceptions."""
         return await handle_domain_exception(exc)
     
-    @app.exception_handler({{domain|title}}NotFoundError)
-    async def not_found_exception_handler(request, exc: {{domain|title}}NotFoundError):
+    @app.exception_handler({{domain.name|title}}NotFoundError)
+    async def not_found_exception_handler(request, exc: {{domain.name|title}}NotFoundError):
         """Handle not found exceptions."""
         return await handle_domain_exception(exc)
     
-    @app.exception_handler({{domain|title}}ValidationError)
-    async def validation_exception_handler(request, exc: {{domain|title}}ValidationError):
+    @app.exception_handler({{domain.name|title}}ValidationError)
+    async def validation_exception_handler(request, exc: {{domain.name|title}}ValidationError):
         """Handle validation exceptions."""
         return await handle_domain_exception(exc)
     
-    @app.exception_handler({{domain|title}}BusinessRuleError)
-    async def business_rule_exception_handler(request, exc: {{domain|title}}BusinessRuleError):
+    @app.exception_handler({{domain.name|title}}BusinessRuleError)
+    async def business_rule_exception_handler(request, exc: {{domain.name|title}}BusinessRuleError):
         """Handle business rule exceptions."""
         return await handle_domain_exception(exc)
     
@@ -645,18 +645,18 @@ def get_exception_hierarchy() -> Dict[str, List[str]]:
         Dict[str, List[str]]: Exception hierarchy mapping
     """
     return {
-        "Base{{domain|title}}Exception": [
-            "{{domain|title}}NotFoundError",
-            "{{domain|title}}ValidationError", 
-            "{{domain|title}}BusinessRuleError",
-            "{{domain|title}}AuthorizationError",
-            "{{domain|title}}IntegrationError",
-            "{{domain|title}}SystemError"
+        "Base{{domain.name|title}}Exception": [
+            "{{domain.name|title}}NotFoundError",
+            "{{domain.name|title}}ValidationError", 
+            "{{domain.name|title}}BusinessRuleError",
+            "{{domain.name|title}}AuthorizationError",
+            "{{domain.name|title}}IntegrationError",
+            "{{domain.name|title}}SystemError"
         ]
     }
 
 
-def validate_exception_context(context: {{domain|title}}ExceptionContext) -> List[str]:
+def validate_exception_context(context: {{domain.name|title}}ExceptionContext) -> List[str]:
     """Validate exception context for completeness.
     
     Args:
@@ -695,16 +695,16 @@ __all__ = [
     "ExceptionCategory",
     
     # Context and Base Classes
-    "{{domain|title}}ExceptionContext",
-    "Base{{domain|title}}Exception",
+    "{{domain.name|title}}ExceptionContext",
+    "Base{{domain.name|title}}Exception",
     
     # Specific Exception Classes
-    "{{domain|title}}NotFoundError",
-    "{{domain|title}}ValidationError",
-    "{{domain|title}}BusinessRuleError",
-    "{{domain|title}}AuthorizationError",
-    "{{domain|title}}IntegrationError",
-    "{{domain|title}}SystemError",
+    "{{domain.name|title}}NotFoundError",
+    "{{domain.name|title}}ValidationError",
+    "{{domain.name|title}}BusinessRuleError",
+    "{{domain.name|title}}AuthorizationError",
+    "{{domain.name|title}}IntegrationError",
+    "{{domain.name|title}}SystemError",
     
     # Factory Functions
     "create_not_found_error",

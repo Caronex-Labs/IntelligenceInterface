@@ -1,0 +1,81 @@
+name: "UserManagement"
+description: "User management use case orchestration"
+methods:
+  - name: "create_user"
+    input_schema: "CreateUserRequest"
+    output_schema: "UserResponse"
+    transaction_boundary: true
+    dependencies:
+      repositories: ["user_repository"]
+      services: ["email_service", "validation_service"]
+    business_rules: ["email_uniqueness", "password_strength"]
+    orchestration_steps:
+      - "validate_user_data"
+      - "check_email_uniqueness"
+      - "hash_password"
+      - "create_user_record"
+      - "send_welcome_email"
+    description: "Create a new user with email validation and welcome notification"
+  
+  - name: "get_user_by_id"
+    input_schema: "GetUserRequest"
+    output_schema: "UserResponse"
+    transaction_boundary: false
+    dependencies:
+      repositories: ["user_repository"]
+    business_rules: ["user_exists"]
+    description: "Retrieve user by ID with existence validation"
+  
+  - name: "update_user_profile"
+    input_schema: "UpdateUserRequest"
+    output_schema: "UserResponse"
+    transaction_boundary: true
+    dependencies:
+      repositories: ["user_repository"]
+      services: ["validation_service"]
+    business_rules: ["user_exists", "profile_update_allowed"]
+    orchestration_steps:
+      - "validate_update_data"
+      - "check_user_permissions"
+      - "update_user_record"
+      - "log_profile_change"
+    description: "Update user profile with permission and validation checks"
+
+dependencies:
+  repositories: ["user_repository"]
+  services: ["email_service", "validation_service", "logging_service"]
+
+error_handling:
+  aggregation_strategy: "collect_all_errors"
+  early_termination: false
+  custom_exceptions:
+    - rule: "email_uniqueness"
+      exception: "UserAlreadyExistsError"
+    - rule: "user_exists"
+      exception: "UserNotFoundError"
+  default_error_response: "StandardErrorResponse"
+
+service_composition:
+  transaction_manager: "database_transaction_manager"
+  event_publisher: "domain_event_publisher"
+  cache_manager: "redis_cache_manager"
+  logger: "structured_logger"
+
+dependency_injection:
+  interface_mappings:
+    "EmailService": "smtp_email_service"
+    "ValidationService": "pydantic_validation_service"
+    "UserRepository": "sqlmodel_user_repository"
+  scoped_dependencies:
+    - "database_session"
+    - "user_context"
+  singleton_dependencies:
+    - "cache_manager"
+    - "logger"
+    - "event_publisher"
+  transient_dependencies:
+    - "validation_service"
+
+entity_dependencies: ["User", "UserProfile"]
+repository_dependencies: ["user_repository"]
+external_dependencies: ["email_service", "validation_service"]

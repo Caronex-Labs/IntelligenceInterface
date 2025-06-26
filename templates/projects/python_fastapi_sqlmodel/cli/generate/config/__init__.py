@@ -28,6 +28,19 @@ from .models import (
     MixinConfig,
     DomainRelationshipConfig,
     SQLModelConfig,
+    UseCaseDomainConfig,
+    UseCaseConfig,
+    BusinessRulesConfig,
+    BusinessRuleConfig,
+    ValidationGroupConfig,
+    DependencyConfig,
+    DependencyInjectionConfig,
+    UseCaseMethodConfig,
+    ServiceCompositionConfig,
+    ErrorHandlingConfig,
+    BusinessRuleType,
+    BusinessRuleSeverity,
+    DependencyScope,
 )
 
 from .loader import (
@@ -37,6 +50,9 @@ from .loader import (
     EntityDomainLoader,
     load_entity_domain_configuration,
     load_entity_domain_from_strings,
+    UseCaseLoader,
+    load_usecase_domain_configuration,
+    load_usecase_domain_from_strings,
 )
 
 from .exceptions import (
@@ -61,6 +77,19 @@ __all__ = [
     'MixinConfig',
     'DomainRelationshipConfig',
     'SQLModelConfig',
+    'UseCaseDomainConfig',
+    'UseCaseConfig',
+    'BusinessRulesConfig',
+    'BusinessRuleConfig',
+    'ValidationGroupConfig',
+    'DependencyConfig',
+    'DependencyInjectionConfig',
+    'UseCaseMethodConfig',
+    'ServiceCompositionConfig',
+    'ErrorHandlingConfig',
+    'BusinessRuleType',
+    'BusinessRuleSeverity',
+    'DependencyScope',
     
     # Loader
     'ConfigurationLoader',
@@ -69,6 +98,9 @@ __all__ = [
     'EntityDomainLoader',
     'load_entity_domain_configuration',
     'load_entity_domain_from_strings',
+    'UseCaseLoader',
+    'load_usecase_domain_configuration',
+    'load_usecase_domain_from_strings',
     
     # Exceptions
     'ConfigurationError',

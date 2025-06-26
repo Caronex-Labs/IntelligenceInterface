@@ -1,0 +1,90 @@
+name: "BlogManagement"
+description: "Blog management use case orchestration"
+methods:
+  - name: "create_post"
+    input_schema: "CreatePostRequest"
+    output_schema: "PostResponse"
+    transaction_boundary: true
+    dependencies:
+      repositories: ["post_repository", "user_repository"]
+      services: ["content_validation_service", "notification_service"]
+    business_rules: ["content_length_validation", "title_uniqueness", "user_can_publish"]
+    orchestration_steps:
+      - "validate_post_content"
+      - "check_title_uniqueness"
+      - "verify_user_permissions"
+      - "create_post_record"
+      - "notify_subscribers"
+    description: "Create a new blog post with validation and notifications"
+  
+  - name: "publish_post"
+    input_schema: "PublishPostRequest"
+    output_schema: "PostResponse"
+    transaction_boundary: true
+    dependencies:
+      repositories: ["post_repository"]
+      services: ["content_validation_service", "seo_service"]
+    business_rules: ["post_exists", "post_ready_for_publish", "user_can_publish"]
+    orchestration_steps:
+      - "validate_post_exists"
+      - "check_publish_readiness"
+      - "generate_seo_metadata"
+      - "update_post_status"
+      - "schedule_social_media"
+    description: "Publish a draft post with SEO optimization"
+  
+  - name: "get_post_by_slug"
+    input_schema: "GetPostRequest"
+    output_schema: "PostResponse"
+    transaction_boundary: false
+    dependencies:
+      repositories: ["post_repository"]
+      services: ["analytics_service"]
+    business_rules: ["post_exists", "post_is_published"]
+    description: "Retrieve published post by slug with analytics tracking"
+
+dependencies:
+  repositories: ["post_repository", "user_repository", "category_repository"]
+  services: ["content_validation_service", "notification_service", "seo_service", "analytics_service"]
+
+error_handling:
+  aggregation_strategy: "fail_fast"
+  early_termination: true
+  custom_exceptions:
+    - rule: "title_uniqueness"
+      exception: "DuplicateTitleError"
+    - rule: "post_exists"
+      exception: "PostNotFoundError"
+    - rule: "user_can_publish"
+      exception: "InsufficientPermissionsError"
+  default_error_response: "BlogErrorResponse"
+
+service_composition:
+  transaction_manager: "database_transaction_manager"
+  event_publisher: "blog_event_publisher"
+  cache_manager: "redis_cache_manager"
+  logger: "blog_logger"
+  metrics_collector: "blog_metrics_collector"
+
+dependency_injection:
+  interface_mappings:
+    "ContentValidationService": "markdown_content_validator"
+    "NotificationService": "email_notification_service"
+    "SeoService": "meta_tag_seo_service"
+    "AnalyticsService": "google_analytics_service"
+  scoped_dependencies:
+    - "database_session"
+    - "user_context"
+    - "request_context"
+  singleton_dependencies:
+    - "cache_manager"
+    - "logger"
+    - "metrics_collector"
+    - "event_publisher"
+  transient_dependencies:
+    - "content_validation_service"
+    - "seo_service"
+
+entity_dependencies: ["Post", "User", "Category", "Tag"]
+repository_dependencies: ["post_repository", "user_repository", "category_repository"]
+external_dependencies: ["notification_service", "seo_service", "analytics_service"]

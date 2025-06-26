@@ -1,0 +1,57 @@
+rules:
+  - name: "email_uniqueness"
+    type: "validation"
+    condition: "email not in existing_emails"
+    error_message: "Email address already exists"
+    severity: "error"
+    context: "user_management"
+    custom_exception: "UserAlreadyExistsError"
+  
+  - name: "password_strength"
+    type: "validation"
+    condition: "password_meets_complexity_requirements"
+    error_message: "Password must meet complexity requirements"
+    severity: "error"
+    context: "user_management"
+  
+  - name: "user_exists"
+    type: "constraint"
+    condition: "user.id exists in database"
+    error_message: "User not found"
+    severity: "error"
+    context: "user_management"
+    custom_exception: "UserNotFoundError"
+  
+  - name: "profile_update_allowed"
+    type: "business_logic"
+    condition: "user.can_update_profile and not user.is_locked"
+    error_message: "Profile update not allowed for this user"
+    severity: "error"
+    context: "user_management"
+
+validation_groups:
+  - name: "user_creation"
+    rules: ["email_uniqueness", "password_strength"]
+    execution_order: ["email_uniqueness", "password_strength"]
+    description: "Validation rules for user creation process"
+  
+  - name: "user_access"
+    rules: ["user_exists"]
+    description: "Validation rules for user access operations"
+  
+  - name: "profile_management"
+    rules: ["user_exists", "profile_update_allowed"]
+    execution_order: ["user_exists", "profile_update_allowed"]
+    description: "Validation rules for profile management operations"
+
+error_handling:
+  aggregation_strategy: "collect_all_errors"
+  early_termination: false
+  custom_exceptions:
+    - rule: "email_uniqueness"
+      exception: "UserAlreadyExistsError"
+    - rule: "user_exists"
+      exception: "UserNotFoundError"
+    - rule: "profile_update_allowed"
+      exception: "ProfileUpdateNotAllowedError"
+  default_error_response: "StandardErrorResponse"

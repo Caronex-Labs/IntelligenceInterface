@@ -50,6 +50,28 @@ class HTTPMethod(str, Enum):
     DELETE = "DELETE"
 
 
+class BusinessRuleType(str, Enum):
+    """Supported business rule types."""
+    VALIDATION = "validation"
+    CONSTRAINT = "constraint"
+    BUSINESS_LOGIC = "business_logic"
+    SECURITY = "security"
+
+
+class BusinessRuleSeverity(str, Enum):
+    """Supported business rule severity levels."""
+    ERROR = "error"
+    WARNING = "warning"
+    INFO = "info"
+
+
+class DependencyScope(str, Enum):
+    """Supported dependency injection scopes."""
+    SINGLETON = "singleton"
+    SCOPED = "scoped"
+    TRANSIENT = "transient"
+
+
 class FieldConfig(BaseModel):
     """Configuration for an entity field."""
     
@@ -428,6 +450,290 @@ class EntityDomainConfig(BaseModel):
             ]
             self.endpoints = default_endpoints
             logger.info("Generated default CRUD endpoints")
+        
+        return self
+    
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True,
+        "extra": "forbid",  # Reject unknown fields
+    }
+
+
+class BusinessRuleConfig(BaseModel):
+    """Configuration for business rules and validation constraints."""
+    
+    name: str = Field(..., description="Business rule name")
+    type: BusinessRuleType = Field(..., description="Rule type")
+    condition: str = Field(..., description="Rule condition expression")
+    error_message: Optional[str] = Field(default=None, description="Error message when rule fails")
+    severity: BusinessRuleSeverity = Field(default=BusinessRuleSeverity.ERROR, description="Rule severity level")
+    context: Optional[str] = Field(default=None, description="Context where rule applies")
+    custom_exception: Optional[str] = Field(default=None, description="Custom exception class name")
+    
+    @field_validator('name')
+    def validate_rule_name(cls, v):
+        """Validate business rule name."""
+        if not v.strip():
+            raise ValueError("Business rule name cannot be empty")
+        if not v.replace('_', '').replace('-', '').isalnum():
+            raise ValueError(f"Business rule name '{v}' should contain only alphanumeric characters, underscores, and hyphens")
+        return v
+    
+    @field_validator('condition')
+    def validate_condition(cls, v):
+        """Validate rule condition."""
+        if not v.strip():
+            raise ValueError("Business rule condition cannot be empty")
+        return v
+
+
+class ValidationGroupConfig(BaseModel):
+    """Configuration for validation group with execution order."""
+    
+    name: str = Field(..., description="Validation group name")
+    rules: List[str] = Field(..., description="Business rule names in this group")
+    execution_order: Optional[List[str]] = Field(default=None, description="Explicit rule execution order")
+    description: Optional[str] = Field(default=None, description="Group description")
+    
+    @field_validator('name')
+    def validate_group_name(cls, v):
+        """Validate validation group name."""
+        if not v.strip():
+            raise ValueError("Validation group name cannot be empty")
+        return v
+    
+    @field_validator('rules')
+    def validate_rules_list(cls, v):
+        """Validate rules list."""
+        if not v:
+            raise ValueError("Validation group must contain at least one rule")
+        return v
+    
+    @model_validator(mode='after')
+    def validate_execution_order(self):
+        """Validate execution order contains only rules from the group."""
+        if self.execution_order:
+            rule_set = set(self.rules)
+            for rule in self.execution_order:
+                if rule not in rule_set:
+                    raise ValueError(f"Execution order contains rule '{rule}' not in group rules")
+        return self
+
+
+class DependencyConfig(BaseModel):
+    """Configuration for service dependencies."""
+    
+    repositories: List[str] = Field(default_factory=list, description="Repository dependencies")
+    services: List[str] = Field(default_factory=list, description="Service dependencies")
+    external_apis: List[str] = Field(default_factory=list, description="External API dependencies")
+    event_handlers: List[str] = Field(default_factory=list, description="Event handler dependencies")
+    
+    @field_validator('repositories', 'services', 'external_apis', 'event_handlers')
+    def validate_dependency_names(cls, v):
+        """Validate dependency names."""
+        for dep in v:
+            if not dep.strip():
+                raise ValueError("Dependency name cannot be empty")
+        return v
+
+
+class DependencyInjectionConfig(BaseModel):
+    """Configuration for dependency injection patterns."""
+    
+    interface_mappings: Dict[str, str] = Field(default_factory=dict, description="Interface to implementation mappings")
+    scoped_dependencies: List[str] = Field(default_factory=list, description="Scoped lifetime dependencies")
+    singleton_dependencies: List[str] = Field(default_factory=list, description="Singleton lifetime dependencies")
+    transient_dependencies: List[str] = Field(default_factory=list, description="Transient lifetime dependencies")
+    
+    @field_validator('interface_mappings')
+    def validate_interface_mappings(cls, v):
+        """Validate interface mappings."""
+        for interface, implementation in v.items():
+            if not interface.strip() or not implementation.strip():
+                raise ValueError("Interface and implementation names cannot be empty")
+        return v
+
+
+class UseCaseMethodConfig(BaseModel):
+    """Configuration for a use case method."""
+    
+    name: str = Field(..., description="Method name")
+    input_schema: Optional[str] = Field(default=None, description="Input schema class name")
+    output_schema: Optional[str] = Field(default=None, description="Output schema class name")
+    transaction_boundary: bool = Field(default=False, description="Whether method requires transaction boundary")
+    dependencies: Union[List[str], DependencyConfig] = Field(default_factory=list, description="Method dependencies")
+    business_rules: List[str] = Field(default_factory=list, description="Business rules for this method")
+    orchestration_steps: List[str] = Field(default_factory=list, description="Ordered orchestration steps")
+    description: Optional[str] = Field(default=None, description="Method description")
+    
+    @field_validator('name')
+    def validate_method_name(cls, v):
+        """Validate method name follows Python naming conventions."""
+        if not v.isidentifier():
+            raise ValueError(f"Method name '{v}' is not a valid Python identifier")
+        if v.startswith('_'):
+            raise ValueError(f"Method name '{v}' should not start with underscore")
+        return v
+    
+    @model_validator(mode='after')
+    def validate_schemas(self):
+        """Validate schema names."""
+        if self.input_schema and not self.input_schema.isidentifier():
+            raise ValueError(f"Input schema '{self.input_schema}' is not a valid Python identifier")
+        if self.output_schema and not self.output_schema.isidentifier():
+            raise ValueError(f"Output schema '{self.output_schema}' is not a valid Python identifier")
+        return self
+
+
+class ServiceCompositionConfig(BaseModel):
+    """Configuration for service composition patterns."""
+    
+    transaction_manager: Optional[str] = Field(default=None, description="Transaction manager service")
+    event_publisher: Optional[str] = Field(default=None, description="Event publisher service")
+    cache_manager: Optional[str] = Field(default=None, description="Cache manager service")
+    logger: Optional[str] = Field(default=None, description="Logger service")
+    metrics_collector: Optional[str] = Field(default=None, description="Metrics collector service")
+
+
+class ErrorHandlingConfig(BaseModel):
+    """Configuration for error handling patterns."""
+    
+    aggregation_strategy: str = Field(default="fail_fast", description="Error aggregation strategy")
+    early_termination: bool = Field(default=True, description="Whether to terminate on first error")
+    custom_exceptions: List[Dict[str, str]] = Field(default_factory=list, description="Custom exception mappings")
+    default_error_response: Optional[str] = Field(default=None, description="Default error response format")
+    
+    @field_validator('aggregation_strategy')
+    def validate_aggregation_strategy(cls, v):
+        """Validate aggregation strategy."""
+        allowed_strategies = ["fail_fast", "collect_all_errors", "collect_first_error_per_type"]
+        if v not in allowed_strategies:
+            raise ValueError(f"Aggregation strategy '{v}' must be one of {allowed_strategies}")
+        return v
+
+
+class UseCaseConfig(BaseModel):
+    """Configuration for use case business logic orchestration."""
+    
+    name: str = Field(..., description="Use case name")
+    description: Optional[str] = Field(default=None, description="Use case description")
+    methods: List[UseCaseMethodConfig] = Field(default_factory=list, description="Use case methods")
+    dependencies: Union[List[str], DependencyConfig] = Field(default_factory=list, description="Use case dependencies")
+    error_handling: Union[Dict[str, str], ErrorHandlingConfig] = Field(default_factory=dict, description="Error handling configuration")
+    service_composition: Optional[ServiceCompositionConfig] = Field(default=None, description="Service composition configuration")
+    dependency_injection: Optional[DependencyInjectionConfig] = Field(default=None, description="Dependency injection configuration")
+    
+    @field_validator('name')
+    def validate_use_case_name(cls, v):
+        """Validate use case name follows Python naming conventions."""
+        if not v.isidentifier():
+            raise ValueError(f"Use case name '{v}' is not a valid Python identifier")
+        if not v[0].isupper():
+            raise ValueError(f"Use case name '{v}' should start with uppercase letter")
+        return v
+    
+    @field_validator('methods')
+    def validate_methods_unique(cls, v):
+        """Validate method names are unique."""
+        method_names = [method.name for method in v]
+        if len(method_names) != len(set(method_names)):
+            raise ValueError("Use case cannot have duplicate method names")
+        return v
+    
+    @model_validator(mode='after')
+    def validate_dependencies(self):
+        """Validate dependency references."""
+        if isinstance(self.dependencies, list):
+            # Convert list to DependencyConfig for consistency
+            self.dependencies = DependencyConfig(services=self.dependencies)
+        
+        if isinstance(self.error_handling, dict):
+            # Convert dict to ErrorHandlingConfig for consistency
+            self.error_handling = ErrorHandlingConfig(**self.error_handling)
+        
+        return self
+
+
+class BusinessRulesConfig(BaseModel):
+    """Configuration for business rules and validation."""
+    
+    rules: List[BusinessRuleConfig] = Field(..., description="Business rules")
+    validation_groups: List[ValidationGroupConfig] = Field(default_factory=list, description="Validation groups")
+    error_handling: Optional[ErrorHandlingConfig] = Field(default=None, description="Error handling configuration")
+    
+    @field_validator('rules')
+    def validate_rules_unique(cls, v):
+        """Validate rule names are unique."""
+        rule_names = [rule.name for rule in v]
+        if len(rule_names) != len(set(rule_names)):
+            raise ValueError("Business rules cannot have duplicate names")
+        return v
+    
+    @model_validator(mode='after')
+    def validate_group_rule_references(self):
+        """Validate validation groups reference existing rules."""
+        rule_names = {rule.name for rule in self.rules}
+        
+        for group in self.validation_groups:
+            for rule_name in group.rules:
+                if rule_name not in rule_names:
+                    raise ValueError(f"Validation group '{group.name}' references unknown rule '{rule_name}'")
+        
+        return self
+
+
+class UseCaseDomainConfig(BaseModel):
+    """Configuration for use case domain with business logic orchestration."""
+    
+    # Use case configuration
+    name: str = Field(..., description="Use case domain name")
+    description: Optional[str] = Field(default=None, description="Use case domain description")
+    package: Optional[str] = Field(default=None, description="Python package name")
+    
+    # Use case specific configurations
+    usecase: Optional[UseCaseConfig] = Field(default=None, description="Use case configuration")
+    business_rules: Optional[BusinessRulesConfig] = Field(default=None, description="Business rules configuration")
+    
+    # Integration with other layers
+    entity_dependencies: List[str] = Field(default_factory=list, description="Entity dependencies")
+    repository_dependencies: List[str] = Field(default_factory=list, description="Repository dependencies")
+    external_dependencies: List[str] = Field(default_factory=list, description="External service dependencies")
+    
+    @field_validator('name')
+    def validate_use_case_domain_name(cls, v):
+        """Validate use case domain name."""
+        if not v.isidentifier():
+            raise ValueError(f"Use case domain name '{v}' is not a valid Python identifier")
+        if not v[0].isupper():
+            raise ValueError(f"Use case domain name '{v}' should start with uppercase letter")
+        return v
+    
+    @model_validator(mode='after')
+    def generate_defaults_and_validate(self):
+        """Generate default values and validate use case domain configuration."""
+        name = self.name
+        
+        # Generate package name if not provided
+        if self.package is None:
+            # Convert PascalCase to snake_case
+            package = ''
+            for i, char in enumerate(name):
+                if char.isupper() and i > 0:
+                    package += '_'
+                package += char.lower()
+            self.package = package
+        
+        # Validate business rule references in use case methods
+        if self.usecase and self.business_rules:
+            rule_names = {rule.name for rule in self.business_rules.rules}
+            
+            for method in self.usecase.methods:
+                for rule_name in method.business_rules:
+                    if rule_name not in rule_names:
+                        logger.warning(
+                            f"Use case method '{method.name}' references unknown business rule '{rule_name}'"
+                        )
         
         return self
     
