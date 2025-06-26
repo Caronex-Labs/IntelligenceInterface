@@ -1,0 +1,18 @@
+domain:
+  name: "User"
+  description: "User management domain"
+  version: "1.0.0"
+
+default_settings:
+  validation: true
+  logging: true
+  cache_enabled: false
+
+field_types:
+  default_string: "str"
+  default_id: "int"
+
+base_configuration:
+  environment: "development"
+  debug: true
+  security_level: "basic"

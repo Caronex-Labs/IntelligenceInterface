@@ -52,6 +52,8 @@ func InitializeScenario(ctx *godog.ScenarioContext) {
 	support.RegisterCaronexSteps(ctx)
 	// Register Management Tools step definitions
 	steps.RegisterManagementSteps(ctx)
+	// Register Sprint 1 Integration step definitions
+	steps.InitializeSprint1IntegrationSteps(ctx)
 	// Directory Migration Steps
 	ctx.Step(`^the Intelligence Interface project at "([^"]*)"$`, theIntelligenceInterfaceProjectAt)
 	ctx.Step(`^the project has existing Go testing infrastructure with testify$`, theProjectHasExistingGoTestingInfrastructure)

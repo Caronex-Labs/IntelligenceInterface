@@ -1,0 +1,5 @@
+settings:
+  timeout: null  # Should not override
+  retries: 5  # Should override
+  cache_ttl: null  # Should not override
+  new_setting: "value"  # Should add

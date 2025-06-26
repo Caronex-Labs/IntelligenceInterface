@@ -1,0 +1,15 @@
+repository:
+  async_operations: true
+  connection_pooling: true
+
+default_settings:
+  logging: false  # Override domain setting
+  query_timeout: 30
+
+database:
+  provider: "postgresql"
+  migration_support: true
+
+data_settings:
+  debug: true  # Conflict with usecase
+  database_debug: true  # New setting

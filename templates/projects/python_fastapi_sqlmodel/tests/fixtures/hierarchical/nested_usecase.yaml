@@ -1,0 +1,15 @@
+database:
+  connection:
+    port: 5433  # Override port
+    options:
+      pool_size: 20  # Override pool_size
+      max_connections: 100  # Add new option
+
+features:
+  - "caching"  # Replace entire array
+  - "monitoring"
+
+field_mapping:
+  string_fields:
+    default_length: 500  # Override default_length
+    encrypted: true  # Add new field

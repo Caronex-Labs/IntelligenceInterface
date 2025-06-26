@@ -1,0 +1,15 @@
+api:
+  auto_documentation: true
+  cors_enabled: true
+
+default_settings:
+  validation: false  # Override domain setting
+  rate_limiting: true
+
+endpoints:
+  prefix: "/api/v1"
+  authentication_required: true
+
+interface_settings:
+  api_timeout: 60
+  compression_enabled: true

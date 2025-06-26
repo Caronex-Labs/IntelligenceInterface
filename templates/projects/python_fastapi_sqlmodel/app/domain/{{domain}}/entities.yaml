@@ -1,0 +1,304 @@
+# Entity-specific Configuration - Co-located YAML
+#
+# Co-location Architecture Pattern:
+# - This entities.yaml file provides entity-specific overrides and extensions
+# - Co-located with domain.yaml, templates (.j2), and generated files (.py)
+# - Processed by ConfigurationMerger with inheritance from domain.yaml
+#
+# Hierarchical Configuration Strategy:
+# - Inherits base configuration from domain.yaml
+# - Provides entity-specific field definitions, relationships, and overrides
+# - ConfigurationMerger deep merges with domain.yaml for complete template context
+
+# Entity Definitions
+entities:
+  # Main domain entity
+  - name: "{{domain|title}}"
+    description: "{{domain|title}} business entity with complete domain modeling"
+    table_name: "{{domain}}_entities"
+    
+    # Entity-specific mixins (overrides domain defaults)
+    mixins:
+      - "UUIDMixin"      # Inherited from domain.yaml
+      - "TimestampMixin" # Inherited from domain.yaml
+      # SoftDeleteMixin: false in domain.yaml, can be enabled here if needed
+      
+    # Field definitions
+    fields:
+      # Business fields (example: user entity)
+      - name: "name"
+        type: "string"
+        description: "{{domain|title}} name"
+        required: true
+        validation:
+          min_length: 2
+          max_length: 100
+        index: true
+        example: "John Doe"
+        
+      - name: "email"
+        type: "email"
+        description: "{{domain|title}} email address"
+        required: true
+        unique: true
+        validation:
+          email_format: true
+        example: "user@example.com"
+        
+      - name: "description"
+        type: "optional_string"
+        description: "{{domain|title}} description"
+        required: false
+        validation:
+          max_length: 500
+        example: "User description"
+        
+      - name: "status"
+        type: "string"
+        description: "{{domain|title}} status"
+        required: true
+        default: "active"
+        enum_values: ["active", "inactive", "pending"]
+        validation:
+          choices: ["active", "inactive", "pending"]
+        example: "active"
+        
+      - name: "metadata"
+        type: "json"
+        description: "{{domain|title}} metadata"
+        required: false
+        default_factory: "dict"
+        example: {"key": "value"}
+        
+      - name: "tags"
+        type: "string_list"
+        description: "{{domain|title}} tags"
+        required: false
+        default_factory: "list"
+        example: ["tag1", "tag2"]
+
+    # Relationship specifications
+    relationships:
+      # One-to-many relationship example
+      - name: "related_items"
+        type: "one_to_many"
+        target_entity: "{{domain|title}}Item"
+        foreign_key: "{{domain}}_id"
+        back_populates: "{{domain}}"
+        cascade: "save-update, merge"
+        lazy: "select"
+        description: "Related items for this {{domain}}"
+        
+      # Many-to-many relationship example  
+      - name: "categories"
+        type: "many_to_many"
+        target_entity: "Category"
+        association_table: "{{domain}}_categories"
+        back_populates: "{{domain}}_entities"
+        cascade: "save-update"
+        lazy: "select"
+        description: "Categories associated with this {{domain}}"
+        
+      # One-to-one relationship example
+      - name: "profile"
+        type: "one_to_one"
+        target_entity: "{{domain|title}}Profile"
+        foreign_key: "{{domain}}_id"
+        back_populates: "{{domain}}"
+        cascade: "all, delete-orphan"
+        uselist: false
+        description: "Profile for this {{domain}}"
+
+    # Entity-specific database configuration
+    database:
+      table_args:
+        indexes:
+          - fields: ["name", "email"]
+            unique: true
+            name: "{{domain}}_name_email_idx"
+          - fields: ["status"]
+            name: "{{domain}}_status_idx"
+          - fields: ["created_at"]
+            name: "{{domain}}_created_at_idx"
+            
+        constraints:
+          - type: "check"
+            name: "{{domain}}_status_check"
+            condition: "status IN ('active', 'inactive', 'pending')"
+          - type: "check"
+            name: "{{domain}}_name_length"
+            condition: "LENGTH(name) >= 2"
+
+    # Entity-specific validation rules
+    validation:
+      business_rules:
+        - name: "unique_email_validation"
+          description: "Email must be unique across all {{domain}} entities"
+          type: "unique_constraint"
+          fields: ["email"]
+          
+        - name: "status_transition_validation"
+          description: "Status transitions must follow business rules"
+          type: "custom_validator"
+          method: "validate_status_transition"
+          
+        - name: "name_format_validation"
+          description: "Name must follow proper format"
+          type: "regex_validator"
+          pattern: "^[A-Za-z\\s]+$"
+          fields: ["name"]
+
+    # Entity-specific overrides for domain configuration
+    overrides:
+      # Override timestamp configuration for this entity
+      timestamps:
+        created_at:
+          description: "When this {{domain}} was created"
+        updated_at:
+          description: "When this {{domain}} was last updated"
+          
+      # Override validation rules
+      validation:
+        string_rules:
+          min_length: 2  # Override domain default of 1
+          
+      # Override database naming
+      database:
+        table_naming:
+          prefix: "{{domain}}_"  # Keep domain prefix
+          suffix: "_v1"          # Add version suffix
+          
+    # Entity-specific generation settings
+    generation:
+      templates:
+        include_examples: true
+        generate_factory_methods: true
+        generate_builder_pattern: false
+        
+      methods:
+        # Custom methods to generate
+        - name: "is_active"
+          description: "Check if {{domain}} is active"
+          return_type: "bool"
+          implementation: "return self.status == 'active'"
+          
+        - name: "get_display_name"
+          description: "Get display name for {{domain}}"
+          return_type: "str"
+          implementation: "return f'{self.name} ({self.email})'"
+          
+        - name: "to_dict"
+          description: "Convert {{domain}} to dictionary"
+          return_type: "Dict[str, Any]"
+          implementation: "# Custom implementation in @pyhex block"
+
+  # Additional related entity (example)
+  - name: "{{domain|title}}Item"
+    description: "Item related to {{domain|title}}"
+    table_name: "{{domain}}_items"
+    
+    fields:
+      - name: "title"
+        type: "string"
+        description: "Item title"
+        required: true
+        validation:
+          min_length: 1
+          max_length: 200
+          
+      - name: "value"
+        type: "float"
+        description: "Item value"
+        required: false
+        default: 0.0
+        validation:
+          minimum: 0.0
+          
+      - name: "{{domain}}_id"
+        type: "UUID"
+        description: "Reference to parent {{domain}}"
+        required: true
+        foreign_key: "{{domain}}_entities.id"
+        index: true
+
+    relationships:
+      - name: "{{domain}}"
+        type: "many_to_one"
+        target_entity: "{{domain|title}}"
+        foreign_key: "{{domain}}_id"
+        back_populates: "related_items"
+        
+  # Profile entity (example)
+  - name: "{{domain|title}}Profile"
+    description: "Extended profile for {{domain|title}}"
+    table_name: "{{domain}}_profiles"
+    
+    fields:
+      - name: "bio"
+        type: "optional_string"
+        description: "{{domain|title}} biography"
+        validation:
+          max_length: 1000
+          
+      - name: "preferences"
+        type: "json"
+        description: "{{domain|title}} preferences"
+        default_factory: "dict"
+        
+      - name: "{{domain}}_id"
+        type: "UUID"
+        description: "Reference to {{domain}}"
+        required: true
+        foreign_key: "{{domain}}_entities.id"
+        unique: true
+
+    relationships:
+      - name: "{{domain}}"
+        type: "one_to_one"
+        target_entity: "{{domain|title}}"
+        foreign_key: "{{domain}}_id"
+        back_populates: "profile"
+
+# Global entity configuration overrides
+global_overrides:
+  # Apply to all entities in this file
+  generation:
+    preserve_custom_code: true
+    auto_format: true
+    include_docstrings: true
+    
+  validation:
+    enforce_type_hints: true
+    require_field_descriptions: true
+    
+  quality:
+    max_fields_per_entity: 20
+    require_examples: true
+    enforce_naming_conventions: true
+
+# Template rendering context
+template_context:
+  # Additional context for template rendering
+  domain_name: "{{domain}}"
+  domain_title: "{{domain|title}}"
+  domain_plural: "{{domain|pluralize}}"
+  domain_snake: "{{domain|to_snake_case}}"
+  
+  # Feature flags for conditional template generation
+  features:
+    enable_soft_delete: false
+    enable_audit_log: true
+    enable_full_text_search: false
+    enable_caching: true
+    
+  # Integration settings
+  integrations:
+    fastapi:
+      generate_crud_routes: true
+      include_openapi_examples: true
+      enable_response_model: true
+      
+    testing:
+      generate_test_fixtures: true
+      include_factory_boy: true
+      generate_api_tests: true

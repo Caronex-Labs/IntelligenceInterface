@@ -1,0 +1,21 @@
+domain:
+  name: "Blog"
+
+database:
+  connection:
+    host: "localhost"
+    port: 5432
+    options:
+      pool_size: 10
+      timeout: 30
+  
+features:
+  - "authentication"
+  - "authorization"
+
+field_mapping:
+  string_fields:
+    default_length: 255
+    nullable: true
+  numeric_fields:
+    precision: 2

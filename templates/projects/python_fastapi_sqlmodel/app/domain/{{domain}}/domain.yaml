@@ -1,0 +1,261 @@
+# Domain-level Configuration - Co-located YAML
+# 
+# Co-location Architecture Pattern:
+# - This domain.yaml file provides base entity configuration for hierarchical merging
+# - Co-located with entities.yaml, templates (.j2), and generated files (.py)
+# - Processed by ConfigurationMerger for hierarchical inheritance to entity level
+#
+# Hierarchical Configuration Strategy:
+# - Domain-level settings provide base configuration for all entities
+# - entities.yaml inherits and overrides domain-level configuration
+# - ConfigurationMerger deep merges configurations for template rendering context
+
+# Domain Metadata
+domain:
+  name: "{{domain}}"
+  description: "{{domain|title}} domain with hexagonal architecture"
+  package: "app.domain.{{domain}}"
+  version: "1.0.0"
+  
+# Base Entity Configuration
+entity:
+  # Base classes and inheritance
+  base_class: "BaseEntity"
+  abstract_base: true
+  
+  # Entity mixins for common functionality
+  mixins:
+    - name: "UUIDMixin"
+      description: "UUID primary key generation"
+      enabled: true
+      import_path: "app.domain.mixins.uuid_mixin"
+      
+    - name: "TimestampMixin" 
+      description: "Created/updated timestamp fields"
+      enabled: true
+      import_path: "app.domain.mixins.timestamp_mixin"
+      fields:
+        - "created_at"
+        - "updated_at"
+        
+    - name: "SoftDeleteMixin"
+      description: "Soft delete functionality"
+      enabled: false  # Can be overridden in entities.yaml
+      import_path: "app.domain.mixins.soft_delete_mixin"
+      fields:
+        - "deleted_at"
+        - "is_deleted"
+
+# UUID Primary Key Configuration
+primary_key:
+  type: "UUID"
+  field_name: "id"
+  auto_generate: true
+  nullable: false
+  description: "Unique identifier"
+  default_factory: "uuid4"
+  
+# Timestamp Field Configuration
+timestamps:
+  created_at:
+    type: "datetime"
+    nullable: false
+    default_factory: "datetime.utcnow"
+    description: "Creation timestamp"
+    index: true
+    
+  updated_at:
+    type: "datetime" 
+    nullable: false
+    default_factory: "datetime.utcnow"
+    description: "Last update timestamp"
+    auto_update: true
+    
+  deleted_at:
+    type: "Optional[datetime]"
+    nullable: true
+    default: null
+    description: "Deletion timestamp for soft delete"
+
+# Field Type Mappings and Defaults
+field_types:
+  # Basic types
+  string:
+    python_type: "str"
+    sqlmodel_type: "str"
+    validation: "strip_whitespace"
+    
+  email:
+    python_type: "EmailStr"
+    sqlmodel_type: "str"
+    validation: "email_validator"
+    unique: true
+    index: true
+    
+  integer:
+    python_type: "int"
+    sqlmodel_type: "int"
+    validation: "range_validator"
+    
+  float:
+    python_type: "float"
+    sqlmodel_type: "float"
+    validation: "range_validator"
+    
+  boolean:
+    python_type: "bool"
+    sqlmodel_type: "bool"
+    default: false
+    
+  json:
+    python_type: "Dict[str, Any]"
+    sqlmodel_type: "JSON"
+    default_factory: "dict"
+    
+  # Optional types
+  optional_string:
+    python_type: "Optional[str]"
+    sqlmodel_type: "str"
+    nullable: true
+    
+  # List types
+  string_list:
+    python_type: "List[str]"
+    sqlmodel_type: "JSON"
+    default_factory: "list"
+
+# Validation Rules and Constraints
+validation:
+  # String validation
+  string_rules:
+    min_length: 1
+    max_length: 255
+    strip_whitespace: true
+    
+  # Email validation
+  email_rules:
+    validate_email: true
+    check_deliverability: false
+    
+  # Business rule validation
+  business_rules:
+    enforce_unique_constraints: true
+    validate_required_fields: true
+    check_field_relationships: true
+    
+  # Custom validation patterns
+  custom_validators:
+    - name: "domain_specific_validator"
+      description: "Domain-specific business rule validation"
+      enabled: true
+
+# Relationship Configuration Patterns
+relationships:
+  # Default relationship settings
+  defaults:
+    cascade_delete: false
+    lazy_loading: true
+    back_populates: true
+    
+  # Foreign key patterns
+  foreign_key:
+    naming_convention: "{{related_table}}_id"
+    nullable: true
+    index: true
+    
+  # One-to-many patterns
+  one_to_many:
+    collection_class: "List"
+    cascade: "save-update"
+    
+  # Many-to-many patterns  
+  many_to_many:
+    association_table: "{{table1}}_{{table2}}"
+    cascade: "save-update"
+
+# Database Configuration
+database:
+  # Table naming conventions
+  table_naming:
+    convention: "snake_case"
+    prefix: "{{domain}}_"
+    pluralize: true
+    
+  # Index configuration
+  indexes:
+    auto_create_primary: true
+    auto_create_foreign_key: true
+    auto_create_unique: true
+    
+  # Constraint configuration
+  constraints:
+    check_constraints: true
+    foreign_key_constraints: true
+    unique_constraints: true
+
+# Code Generation Configuration  
+generation:
+  # Template configuration
+  templates:
+    preserve_custom_code: true
+    preservation_markers: "@pyhex"
+    auto_format: true
+    
+  # Import configuration
+  imports:
+    base_imports:
+      - "from datetime import datetime"
+      - "from uuid import UUID, uuid4" 
+      - "from typing import Optional, List, Dict, Any"
+      - "from sqlmodel import SQLModel, Field"
+      - "from pydantic import EmailStr, validator"
+      
+    conditional_imports:
+      soft_delete: "from sqlalchemy import Boolean"
+      json_fields: "from sqlalchemy.dialects.postgresql import JSON"
+      
+  # Code style configuration
+  style:
+    line_length: 88
+    use_type_hints: true
+    use_dataclasses: false
+    docstring_style: "google"
+
+# Integration Configuration
+integration:
+  # FastAPI integration
+  fastapi:
+    auto_generate_schemas: true
+    include_examples: true
+    generate_openapi_tags: true
+    
+  # Pydantic integration
+  pydantic:
+    config_class: "Config"
+    validate_assignment: true
+    use_enum_values: true
+    allow_population_by_field_name: true
+    
+  # SQLModel integration
+  sqlmodel:
+    table_mode: true
+    schema_extra: true
+    generate_table_args: true
+
+# Quality and Testing Configuration
+quality:
+  # Validation requirements
+  validation_coverage: 100
+  type_hint_coverage: 100
+  docstring_coverage: 80
+  
+  # Testing requirements
+  test_coverage:
+    minimum: 90
+    exclude_patterns: ["__init__.py", "migrations/"]
+    
+  # Code quality
+  linting:
+    max_complexity: 10
+    max_line_length: 88
+    enforce_typing: true

@@ -1,0 +1,17 @@
+usecase:
+  business_logic: true
+  transaction_management: true
+
+default_settings:
+  cache_enabled: true  # Override domain setting
+  retry_attempts: 3
+
+validation_rules:
+  strict_mode: true
+  email_validation: true
+
+business_settings:
+  environment: "production"  # Conflict with domain
+  debug: false  # Conflict with domain  
+  security_level: "enhanced"  # Conflict with domain
+  audit_enabled: true  # New setting
