@@ -58,6 +58,7 @@ class FieldConfig(BaseModel):
     unique: bool = Field(default=False, description="Whether field should be unique")
     default: Optional[str] = Field(default=None, description="Default value expression")
     description: Optional[str] = Field(default=None, description="Field description")
+    sqlmodel_field: Optional[str] = Field(default=None, description="SQLModel Field() expression")
     
     @field_validator('name')
     def validate_field_name(cls, v):
@@ -116,6 +117,7 @@ class EntityConfig(BaseModel):
     relationships: List[RelationshipConfig] = Field(default_factory=list, description="Entity relationships")
     table_name: Optional[str] = Field(default=None, description="Custom table name")
     description: Optional[str] = Field(default=None, description="Entity description")
+    mixins: List[str] = Field(default_factory=list, description="Mixin names to apply to this entity")
     
     @field_validator('name')
     def validate_entity_name(cls, v):
@@ -252,6 +254,178 @@ class Configuration(BaseModel):
         entity_names = [entity.name for entity in self.entities]
         if self.domain.name not in entity_names:
             logger.warning(f"Domain name '{self.domain.name}' does not match any entity name")
+        
+        return self
+    
+    model_config = {
+        "use_enum_values": True,
+        "validate_assignment": True,
+        "extra": "forbid",  # Reject unknown fields
+    }
+
+
+class MixinConfig(BaseModel):
+    """Configuration for reusable field mixins."""
+    
+    name: str = Field(..., description="Mixin name")
+    fields: List[FieldConfig] = Field(..., description="Fields provided by this mixin")
+    description: Optional[str] = Field(default=None, description="Mixin description")
+    
+    @field_validator('name')
+    def validate_mixin_name(cls, v):
+        """Validate mixin name follows Python naming conventions."""
+        if not v.isidentifier():
+            raise ValueError(f"Mixin name '{v}' is not a valid Python identifier")
+        if not v[0].isupper():
+            raise ValueError(f"Mixin name '{v}' should start with uppercase letter")
+        return v
+
+
+class DomainRelationshipConfig(BaseModel):
+    """Configuration for domain-level relationship definitions."""
+    
+    name: str = Field(..., description="Relationship name")
+    from_entity: str = Field(..., description="Source entity name")
+    to_entity: str = Field(..., description="Target entity name")
+    type: RelationshipType = Field(..., description="Relationship type")
+    back_populates: Optional[str] = Field(default=None, description="Back-reference field name")
+    foreign_key: Optional[str] = Field(default=None, description="Foreign key reference")
+    
+    @field_validator('from_entity', 'to_entity')
+    def validate_entity_names(cls, v):
+        """Validate entity names in relationships."""
+        if not v.isidentifier():
+            raise ValueError(f"Entity name '{v}' is not a valid Python identifier")
+        return v
+
+
+class SQLModelConfig(BaseModel):
+    """Configuration for SQLModel-specific settings."""
+    
+    table_naming: str = Field(default="snake_case", description="Table naming convention")
+    field_naming: str = Field(default="snake_case", description="Field naming convention")
+    generate_id_fields: bool = Field(default=True, description="Auto-generate ID fields")
+    timestamp_fields: List[str] = Field(default_factory=list, description="Auto-generated timestamp fields")
+    
+    @field_validator('table_naming', 'field_naming')
+    def validate_naming_convention(cls, v):
+        """Validate naming conventions."""
+        allowed_conventions = ["snake_case", "camelCase", "PascalCase"]
+        if v not in allowed_conventions:
+            raise ValueError(f"Naming convention '{v}' must be one of {allowed_conventions}")
+        return v
+
+
+class EntityDomainConfig(BaseModel):
+    """Configuration for entity domain with separate domain and entity files."""
+    
+    # Domain configuration
+    name: str = Field(..., description="Domain name")
+    plural: Optional[str] = Field(default=None, description="Plural form of domain name")
+    description: Optional[str] = Field(default=None, description="Domain description")
+    package: Optional[str] = Field(default=None, description="Python package name")
+    
+    # Domain-level configurations
+    base_fields: List[FieldConfig] = Field(default_factory=list, description="Base fields for all entities")
+    mixins: List[MixinConfig] = Field(default_factory=list, description="Reusable field mixins")
+    relationships: List[DomainRelationshipConfig] = Field(default_factory=list, description="Domain relationships")
+    sqlmodel_config: Optional[SQLModelConfig] = Field(default=None, description="SQLModel-specific configuration")
+    
+    # Entity configurations (loaded from entities.yaml)
+    entities: List[EntityConfig] = Field(default_factory=list, description="Entity configurations")
+    endpoints: List[EndpointConfig] = Field(default_factory=list, description="API endpoint configurations")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    
+    @field_validator('name')
+    def validate_domain_name(cls, v):
+        """Validate domain name follows Python naming conventions."""
+        if not v.isidentifier():
+            raise ValueError(f"Domain name '{v}' is not a valid Python identifier")
+        if not v[0].isupper():
+            raise ValueError(f"Domain name '{v}' should start with uppercase letter")
+        return v
+    
+    @model_validator(mode='after')
+    def generate_defaults_and_validate(self):
+        """Generate default values and validate entity domain configuration."""
+        name = self.name
+        
+        # Generate plural form if not provided
+        if self.plural is None:
+            if name.endswith('y'):
+                plural = name[:-1] + 'ies'
+            elif name.endswith(('s', 'sh', 'ch', 'x', 'z')):
+                plural = name + 'es'
+            else:
+                plural = name + 's'
+            self.plural = plural
+        
+        # Generate package name if not provided
+        if self.package is None:
+            # Convert PascalCase to snake_case
+            package = ''
+            for i, char in enumerate(name):
+                if char.isupper() and i > 0:
+                    package += '_'
+                package += char.lower()
+            self.package = package
+        
+        # Apply base fields to all entities if configured
+        if self.base_fields:
+            for entity in self.entities:
+                # Add base fields that don't already exist
+                existing_field_names = {field.name for field in entity.fields}
+                for base_field in self.base_fields:
+                    if base_field.name not in existing_field_names:
+                        entity.fields.insert(0, base_field)
+        
+        # Apply mixins to entities
+        for entity in self.entities:
+            if hasattr(entity, 'mixins') and getattr(entity, 'mixins'):
+                # Find requested mixins and apply their fields
+                for mixin_name in entity.mixins:
+                    mixin = next((m for m in self.mixins if m.name == mixin_name), None)
+                    if mixin:
+                        # Add mixin fields that don't already exist
+                        existing_field_names = {field.name for field in entity.fields}
+                        for mixin_field in mixin.fields:
+                            if mixin_field.name not in existing_field_names:
+                                entity.fields.append(mixin_field)
+                    else:
+                        logger.warning(f"Mixin '{mixin_name}' not found for entity '{entity.name}'")
+        
+        # Apply domain relationships to entities
+        for domain_rel in self.relationships:
+            # Find the source entity and add relationship if not already present
+            source_entity = next((e for e in self.entities if e.name == domain_rel.from_entity), None)
+            if source_entity:
+                # Check if relationship already exists
+                existing_rel = next(
+                    (rel for rel in source_entity.relationships 
+                     if rel.entity == domain_rel.to_entity and rel.type == domain_rel.type),
+                    None
+                )
+                
+                if not existing_rel:
+                    entity_rel = RelationshipConfig(
+                        entity=domain_rel.to_entity,
+                        type=domain_rel.type,
+                        back_populates=domain_rel.back_populates,
+                        foreign_key=domain_rel.foreign_key
+                    )
+                    source_entity.relationships.append(entity_rel)
+        
+        # Generate default endpoints if none provided
+        if not self.endpoints and self.entities:
+            default_endpoints = [
+                EndpointConfig(method=HTTPMethod.POST, path="/", operation="create"),
+                EndpointConfig(method=HTTPMethod.GET, path="/{id}", operation="get_by_id"), 
+                EndpointConfig(method=HTTPMethod.GET, path="/", operation="list"),
+                EndpointConfig(method=HTTPMethod.PUT, path="/{id}", operation="update"),
+                EndpointConfig(method=HTTPMethod.DELETE, path="/{id}", operation="delete"),
+            ]
+            self.endpoints = default_endpoints
+            logger.info("Generated default CRUD endpoints")
         
         return self
     

@@ -1,0 +1,68 @@
+# Sample domain.yaml for User domain
+# Demonstrates base field mixins and domain-level configuration
+
+name: "User"
+plural: "Users"
+description: "User management domain for authentication and profiles"
+package: "user"
+
+# Base fields applied to all entities in this domain
+base_fields:
+  - name: "id"
+    type: "int"
+    required: false
+    index: true
+    description: "Primary key"
+    sqlmodel_field: "Field(primary_key=True)"
+  
+  - name: "created_at"
+    type: "datetime"
+    required: false
+    default: "datetime.utcnow"
+    description: "Record creation timestamp"
+  
+  - name: "updated_at"
+    type: "datetime" 
+    required: false
+    default: "datetime.utcnow"
+    description: "Record last update timestamp"
+
+# Reusable field mixins
+mixins:
+  - name: "Timestamped"
+    description: "Standard timestamp fields"
+    fields:
+      - name: "created_at"
+        type: "datetime"
+        default: "datetime.utcnow"
+      - name: "updated_at"
+        type: "datetime"
+        default: "datetime.utcnow"
+  
+  - name: "SoftDelete"
+    description: "Soft deletion support"
+    fields:
+      - name: "deleted_at"
+        type: "Optional[datetime]"
+        required: false
+        description: "Soft deletion timestamp"
+
+# Domain-level relationship definitions
+relationships:
+  - name: "user_profile"
+    from_entity: "User"
+    to_entity: "Profile"
+    type: "one_to_one"
+    back_populates: "user"
+
+# SQLModel-specific configuration
+sqlmodel_config:
+  table_naming: "snake_case"
+  field_naming: "snake_case"
+  generate_id_fields: true
+  timestamp_fields: ["created_at", "updated_at"]
+
+metadata:
+  version: "1.0.0"
+  domain_type: "authentication"
+  complexity: "medium"

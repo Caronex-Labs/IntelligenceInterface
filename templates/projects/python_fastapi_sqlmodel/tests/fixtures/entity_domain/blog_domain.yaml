@@ -1,0 +1,92 @@
+# Sample domain.yaml for Blog domain
+# Demonstrates complex relationships and multiple entity types
+
+name: "Blog"
+plural: "Blogs"
+description: "Blog management domain with posts and comments"
+package: "blog"
+
+# Base fields for all blog entities
+base_fields:
+  - name: "id"
+    type: "int"
+    required: false
+    index: true
+    description: "Primary key"
+    sqlmodel_field: "Field(primary_key=True)"
+
+# Advanced mixins for blog domain
+mixins:
+  - name: "Timestamped"
+    description: "Creation and update timestamps"
+    fields:
+      - name: "created_at"
+        type: "datetime"
+        default: "datetime.utcnow"
+        description: "Creation timestamp"
+      - name: "updated_at"
+        type: "datetime"
+        default: "datetime.utcnow"
+        description: "Last update timestamp"
+  
+  - name: "Authored"
+    description: "Content with author reference"
+    fields:
+      - name: "author_id"
+        type: "int"
+        required: true
+        description: "Author reference"
+        sqlmodel_field: "Field(foreign_key='users.id')"
+  
+  - name: "Published"
+    description: "Publishable content"
+    fields:
+      - name: "published"
+        type: "bool"
+        required: true
+        default: "false"
+        description: "Publication status"
+        sqlmodel_field: "Field(default=False)"
+      - name: "published_at"
+        type: "Optional[datetime]"
+        required: false
+        description: "Publication timestamp"
+
+# Domain relationships between entities
+relationships:
+  - name: "user_posts"
+    from_entity: "User"
+    to_entity: "Post"
+    type: "one_to_many"
+    back_populates: "author"
+  
+  - name: "user_comments"
+    from_entity: "User" 
+    to_entity: "Comment"
+    type: "one_to_many"
+    back_populates: "author"
+  
+  - name: "post_comments"
+    from_entity: "Post"
+    to_entity: "Comment"
+    type: "one_to_many"
+    back_populates: "post"
+  
+  - name: "post_tags"
+    from_entity: "Post"
+    to_entity: "Tag"
+    type: "many_to_many"
+    back_populates: "posts"
+
+# SQLModel configuration for blog domain
+sqlmodel_config:
+  table_naming: "snake_case"
+  field_naming: "snake_case"
+  generate_id_fields: true
+  timestamp_fields: ["created_at", "updated_at"]
+
+metadata:
+  version: "1.0.0"
+  domain_type: "content_management"
+  complexity: "high"
+  features: ["relationships", "publishing", "tagging"]

@@ -1,0 +1,129 @@
+# Sample entities.yaml for User domain
+# Demonstrates entity-specific field definitions with mixin usage
+
+entities:
+  - name: "User"
+    description: "System user entity for authentication"
+    table_name: "users"
+    mixins: ["Timestamped"]
+    fields:
+      - name: "username"
+        type: "str"
+        required: true
+        unique: true
+        index: true
+        description: "Unique username for login"
+        sqlmodel_field: "Field(index=True, unique=True)"
+      
+      - name: "email"
+        type: "EmailStr"
+        required: true
+        unique: true
+        index: true
+        description: "User email address"
+        sqlmodel_field: "Field(index=True, unique=True)"
+      
+      - name: "full_name"
+        type: "str"
+        required: true
+        description: "User's full display name"
+      
+      - name: "is_active"
+        type: "bool"
+        required: true
+        default: "true"
+        description: "Whether user account is active"
+        sqlmodel_field: "Field(default=True)"
+      
+      - name: "is_admin"
+        type: "bool"
+        required: true
+        default: "false"
+        description: "Whether user has admin privileges"
+        sqlmodel_field: "Field(default=False)"
+  
+  - name: "Profile"
+    description: "User profile with additional details"
+    table_name: "user_profiles"
+    mixins: ["Timestamped", "SoftDelete"]
+    fields:
+      - name: "bio"
+        type: "Optional[str]"
+        required: false
+        description: "User biography"
+      
+      - name: "avatar_url"
+        type: "Optional[str]"
+        required: false
+        description: "URL to user avatar image"
+      
+      - name: "location"
+        type: "Optional[str]"
+        required: false
+        description: "User's location"
+      
+      - name: "website"
+        type: "Optional[str]"
+        required: false
+        description: "User's website URL"
+      
+      - name: "user_id"
+        type: "int"
+        required: true
+        unique: true
+        description: "Foreign key to User"
+        sqlmodel_field: "Field(foreign_key='users.id', unique=True)"
+    
+    relationships:
+      - entity: "User"
+        type: "one_to_one"
+        back_populates: "profile"
+        foreign_key: "users.id"
+
+# API endpoints for this domain
+endpoints:
+  - method: "POST"
+    path: "/users/"
+    operation: "create_user"
+    description: "Create new user account"
+  
+  - method: "GET"
+    path: "/users/{id}"
+    operation: "get_user"
+    description: "Get user by ID"
+  
+  - method: "GET"
+    path: "/users/"
+    operation: "list_users"
+    description: "List users with pagination"
+  
+  - method: "PUT"
+    path: "/users/{id}"
+    operation: "update_user"
+    description: "Update user information"
+  
+  - method: "DELETE"
+    path: "/users/{id}"
+    operation: "delete_user"
+    description: "Deactivate user account"
+  
+  - method: "GET"
+    path: "/users/search"
+    operation: "search_users"
+    description: "Search users by criteria"
+  
+  # Profile endpoints
+  - method: "GET"
+    path: "/users/{user_id}/profile"
+    operation: "get_user_profile"
+    description: "Get user profile"
+  
+  - method: "PUT"
+    path: "/users/{user_id}/profile"
+    operation: "update_user_profile"
+    description: "Update user profile"
+
+metadata:
+  entities_count: 2
+  has_relationships: true
+  complexity: "medium"

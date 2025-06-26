@@ -24,12 +24,19 @@ from .models import (
     FieldType,
     RelationshipType,
     HTTPMethod,
+    EntityDomainConfig,
+    MixinConfig,
+    DomainRelationshipConfig,
+    SQLModelConfig,
 )
 
 from .loader import (
     ConfigurationLoader,
     load_configuration,
     load_configuration_from_string,
+    EntityDomainLoader,
+    load_entity_domain_configuration,
+    load_entity_domain_from_strings,
 )
 
 from .exceptions import (
@@ -50,11 +57,18 @@ __all__ = [
     'FieldType',
     'RelationshipType',
     'HTTPMethod',
+    'EntityDomainConfig',
+    'MixinConfig',
+    'DomainRelationshipConfig',
+    'SQLModelConfig',
     
     # Loader
     'ConfigurationLoader',
     'load_configuration',
     'load_configuration_from_string',
+    'EntityDomainLoader',
+    'load_entity_domain_configuration',
+    'load_entity_domain_from_strings',
     
     # Exceptions
     'ConfigurationError',
