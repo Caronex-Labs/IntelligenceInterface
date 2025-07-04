@@ -134,8 +134,10 @@ Feature: Complete Go Reference Analysis & Domain Flow Creation
 #### **High Priority: Go Reference Analysis Completion**
 
 Complete the existing Go Reference Analysis Flow (CAR-21) with these atomic tasks:
+
 - [ ] **Complete File Structure Mapping**: Categorize every Go file by purpose and generation strategy
-- [ ] **Infrastructure Component Cataloging**: Document all essential production components (logging, config, auth, monitoring, health checks, middleware)
+- [ ] **Infrastructure Component Cataloging**: Document all essential production components (logging, config, auth,
+  monitoring, health checks, middleware)
 - [ ] **Domain vs Infrastructure Boundary Analysis**: Understand separation between constant and generated code
 - [ ] **Code Generation Workflow Analysis**: Understand cmd/standardize tool and template processing
 - [ ] **Python Equivalency Planning**: Map Go components to Python/FastAPI/SQLModel equivalents
@@ -143,6 +145,7 @@ Complete the existing Go Reference Analysis Flow (CAR-21) with these atomic task
 #### **High Priority: Templates Domain Flow Creation**
 
 Create comprehensive flows under Templates Domain (CAR-19):
+
 - [ ] **Entity Template Flow**: SQLModel entity templates with relationships and validation
 - [ ] **Repository Template Flow**: Async data access layer with complex query patterns
 - [ ] **Use Case Template Flow**: Business logic orchestration with dependency injection
@@ -152,6 +155,7 @@ Create comprehensive flows under Templates Domain (CAR-19):
 #### **Medium Priority: Engine Domain Flow Creation**
 
 Create technical flows under Engine Domain (CAR-20):
+
 - [ ] **CLI Framework Flow**: Professional Click-based command line interface
 - [ ] **YAML Processing Flow**: Configuration parsing with comprehensive validation
 - [ ] **Template Engine Flow**: Jinja2-based processing with {{DOMAIN}} placeholder system
@@ -161,6 +165,7 @@ Create technical flows under Engine Domain (CAR-20):
 #### **Medium Priority: Health Domain Flow Creation**
 
 Create validation flows under Health Domain (CAR-18):
+
 - [ ] **Patient Management Flow**: Complete patient lifecycle with demographics and medical history
 - [ ] **Provider Management Flow**: Healthcare provider management with specializations
 - [ ] **Appointment System Flow**: Sophisticated scheduling with business rules and constraints
@@ -181,21 +186,25 @@ Create validation flows under Health Domain (CAR-18):
 ### Implementation Strategy:
 
 #### **Phase 1: Go Reference Analysis (1-2 days):**
+
 - Complete analysis of Go reference project
 - Document all findings in CAR-21 atomic tasks
 - Create comprehensive mapping of Go → Python equivalents
 
 #### **Phase 2: Templates Domain Flows (1 day):**
+
 - Create 5-6 flows for template development
 - Focus on essential infrastructure inclusion
 - Ensure health domain gets complete production stack
 
 #### **Phase 3: Engine & Health Domain Flows (1 day):**
+
 - Create Engine Domain flows for code generation
 - Create Health Domain flows for validation
 - Establish dependencies between all flows
 
 #### **Phase 4: Atomic Task Creation (2 days):**
+
 - Create 3-5 atomic tasks per flow
 - Follow task prompt template exactly
 - Include comprehensive BDD scenarios and acceptance criteria
@@ -203,6 +212,7 @@ Create validation flows under Health Domain (CAR-18):
 ### Technical Requirements:
 
 #### **Linear MCP Integration:**
+
 - **Create Flows**: Use `mcp__linear-server__create_issue` with appropriate parent domain IDs
 - **Create Atomic Tasks**: Nest tasks under flows using parentId relationships
 - **Set Priorities**: Assign appropriate priorities (1=Urgent, 2=High, 3=Medium)
@@ -210,6 +220,7 @@ Create validation flows under Health Domain (CAR-18):
 - **Add Estimates**: Include story point estimates in descriptions
 
 #### **Memory Bank Integration:**
+
 - **Document Findings**: Update relevant memory files with Go analysis insights
 - **Pattern Documentation**: Add discovered patterns to systemPatterns.md
 - **Progress Tracking**: Update progress.md with flow creation status
@@ -223,7 +234,9 @@ Create validation flows under Health Domain (CAR-18):
 - [ ] **Quality Standards**: All tasks follow established prompt templates and BDD patterns
 - [ ] **Team Coordination**: Clear dependencies and estimates enable effective team planning
 
-Begin by reading all memory files, querying Linear project context, and analyzing the Go reference project to understand the complete architecture before creating any Linear flows or tasks.
+Begin by reading all memory files, querying Linear project context, and analyzing the Go reference project to understand
+the complete architecture before creating any Linear flows or tasks.
+
 ```
 
 ## Implementation Agent Prompt Templates
@@ -280,6 +293,7 @@ Begin by reading all memory files, querying Linear project context, and analyzin
 ```
 
 #### Architecture Decision Template
+
 ```markdown
 # Architecture Decision: [DECISION_NAME]
 
@@ -326,6 +340,7 @@ Begin by reading all memory files, querying Linear project context, and analyzin
 ### BDD Implementation Agent Prompts
 
 #### Template Implementation Template
+
 ```markdown
 # BDD Implementation Task: [TEMPLATE_NAME] Template
 
@@ -380,38 +395,46 @@ Scenario: Preserve Custom Code During Regeneration
 ```
 
 ## Implementation Standards
+
 **Code Quality**:
+
 - Follow Python type hints throughout
 - Use modern FastAPI patterns and best practices
 - Implement proper error handling and validation
 - Include comprehensive docstrings
 
 **Template Quality**:
+
 - Clear, readable Jinja2 template syntax
 - Proper placeholder handling for all variations
 - Consistent code formatting in generated output
 - Support for both simple and complex configurations
 
 **Architecture Compliance**:
+
 - Follow hexagonal architecture principles
 - Proper dependency injection patterns
 - Clear separation of concerns
 - Consistent naming conventions
 
 ## Testing Requirements
+
 **Template Testing**:
+
 - Unit tests for template processing logic
 - Integration tests for complete generation workflow
 - Validation tests for generated code quality
 - Performance tests for generation speed
 
 **Generated Code Testing**:
+
 - Generated code should include comprehensive test suites
 - Tests should follow BDD patterns with clear scenarios
 - All generated functionality should be tested
 - Integration tests for API endpoints
 
 ## File Structure Requirements
+
 ```
 templates/
 └── [component_name]/
@@ -423,6 +446,7 @@ templates/
 ```
 
 ## Validation Steps
+
 1. **Template Syntax**: Verify Jinja2 template syntax is correct
 2. **Placeholder Handling**: Test all placeholder variations work
 3. **Generated Code Quality**: Validate output passes linting and type checking
@@ -430,6 +454,7 @@ templates/
 5. **Integration Testing**: Verify integration with other generated components
 
 ## Success Criteria
+
 - [ ] Template generates syntactically correct Python code
 - [ ] All placeholder variations are properly handled
 - [ ] Generated code follows established architecture patterns
@@ -439,10 +464,12 @@ templates/
 - [ ] Documentation is complete and accurate
 
 ## Memory Updates Required
+
 - Update .claude/progress.md with implementation status
 - Document any new patterns discovered in .claude/systemPatterns.md
 - Log any technical debt or shortcuts in .claude/TechDebt.md
 - Update .claude/testingContext.md with new testing patterns
+
 ```
 
 #### Code Generation Tool Template
@@ -501,6 +528,7 @@ Scenario: Handle Code Preservation During Regeneration
 ```
 
 ## Implementation Architecture
+
 ```python
 # Tool structure
 cmd/
@@ -518,6 +546,7 @@ cmd/
 ## Core Components
 
 ### CLI Interface (main.py)
+
 ```python
 import click
 from pathlib import Path
@@ -539,36 +568,42 @@ def generate(config: str, output: str, force: bool, preserve_custom: bool):
 ```
 
 ### Configuration Processing (config.py)
+
 - YAML parsing and validation
 - Schema validation against defined structure
 - Default value application
 - Configuration transformation for template use
 
 ### Template Engine (template_engine.py)
+
 - Jinja2 environment setup
 - Template loading and processing
 - Placeholder replacement logic
 - Code formatting and validation
 
 ### Code Preservation (code_preservation.py)
+
 - Extract custom code blocks before regeneration
 - Restore custom code after template processing
 - Validate preservation markers
 - Handle merge conflicts
 
 ## Quality Requirements
+
 - **Error Handling**: Comprehensive error messages and recovery
 - **Performance**: Fast generation for large configurations
 - **Reliability**: Consistent output across multiple runs
 - **Usability**: Clear CLI interface with helpful documentation
 
 ## Testing Strategy
+
 - **Unit Tests**: Each component tested in isolation
 - **Integration Tests**: Complete generation workflows
 - **CLI Tests**: Command-line interface testing
 - **Performance Tests**: Generation speed benchmarks
 
 ## Success Criteria
+
 - [ ] Tool generates working FastAPI applications from YAML
 - [ ] Configuration validation provides clear error messages
 - [ ] Code preservation works reliably during regeneration
@@ -578,10 +613,12 @@ def generate(config: str, output: str, force: bool, preserve_custom: bool):
 - [ ] Tool integrates properly with development workflow
 
 ## Integration Requirements
+
 - **Template System**: Works with all template files
 - **Development Workflow**: Integrates with IDE and build tools
 - **CI/CD**: Can be automated in deployment pipelines
 - **Documentation**: Auto-generates usage documentation
+
 ```
 
 ### Quickfire Agent Prompts
@@ -623,6 +660,7 @@ def generate(config: str, output: str, force: bool, preserve_custom: bool):
 ```
 
 ### Configuration Update Template
+
 ```markdown
 # Quickfire Task: Configuration Update
 
@@ -646,15 +684,18 @@ def generate(config: str, output: str, force: bool, preserve_custom: bool):
 ```
 
 ## Validation Requirements
+
 - [ ] Configuration syntax is valid
 - [ ] All dependent configurations remain compatible
 - [ ] Generated applications work with new configuration
 - [ ] Documentation reflects configuration changes
 
 ## Impact Assessment
+
 **Components Affected**: [List of affected components]
 **Testing Required**: [Specific testing needed]
 **Documentation Updates**: [Required documentation changes]
+
 ```
 
 ## Quality Assurance Templates
@@ -731,6 +772,7 @@ def generate(config: str, output: str, force: bool, preserve_custom: bool):
 ```
 
 ### Release Readiness Template
+
 ```markdown
 # Release Readiness Assessment: [VERSION]
 
@@ -777,4 +819,5 @@ def generate(config: str, output: str, force: bool, preserve_custom: bool):
 **Post-Release Plan**: [Monitoring and support plan]
 ```
 
-These prompt templates ensure consistent, high-quality implementations across all agents working on the Python FastAPI SQLModel template system while maintaining proper memory integration and BDD compliance.
+These prompt templates ensure consistent, high-quality implementations across all agents working on the Python FastAPI
+SQLModel template system while maintaining proper memory integration and BDD compliance.

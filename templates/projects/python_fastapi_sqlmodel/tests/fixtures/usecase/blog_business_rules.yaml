@@ -5,7 +5,7 @@ rules:
     error_message: "Post content must be between 100 and 10,000 characters"
     severity: "error"
     context: "blog_management"
-  
+
   - name: "title_uniqueness"
     type: "constraint"
     condition: "title not in existing_post_titles"
@@ -13,7 +13,7 @@ rules:
     severity: "error"
     context: "blog_management"
     custom_exception: "DuplicateTitleError"
-  
+
   - name: "user_can_publish"
     type: "security"
     condition: "user.has_permission('publish_posts') and user.is_active"
@@ -21,7 +21,7 @@ rules:
     severity: "error"
     context: "blog_management"
     custom_exception: "InsufficientPermissionsError"
-  
+
   - name: "post_exists"
     type: "constraint"
     condition: "post.id exists in database"
@@ -29,21 +29,21 @@ rules:
     severity: "error"
     context: "blog_management"
     custom_exception: "PostNotFoundError"
-  
+
   - name: "post_ready_for_publish"
     type: "business_logic"
     condition: "post.status == 'draft' and post.title and post.content and post.category"
     error_message: "Post is not ready for publishing - missing required fields"
     severity: "error"
     context: "blog_management"
-  
+
   - name: "post_is_published"
     type: "business_logic"
     condition: "post.status == 'published' and post.published_at is not None"
     error_message: "Post is not published"
     severity: "warning"
     context: "blog_management"
-  
+
   - name: "seo_metadata_complete"
     type: "validation"
     condition: "post.meta_description and post.meta_keywords and len(post.meta_description) <= 160"
@@ -53,18 +53,18 @@ rules:
 
 validation_groups:
   - name: "post_creation"
-    rules: ["content_length_validation", "title_uniqueness", "user_can_publish"]
-    execution_order: ["user_can_publish", "title_uniqueness", "content_length_validation"]
+    rules: [ "content_length_validation", "title_uniqueness", "user_can_publish" ]
+    execution_order: [ "user_can_publish", "title_uniqueness", "content_length_validation" ]
     description: "Validation rules for creating new blog posts"
-  
+
   - name: "post_publishing"
-    rules: ["post_exists", "post_ready_for_publish", "user_can_publish", "seo_metadata_complete"]
-    execution_order: ["post_exists", "user_can_publish", "post_ready_for_publish", "seo_metadata_complete"]
+    rules: [ "post_exists", "post_ready_for_publish", "user_can_publish", "seo_metadata_complete" ]
+    execution_order: [ "post_exists", "user_can_publish", "post_ready_for_publish", "seo_metadata_complete" ]
     description: "Validation rules for publishing blog posts"
-  
+
   - name: "post_access"
-    rules: ["post_exists", "post_is_published"]
-    execution_order: ["post_exists", "post_is_published"]
+    rules: [ "post_exists", "post_is_published" ]
+    execution_order: [ "post_exists", "post_is_published" ]
     description: "Validation rules for accessing published posts"
 
 error_handling:

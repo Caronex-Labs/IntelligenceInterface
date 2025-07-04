@@ -1,0 +1,62 @@
+domain:
+  name: "Health"
+  description: "Health monitoring domain for readiness, liveness and health check endpoints"
+  package: "health"
+  plural: "HealthChecks"
+
+entities:
+  - name: "HealthCheck"
+    description: "Health check entity for monitoring system status"
+    table_name: "health_checks"
+    fields:
+      - name: "id"
+        type: "str"
+        required: false
+        description: "UUID primary key"
+        sqlmodel_field: "Field(primary_key=True, default_factory=lambda: str(uuid.uuid4()))"
+
+      - name: "service_name"
+        type: "str"
+        required: true
+        description: "Name of the service being checked"
+        sqlmodel_field: "Field(min_length=1, max_length=100)"
+
+      - name: "status"
+        type: "str"
+        required: true
+        default: "healthy"
+        description: "Current health status (healthy, unhealthy, unknown)"
+        sqlmodel_field: "Field(default='healthy')"
+
+      - name: "last_check_time"
+        type: "datetime"
+        required: false
+        default: "datetime.utcnow"
+        description: "Timestamp of last health check"
+        sqlmodel_field: "Field(default_factory=datetime.utcnow)"
+
+      - name: "response_time_ms"
+        type: "Optional[int]"
+        required: false
+        description: "Response time in milliseconds"
+        sqlmodel_field: "Field(default=None, ge=0)"
+
+      - name: "error_message"
+        type: "Optional[str]"
+        required: false
+        description: "Error message if unhealthy"
+        sqlmodel_field: "Field(default=None, max_length=500)"
+
+      - name: "created_at"
+        type: "datetime"
+        required: false
+        default: "datetime.utcnow"
+        description: "Creation timestamp"
+        sqlmodel_field: "Field(default_factory=datetime.utcnow)"
+
+      - name: "updated_at"
+        type: "datetime"
+        required: false
+        default: "datetime.utcnow"
+        description: "Last update timestamp"
+        sqlmodel_field: "Field(default_factory=datetime.utcnow)"

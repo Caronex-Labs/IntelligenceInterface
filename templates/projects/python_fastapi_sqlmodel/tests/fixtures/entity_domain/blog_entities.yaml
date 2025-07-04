@@ -5,7 +5,7 @@ entities:
   - name: "User"
     description: "Blog user who can create posts and comments"
     table_name: "users"
-    mixins: ["Timestamped"]
+    mixins: [ "Timestamped" ]
     fields:
       - name: "username"
         type: "str"
@@ -14,28 +14,28 @@ entities:
         index: true
         description: "Unique username"
         sqlmodel_field: "Field(index=True, unique=True)"
-      
+
       - name: "email"
         type: "EmailStr"
         required: true
         unique: true
         description: "User email"
         sqlmodel_field: "Field(unique=True)"
-      
+
       - name: "full_name"
         type: "str"
         required: true
         description: "Display name"
-      
+
       - name: "bio"
         type: "Optional[str]"
         required: false
         description: "User bio"
-  
+
   - name: "Post"
     description: "Blog post with content and metadata"
     table_name: "posts"
-    mixins: ["Timestamped", "Authored", "Published"]
+    mixins: [ "Timestamped", "Authored", "Published" ]
     fields:
       - name: "title"
         type: "str"
@@ -43,7 +43,7 @@ entities:
         index: true
         description: "Post title"
         sqlmodel_field: "Field(index=True)"
-      
+
       - name: "slug"
         type: "str"
         required: true
@@ -51,17 +51,17 @@ entities:
         index: true
         description: "URL-friendly identifier"
         sqlmodel_field: "Field(index=True, unique=True)"
-      
+
       - name: "content"
         type: "str"
         required: true
         description: "Post content in markdown"
-      
+
       - name: "excerpt"
         type: "Optional[str]"
         required: false
         description: "Short summary"
-      
+
       - name: "view_count"
         type: "int"
         required: true
@@ -74,32 +74,32 @@ entities:
         type: "many_to_one"
         back_populates: "posts"
         foreign_key: "users.id"
-      
+
       - entity: "Comment"
         type: "one_to_many"
         back_populates: "post"
-      
+
       - entity: "Tag"
         type: "many_to_many"
         back_populates: "posts"
-  
+
   - name: "Comment"
     description: "User comment on blog posts"
     table_name: "comments"
-    mixins: ["Timestamped", "Authored"]
+    mixins: [ "Timestamped", "Authored" ]
     fields:
       - name: "content"
         type: "str"
         required: true
         description: "Comment content"
-      
+
       - name: "approved"
         type: "bool"
         required: true
         default: "false"
         description: "Moderation status"
         sqlmodel_field: "Field(default=False)"
-      
+
       - name: "post_id"
         type: "int"
         required: true
@@ -111,16 +111,16 @@ entities:
         type: "many_to_one"
         back_populates: "comments"
         foreign_key: "posts.id"
-      
+
       - entity: "User"
         type: "many_to_one"
         back_populates: "comments"
         foreign_key: "users.id"
-  
+
   - name: "Tag"
     description: "Content categorization tags"
     table_name: "tags"
-    mixins: ["Timestamped"]
+    mixins: [ "Timestamped" ]
     fields:
       - name: "name"
         type: "str"
@@ -129,7 +129,7 @@ entities:
         index: true
         description: "Tag name"
         sqlmodel_field: "Field(index=True, unique=True)"
-      
+
       - name: "slug"
         type: "str"
         required: true
@@ -137,12 +137,12 @@ entities:
         index: true
         description: "URL-friendly tag identifier"
         sqlmodel_field: "Field(index=True, unique=True)"
-      
+
       - name: "description"
         type: "Optional[str]"
         required: false
         description: "Tag description"
-      
+
       - name: "color"
         type: "str"
         required: true
@@ -162,7 +162,7 @@ endpoints:
     path: "/users/"
     operation: "create_user"
     description: "Create blog user"
-  
+
   - method: "GET"
     path: "/users/{id}"
     operation: "get_user"
@@ -173,22 +173,22 @@ endpoints:
     path: "/posts/"
     operation: "create_post"
     description: "Create new post"
-  
+
   - method: "GET"
     path: "/posts/{id}"
     operation: "get_post"
     description: "Get post by ID"
-  
+
   - method: "GET"
     path: "/posts/"
     operation: "list_posts"
     description: "List posts with filters"
-  
+
   - method: "GET"
     path: "/posts/published"
     operation: "list_published_posts"
     description: "List published posts only"
-  
+
   - method: "GET"
     path: "/posts/by-tag/{tag_slug}"
     operation: "list_posts_by_tag"
@@ -199,12 +199,12 @@ endpoints:
     path: "/posts/{post_id}/comments/"
     operation: "create_comment"
     description: "Add comment to post"
-  
+
   - method: "GET"
     path: "/posts/{post_id}/comments/"
     operation: "list_post_comments"
     description: "Get post comments"
-  
+
   - method: "PUT"
     path: "/comments/{id}/approve"
     operation: "approve_comment"
@@ -215,7 +215,7 @@ endpoints:
     path: "/tags/"
     operation: "create_tag"
     description: "Create new tag"
-  
+
   - method: "GET"
     path: "/tags/"
     operation: "list_tags"
@@ -225,4 +225,4 @@ metadata:
   entities_count: 4
   has_relationships: true
   relationship_complexity: "high"
-  features: ["many_to_many", "moderation", "publishing"]
+  features: [ "many_to_many", "moderation", "publishing" ]

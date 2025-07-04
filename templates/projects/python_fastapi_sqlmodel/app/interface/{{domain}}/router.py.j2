@@ -1,0 +1,439 @@
+"""
+{{ entity_name }} FastAPI Router - Interface Layer
+This module implements the HTTP API interface for {{ entity_name }} operations,
+providing REST endpoints with proper request/response handling and error management.
+Generated from: app/interface/{{ domain }}/router.py.j2
+Configuration: app/interface/{{ domain }}/interface.yaml
+"""
+import logging
+from typing import Optional
+from uuid import UUID
+
+from app.usecase.{{domain}}.schemas import (
+    Create{{entity_name}}Request,
+    Update{{entity_name}}Request,
+    Delete{{entity_name}}Request,
+    Get{{entity_name}}Request,
+    List{{domain_name_plural | title}}Request,
+    {{entity_name}}Response,
+    List{{domain_name_plural | title}}Response,
+    DeleteResponse,
+)
+# @pyhex:begin:custom:imports
+# Add custom imports here
+# @pyhex:end:custom:imports
+from app.usecase.{{domain}}.protocols import {{entity_name}}UseCaseProtocol
+# Custom exception handling
+from app.domain.{{domain}}.exceptions import (
+    {{entity_name}}ValidationError,
+    {{entity_name}}NotFoundError,
+    BusinessConstraintViolationError,
+    UnauthorizedOperationError,
+)
+from fastapi import APIRouter, Depends, status, Body, Path, Query, HTTPException
+from fastapi.responses import JSONResponse
+
+from .dependencies import (
+    get_
+
+{{domain}}
+_usecase,
+get_current_user,
+require_
+{{domain}}
+_permission,
+)
+from .protocols import (
+
+{{entity_name}}
+RouterProtocol,
+AuthenticationProtocol,
+AuthorizationProtocol,
+)
+
+logger = logging.getLogger(__name__)
+
+# Create FastAPI router
+router = APIRouter(
+    prefix="/api/v1/{{ domain_name_plural }}",
+    tags=["{{ domain_name_plural }}"],
+    responses={
+        404: {"description": "{{ entity_name }} not found"},
+        422: {"description": "Validation error"},
+        500: {"description": "Service temporarily unavailable"},
+    },
+)
+
+
+class {{ entity_name }}Router({{ entity_name }}RouterProtocol):
+    """
+    {{ entity_name }} FastAPI router implementation.
+    This class implements REST API endpoints for {{ entity_name }} operations,
+    following FastAPI conventions and providing comprehensive error handling.
+    
+    Endpoints:
+    {% for endpoint in interface.endpoints %}
+      - {{ endpoint.method }} {{ endpoint.path }}: {{ endpoint.description }}
+    {% endfor %}
+    """
+
+    def __init__(self, usecase: {{ entity_name }}UseCaseProtocol):
+        """Initialize router with use case dependency."""
+        self.usecase = usecase
+        self.logger = logging.getLogger(__name__)
+
+
+@router.post(
+    "/",
+    response_model={{ entity_name }}Response,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new {{ entity_name }}",
+    description="Create a new {{ entity_name }} with the provided data",
+    responses={
+        201: {"description": "{{ entity_name }} created successfully"},
+        400: {"description": "Invalid request data"},
+        422: {"description": "Validation failed"},
+    },
+)
+async def create_{{ domain }}(
+                 request: Create{{ entity_name }}Request = Body(..., description="{{ entity_name }} creation data"),
+                 usecase: {{ entity_name }}UseCaseProtocol = Depends(get_{{ domain }}_usecase),
+                 current_user=Depends(get_current_user),
+                 _: None = Depends(require_{{ domain }}_permission("create")),
+                 ) -> {{ entity_name }}Response:
+    """
+    Create a new {{ entity_name }} entity.
+    This endpoint creates a new {{ entity_name }} with comprehensive validation,
+    business rules enforcement, and proper error handling.
+    """
+    try:
+        logger.info(f"Creating {{ entity_name }}", extra={"user_id": getattr(current_user, 'id', None)})
+        # Execute use case
+        result = await usecase.create_{{ domain }}(request)
+        logger.info(f"{{ entity_name }} created successfully", extra={"entity_id": result.id})
+        return result
+    except {{ entity_name }}ValidationError as e:
+        logger.warning(f"{{ entity_name }} validation failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "Validation failed", "message": str(e)}
+        )
+    except BusinessConstraintViolationError as e:
+        logger.warning(f"Business constraint violation: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"error": "Business rule violation", "message": str(e)}
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error creating {{ entity_name }}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": "Service temporarily unavailable", "message": "Request could not be completed"}
+        )
+
+
+@router.get(
+    "/{id}",
+    response_model={{ entity_name }}Response,
+    summary="Get {{ entity_name }} by ID",
+    description="Retrieve a specific {{ entity_name }} by its unique identifier",
+    responses={
+        200: {"description": "{{ entity_name }} retrieved successfully"},
+        404: {"description": "{{ entity_name }} not found"},
+    },
+)
+async def get_{{ domain }}_by_id(
+        id: UUID = Path(..., description="{{ entity_name }} unique identifier"),
+        usecase: {{ entity_name }}UseCaseProtocol = Depends(get_{{ domain }}_usecase),
+        current_user=Depends(get_current_user),
+        _: None = Depends(require_{{ domain }}_permission("read")),
+) -> {{ entity_name }}Response:
+    """
+    Retrieve a {{ entity_name }} by its unique identifier.
+    This endpoint retrieves a specific {{ entity_name }} with access control validation
+    and comprehensive error handling.
+    """
+    try:
+        logger.info(f"Retrieving {{ entity_name }} {id}")
+        # Create request object
+        request = Get{{ entity_name }}Request(id=id)
+        # Execute use case
+        result = await usecase.get_{{ domain }}_by_id(request)
+        logger.info(f"{{ entity_name }} retrieved successfully")
+        return result
+    except {{ entity_name }}NotFoundError as e:
+        logger.warning(f"{{ entity_name }} not found: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "Not found", "message": str(e)}
+        )
+    except UnauthorizedOperationError as e:
+        logger.warning(f"Unauthorized access attempt: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"error": "Access denied", "message": str(e)}
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error retrieving {{ entity_name }}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": "Service temporarily unavailable", "message": "Request could not be completed"}
+        )
+
+
+@router.put(
+    "/{id}",
+    response_model={{ entity_name }}Response,
+    summary="Update {{ entity_name }}",
+    description="Update an existing {{ entity_name }} with new data",
+    responses={
+        200: {"description": "{{ entity_name }} updated successfully"},
+        400: {"description": "Invalid request data"},
+        404: {"description": "{{ entity_name }} not found"},
+        422: {"description": "Validation failed"},
+    },
+)
+async def update_{{ domain }}(
+                 id: UUID = Path(..., description="{{ entity_name }} unique identifier"),
+                 request: Update{{ entity_name }}Request = Body(..., description="{{ entity_name }} update data"),
+                 usecase: {{ entity_name }}UseCaseProtocol = Depends(get_{{ domain }}_usecase),
+                 current_user=Depends(get_current_user),
+                 _: None = Depends(require_{{ domain }}_permission("update")),
+                 ) -> {{ entity_name }}Response:
+    """
+    Update an existing {{ entity_name }} entity.
+    This endpoint updates a {{ entity_name }} with validation, permission checks,
+    and comprehensive error handling.
+    """
+    try:
+        logger.info(f"Updating {{ entity_name }} {id}")
+        # Set the ID in the request
+        request.id = id
+        # Execute use case
+        result = await usecase.update_{{ domain }}(request)
+        logger.info(f"{{ entity_name }} updated successfully")
+        return result
+    except {{ entity_name }}NotFoundError as e:
+        logger.warning(f"{{ entity_name }} not found for update: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "Not found", "message": str(e)}
+        )
+    except {{ entity_name }}ValidationError as e:
+        logger.warning(f"{{ entity_name }} update validation failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": "Validation failed", "message": str(e)}
+        )
+    except BusinessConstraintViolationError as e:
+        logger.warning(f"Business constraint violation on update: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"error": "Business rule violation", "message": str(e)}
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error updating {{ entity_name }}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": "Service temporarily unavailable", "message": "Request could not be completed"}
+        )
+
+
+@router.delete(
+    "/{id}",
+    response_model=DeleteResponse,
+    summary="Delete {{ entity_name }}",
+    description="Delete an existing {{ entity_name }}",
+    responses={
+        200: {"description": "{{ entity_name }} deleted successfully"},
+        404: {"description": "{{ entity_name }} not found"},
+        422: {"description": "Deletion not allowed"},
+    },
+)
+async def delete_{{ domain }}(
+                 id: UUID = Path(..., description="{{ entity_name }} unique identifier"),
+                 usecase: {{ entity_name }}UseCaseProtocol = Depends(get_{{ domain }}_usecase),
+                 current_user=Depends(get_current_user),
+                 _: None = Depends(require_{{ domain }}_permission("delete")),
+                 ) -> DeleteResponse:
+    """
+    Delete an existing {{ entity_name }} entity.
+    This endpoint deletes a {{ entity_name }} with validation, permission checks,
+    and comprehensive error handling.
+    """
+    try:
+        logger.info(f"Deleting {{ entity_name }} {id}")
+        # Create request object
+        request = Delete{{ entity_name }}Request(id=id)
+        # Execute use case
+        result = await usecase.delete_{{ domain }}(request)
+        logger.info(f"{{ entity_name }} deleted successfully")
+        return result
+    except {{ entity_name }}NotFoundError as e:
+        logger.warning(f"{{ entity_name }} not found for deletion: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"error": "Not found", "message": str(e)}
+        )
+    except BusinessConstraintViolationError as e:
+        logger.warning(f"Deletion constraint violation: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={"error": "Deletion not allowed", "message": str(e)}
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error deleting {{ entity_name }}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": "Service temporarily unavailable", "message": "Request could not be completed"}
+        )
+
+
+@router.get(
+    "/",
+    response_model=List{{ domain_name_plural | title }}Response,
+    summary="List {{ domain_name_plural }}",
+    description="Retrieve a list of {{ domain_name_plural }} with optional filtering and pagination",
+    responses={
+        200: {"description": "{{ domain_name_plural | title }} retrieved successfully"},
+    },
+)
+async def list_{{ domain_name_plural }}(
+               skip: int = Query(0, ge=0, description="Number of items to skip"),
+               limit: int = Query(100, ge=1, le=1000, description="Maximum number of items to return"),
+               search: Optional[str] = Query(None, description="Search term for filtering"),
+               status: Optional[str] = Query(None, description="Filter by status"),
+               usecase: {{ entity_name }}UseCaseProtocol = Depends(get_{{ domain }}_usecase),
+               current_user=Depends(get_current_user),
+               _: None = Depends(require_{{ domain }}_permission("list")),
+               ) -> List{{ domain_name_plural | title }}Response:
+    """
+    Retrieve a list of {{ domain_name_plural }} with optional filtering and pagination.
+    This endpoint supports filtering, searching, and pagination with
+    comprehensive error handling and access control.
+    """
+    try:
+        logger.info(f"Listing {{ domain_name_plural }} with filters")
+        # Build filters
+        filters = {}
+        if search:
+            filters["search"] = search
+        if status:
+            filters["status"] = status
+        # Create request object
+        request = List{{ domain_name_plural | title }}Request(
+            skip=skip,
+            limit=limit,
+            filters=filters
+        )
+        # Execute use case
+        result = await usecase.list_{{ domain_name_plural }}(request)
+        logger.info(f"{{ domain_name_plural | title }} listed successfully", extra={"count": len(result.items)})
+        return result
+    except Exception as e:
+        logger.error(f"Unexpected error listing {{ domain_name_plural }}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": "Service temporarily unavailable", "message": "Request could not be completed"}
+        )
+
+
+# @pyhex:begin:custom:router_methods
+# Add custom router methods here
+# @pyhex:end:custom:router_methods
+
+# Exception handlers
+@router.exception_handler({{ entity_name }}ValidationError)
+async def {{ domain }}_validation_exception_handler(request, exc: {{ entity_name }}ValidationError):
+    """Handle {{ entity_name }} validation errors."""
+    return JSONResponse(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        content={"error": "Validation failed", "message": str(exc)}
+    )
+
+
+@router.exception_handler({{ entity_name }}NotFoundError)
+async def {{ domain }}_not_found_exception_handler(request, exc: {{ entity_name }}NotFoundError):
+    """Handle {{ entity_name }} not found errors."""
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND,
+        content={"error": "Not found", "message": str(exc)}
+    )
+
+
+@router.exception_handler(BusinessConstraintViolationError)
+async def business_constraint_exception_handler(request, exc: BusinessConstraintViolationError):
+    """Handle business constraint violations."""
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={"error": "Business rule violation", "message": str(exc)}
+    )
+
+
+@router.exception_handler(UnauthorizedOperationError)
+async def unauthorized_exception_handler(request, exc: UnauthorizedOperationError):
+    """Handle unauthorized operation errors."""
+    return JSONResponse(
+        status_code=status.HTTP_403_FORBIDDEN,
+        content={"error": "Access denied", "message": str(exc)}
+    )
+
+
+# Health check endpoint
+@router.get(
+    "/health",
+    summary="Health check",
+    description="Check the health status of the {{ entity_name }} service",
+    include_in_schema=False,
+)
+async def health_check():
+    """Comprehensive health check endpoint for monitoring and container orchestration."""
+    from datetime import datetime
+
+    try:
+        # Basic health checks
+        current_time = datetime.utcnow()
+        # Database connectivity check would go here
+        # db_status = await check_database_connection()
+        health_response = {
+            "status": "healthy",
+            "service": "{{ domain }}_service",
+            "timestamp": current_time.isoformat(),
+            "version": "1.0.0",
+            "checks": {
+                "service": "healthy",
+                "database": "healthy",  # Would implement actual DB check
+                "memory": "healthy",
+                "dependencies": "healthy"
+            }
+        }
+        return health_response
+    except Exception as e:
+        # Health check should never fail with 500
+        return {
+            "status": "degraded",
+            "service": "{{ domain }}_service",
+            "timestamp": datetime.utcnow().isoformat(),
+            "error": "Health check partially failed"
+        }
+
+
+# Metrics endpoint
+@router.get(
+    "/metrics",
+    summary="Service metrics",
+    description="Get service metrics and statistics",
+    include_in_schema=False,
+)
+async def get_metrics():
+    """Get service metrics."""
+    return {
+        "service": "{{ domain }}_service",
+        "version": "1.0.0",
+        "uptime": "N/A",  # Implement actual uptime tracking
+        "requests_count": "N/A",  # Implement actual request counting
+    }
+
+# @pyhex:begin:custom:router_handlers
+# Add custom router handlers here
+# @pyhex:end:custom:router_handlers

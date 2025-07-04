@@ -1,0 +1,58 @@
+# Pre-commit configuration for Python FastAPI SQLModel template
+# This file configures pre-commit hooks to automatically run linting and formatting
+# on Jinja2 templates and Python code before commits.
+
+repos:
+  # Python code formatting and linting
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+      - id: black
+        language_version: python3
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.0
+    hooks:
+      - id: ruff
+        args: [ --fix ]
+
+  # Jinja2 template linting and formatting
+  - repo: https://github.com/djlint/djLint
+    rev: v1.36.4
+    hooks:
+      - id: djlint-reformat-jinja
+        name: djlint-reformat-jinja
+        entry: djlint --reformat --profile=jinja
+        language: python
+        files: \.j2$
+        types_or: [ jinja ]
+      - id: djlint-jinja
+        name: djlint-jinja
+        entry: djlint --profile=jinja
+        language: python
+        files: \.j2$
+        types_or: [ jinja ]
+
+  # Basic file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: [ --fix=lf ]
+
+  # Custom Jinja2 validation using j2lint
+  - repo: local
+    hooks:
+      - id: j2lint-validation
+        name: j2lint Jinja2 validation
+        entry: uv run python scripts/lint_templates.py --j2lint-only
+        language: system
+        files: \.j2$
+        pass_filenames: false

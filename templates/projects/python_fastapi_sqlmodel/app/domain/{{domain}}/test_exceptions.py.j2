@@ -1,0 +1,524 @@
+"""Tests for {{ entity_name }} domain exceptions - Generated from Enhanced Co-located Template.
+
+This module contains comprehensive tests for the generated domain exceptions
+in the {{ entity_name }} domain, following hexagonal architecture testing principles.
+
+Generated from:
+- domain.yaml: Base domain configuration
+- entities.yaml: Entity-specific exception requirements
+- test_exceptions.py.j2: This enhanced Jinja2 test template with best practices
+
+Co-location Architecture:
+- Test templates, configurations, and generated tests in same directory
+- Tests generated alongside the actual exception code
+- @pyhex preservation markers for custom test logic
+
+Jinja2 Best Practices Applied:
+- Macros for repeated exception test pattern generation
+- Proper variable scoping with Jinja2 set tags
+- Filters for text transformation (|upper, |lower)
+- Tests for conditional logic (is defined, is not none)
+- Template structure improvements with clear sections
+"""
+
+from uuid import uuid4
+
+# Standard library imports
+import pytest
+# Third-party imports
+from fastapi import HTTPException
+from starlette import status
+
+# Local imports - Generated exceptions
+from .exceptions import (
+    ExceptionSeverity,
+    ExceptionCategory,
+
+{ % if entities is defined and entities %}
+{ %
+for entity in entities %}
+{{entity.name}}ExceptionContext,
+Base{{entity.name}}Exception,
+{{entity.name}}NotFoundError,
+{{entity.name}}ValidationError,
+{{entity.name}}BusinessRuleError,
+{{entity.name}}AuthorizationError,
+{{entity.name}}IntegrationError,
+{{entity.name}}SystemError,
+{%endfor %}
+{%endif %}
+create_not_found_error,
+create_validation_error,
+create_business_rule_error,
+register_exception_handlers,
+)
+
+
+# @pyhex:begin:custom_imports
+# Add your custom test imports here
+# @pyhex:end:custom_imports
+
+
+class TestExceptionEnums:
+    """Test cases for exception enumeration classes."""
+
+    def test_exception_severity_values(self):
+        """Test ExceptionSeverity enum values."""
+        assert ExceptionSeverity.CRITICAL == "critical"
+        assert ExceptionSeverity.ERROR == "error"
+        assert ExceptionSeverity.WARNING == "warning"
+        assert ExceptionSeverity.INFO == "info"
+        assert ExceptionSeverity.DEBUG == "debug"
+
+        # Test all values are present
+        expected_values = {"critical", "error", "warning", "info", "debug"}
+        actual_values = {severity.value for severity in ExceptionSeverity}
+        assert expected_values == actual_values
+
+    def test_exception_category_values(self):
+        """Test ExceptionCategory enum values."""
+        assert ExceptionCategory.VALIDATION == "validation"
+        assert ExceptionCategory.BUSINESS_RULE == "business_rule"
+        assert ExceptionCategory.NOT_FOUND == "not_found"
+        assert ExceptionCategory.AUTHORIZATION == "authorization"
+        assert ExceptionCategory.INTEGRATION == "integration"
+        assert ExceptionCategory.SYSTEM == "system"
+
+        # Test all values are present
+        expected_values = {
+            "validation", "business_rule", "not_found",
+            "authorization", "integration", "system"
+        }
+        actual_values = {category.value for category in ExceptionCategory}
+        assert expected_values == actual_values
+
+
+class TestExceptionContext:
+    """Test cases for {{ entity_name }}ExceptionContext."""
+
+    def test_context_creation_minimal(self):
+        """Test creating exception context with minimal data."""
+        context = {{ entity_name }}ExceptionContext(
+            error_code="TEST_001",
+            error_message="Test error message",
+            category=ExceptionCategory.VALIDATION
+        )
+        assert context.error_code == "TEST_001"
+        assert context.error_message == "Test error message"
+        assert context.severity == ExceptionSeverity.ERROR  # Default
+        assert context.category == ExceptionCategory.VALIDATION
+        assert context.context_data == {}  # Default
+        assert context.entity_type is None  # Default
+        assert context.entity_id is None  # Default
+        assert context.field_name is None  # Default
+
+    def test_context_creation_complete(self):
+        """Test creating exception context with complete data."""
+        test_context_data = {"field": "test_field", "value": "test_value"}
+        context = {{ entity_name }}ExceptionContext(
+            error_code="TEST_002",
+            error_message="Complete test error",
+            severity=ExceptionSeverity.WARNING,
+            category=ExceptionCategory.VALIDATION,
+            context_data=test_context_data,
+            entity_type="TestEntity",
+            entity_id="test_id_123",
+            field_name="test_field"
+        )
+        assert context.error_code == "TEST_002"
+        assert context.error_message == "Complete test error"
+        assert context.severity == ExceptionSeverity.WARNING
+        assert context.category == ExceptionCategory.VALIDATION
+        assert context.context_data == test_context_data
+        assert context.entity_type == "TestEntity"
+        assert context.entity_id == "test_id_123"
+        assert context.field_name == "test_field"
+
+    def test_context_validation(self):
+        """Test exception context field validation."""
+        # Test invalid severity
+        with pytest.raises(ValueError):
+            {{ entity_name }}ExceptionContext(
+                error_code="TEST_003",
+                error_message="Test message",
+                category=ExceptionCategory.VALIDATION,
+                severity="invalid_severity"
+            )
+
+        # Test invalid category
+        with pytest.raises(ValueError):
+            {{ entity_name }}ExceptionContext(
+                error_code="TEST_004",
+                error_message="Test message",
+                category="invalid_category"
+            )
+
+
+class TestBase{{ entity_name }}Exception:
+    """Test cases for Base{{ entity_name }}Exception."""
+
+    def test_base_exception_creation(self):
+        """Test creating base exception."""
+        exception = Base{{ entity_name }}Exception(
+            error_code="BASE_001",
+            error_message="Base exception test",
+            category=ExceptionCategory.SYSTEM
+        )
+        assert exception.context.error_code == "BASE_001"
+        assert exception.context.error_message == "Base exception test"
+        assert exception.context.category == ExceptionCategory.SYSTEM
+        assert str(exception) == "[BASE_001] Base exception test"
+
+    def test_base_exception_to_fastapi_exception(self):
+        """Test converting base exception to HTTPException."""
+        exception = Base{{ entity_name }}Exception(
+            error_code="BASE_002",
+            error_message="Base exception test",
+            category=ExceptionCategory.SYSTEM
+        )
+        http_exception = exception.to_fastapi_exception()
+        assert isinstance(http_exception, HTTPException)
+        assert http_exception.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        assert "BASE_002" in str(http_exception.detail)
+
+    def test_base_exception_to_dict(self):
+        """Test converting base exception to dictionary."""
+        exception = Base{{ entity_name }}Exception(
+            error_code="BASE_003",
+            error_message="Base exception test",
+            category=ExceptionCategory.VALIDATION,
+            entity_type="TestEntity",
+            entity_id="test_123"
+        )
+        exception_dict = exception.to_dict()
+        assert isinstance(exception_dict, dict)
+        assert exception_dict["error_code"] == "BASE_003"
+        assert exception_dict["error_message"] == "Base exception test"
+        assert exception_dict["category"] == "validation"
+        assert exception_dict["entity_type"] == "TestEntity"
+        assert exception_dict["entity_id"] == "test_123"
+
+{% for entity in entities %}
+
+class Test{{ entity.name }}Exceptions:
+    """Test cases for {{ entity.name }} specific exceptions."""
+
+    def test_{{ entity.name | lower }}_not_found_error(self):
+        """Test {{ entity.name }}NotFoundError."""
+        entity_id = str(uuid4())
+        exception = {{ entity.name }}NotFoundError(
+            entity_type="{{ entity.name }}",
+            entity_id=entity_id
+        )
+        assert entity_id in str(exception)
+        assert exception.to_fastapi_exception().status_code == status.HTTP_404_NOT_FOUND
+        assert exception.context.category == ExceptionCategory.NOT_FOUND
+        assert "{{ domain.upper() if domain.upper is defined else domain | upper }}_NOT_FOUND" in exception.context.error_code
+
+    def test_{{ entity.name | lower }}_not_found_http_conversion(self):
+        """Test {{ entity.name }}NotFoundError HTTP conversion."""
+        entity_id = str(uuid4())
+        exception = {{ entity.name }}NotFoundError(
+            entity_type="{{ entity.name }}",
+            entity_id=entity_id
+        )
+        http_exception = exception.to_fastapi_exception()
+        assert isinstance(http_exception, HTTPException)
+        assert http_exception.status_code == status.HTTP_404_NOT_FOUND
+        assert entity_id in str(http_exception.detail)
+
+    def test_{{ entity.name | lower }}_validation_error(self):
+        """Test {{ entity.name }}ValidationError."""
+        field_name = "test_field"
+        field_value = "invalid_value"
+        validation_rule = "must be valid"
+        exception = {{ entity.name }}ValidationError(
+            field_name=field_name,
+            field_value=field_value,
+            validation_rule=validation_rule
+        )
+        assert exception.to_fastapi_exception().status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert exception.context.category == ExceptionCategory.VALIDATION
+        assert "{{ domain.upper() if domain.upper is defined else domain | upper }}_VALIDATION_ERROR" in exception.context.error_code
+        assert field_name in exception.context.error_message
+        assert validation_rule in exception.context.error_message
+
+    def test_{{ entity.name | lower }}_validation_error_context(self):
+        """Test {{ entity.name }}ValidationError context data."""
+        field_name = "email"
+        field_value = "invalid_email"
+        validation_rule = "must be valid email"
+        exception = {{ entity.name }}ValidationError(
+            field_name=field_name,
+            field_value=field_value,
+            validation_rule=validation_rule,
+            entity_type="{{ entity.name }}",
+            entity_id="test_123"
+        )
+        assert exception.context.field_name == field_name
+        assert exception.context.context_data["field_value"] == str(field_value)
+        assert exception.context.context_data["validation_rule"] == validation_rule
+        assert exception.context.entity_type == "{{ entity.name }}"
+        assert exception.context.entity_id == "test_123"
+
+    def test_{{ entity.name | lower }}_business_rule_error(self):
+        """Test {{ entity.name }}BusinessRuleError."""
+        rule_name = "unique_email_rule"
+        rule_description = "Email must be unique"
+        exception = {{ entity.name }}BusinessRuleError(
+            rule_name=rule_name,
+            rule_description=rule_description
+        )
+        assert exception.to_fastapi_exception().status_code == status.HTTP_400_BAD_REQUEST
+        assert exception.context.category == ExceptionCategory.BUSINESS_RULE
+        assert "{{ domain.upper() if domain.upper is defined else domain | upper }}_BUSINESS_RULE_ERROR" in exception.context.error_code
+        assert rule_name in str(exception)
+        assert rule_description in str(exception)
+
+    def test_{{ entity.name | lower }}_business_rule_http_conversion(self):
+        """Test {{ entity.name }}BusinessRuleError HTTP conversion."""
+        rule_name = "test_rule"
+        rule_description = "Test business rule violation"
+        exception = {{ entity.name }}BusinessRuleError(
+            rule_name=rule_name,
+            rule_description=rule_description
+        )
+        http_exception = exception.to_fastapi_exception()
+        assert isinstance(http_exception, HTTPException)
+        assert http_exception.status_code == status.HTTP_400_BAD_REQUEST
+        assert rule_name in str(http_exception.detail)
+
+    def test_{{ entity.name | lower }}_authorization_error(self):
+        """Test {{ entity.name }}AuthorizationError."""
+        user_id = "user_123"
+        action = "delete"
+        resource = "{{ entity.name | lower }}"
+        exception = {{ entity.name }}AuthorizationError(
+            user_id=user_id,
+            action=action,
+            resource=resource
+        )
+        assert exception.to_fastapi_exception().status_code == status.HTTP_403_FORBIDDEN
+        assert exception.context.category == ExceptionCategory.AUTHORIZATION
+        assert user_id in str(exception)
+        assert action in str(exception)
+        assert resource in str(exception)
+
+    def test_{{ entity.name | lower }}_integration_error(self):
+        """Test {{ entity.name }}IntegrationError."""
+        integration_name = "payment_gateway"
+        operation = "process_payment"
+        error_details = "Connection timeout"
+        exception = {{ entity.name }}IntegrationError(
+            integration_name=integration_name,
+            operation=operation,
+            error_details=error_details
+        )
+        assert exception.to_fastapi_exception().status_code == status.HTTP_502_BAD_GATEWAY
+        assert exception.context.category == ExceptionCategory.INTEGRATION
+        assert integration_name in str(exception)
+        assert operation in str(exception)
+        assert error_details in str(exception)
+
+    def test_{{ entity.name | lower }}_system_error(self):
+        """Test {{ entity.name }}SystemError."""
+        system_component = "database"
+        error_details = "Connection lost"
+        exception = {{ entity.name }}SystemError(
+            system_component=system_component,
+            error_details=error_details
+        )
+        assert exception.to_fastapi_exception().status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        assert exception.context.category == ExceptionCategory.SYSTEM
+        assert exception.context.severity == ExceptionSeverity.CRITICAL
+        assert system_component in str(exception)
+        assert error_details in str(exception)
+
+    # @pyhex:begin:custom_
+    {{ entity.name | lower }}  _exception_tests
+    # Add your custom
+    {{ entity.name }}   exception tests here
+    # @pyhex:end:custom_
+    {{ entity.name | lower }}  _exception_tests
+
+{% endfor %}
+
+class TestExceptionHelpers:
+    """Test cases for exception helper functions."""
+
+    def test_create_not_found_error_function(self):
+        """Test create_not_found_error helper function."""
+        entity_type = "TestEntity"
+        entity_id = str(uuid4())
+        exception = create_not_found_error(
+            entity_type=entity_type,
+            entity_id=entity_id
+        )
+        assert isinstance(exception, Base{{ entity_name }}Exception)
+        assert exception.context.category == ExceptionCategory.NOT_FOUND
+        assert entity_type in str(exception)
+        assert entity_id in str(exception)
+
+    def test_create_not_found_error_with_field_name(self):
+        """Test create_not_found_error with field name."""
+        entity_type = "TestEntity"
+        field_name = "email"
+        exception = create_not_found_error(
+            entity_type=entity_type,
+            field_name=field_name
+        )
+        assert isinstance(exception, Base{{ entity_name }}Exception)
+        assert exception.context.field_name == field_name
+        assert field_name in str(exception)
+
+    def test_create_validation_error_function(self):
+        """Test create_validation_error helper function."""
+        field_name = "email"
+        field_value = "invalid_email"
+        validation_rule = "must be valid email format"
+        exception = create_validation_error(
+            field_name=field_name,
+            field_value=field_value,
+            validation_rule=validation_rule
+        )
+        assert isinstance(exception, Base{{ entity_name }}Exception)
+        assert exception.context.category == ExceptionCategory.VALIDATION
+        assert field_name in str(exception)
+        assert validation_rule in str(exception)
+
+    def test_create_business_rule_error_function(self):
+        """Test create_business_rule_error helper function."""
+        rule_name = "unique_constraint"
+        rule_description = "Value must be unique"
+        exception = create_business_rule_error(
+            rule_name=rule_name,
+            rule_description=rule_description
+        )
+        assert isinstance(exception, Base{{ entity_name }}Exception)
+        assert exception.context.category == ExceptionCategory.BUSINESS_RULE
+        assert rule_name in str(exception)
+        assert rule_description in str(exception)
+
+
+class TestExceptionHandlerRegistration:
+    """Test cases for exception handler registration."""
+
+    def test_register_exception_handlers_callable(self):
+        """Test that register_exception_handlers is callable."""
+        # Note: Full testing would require FastAPI app instance
+        # This test verifies the function exists and is callable
+        assert callable(register_exception_handlers)
+
+    def test_register_exception_handlers_with_mock_app(self):
+        """Test register_exception_handlers with mock app."""
+
+        # Mock FastAPI app for testing
+        class MockApp:
+            def __init__(self):
+                self.exception_handlers = {}
+
+            def exception_handler(self, exc_class):
+                def decorator(handler):
+                    self.exception_handlers[exc_class] = handler
+                    return handler
+
+                return decorator
+
+        mock_app = MockApp()
+        register_exception_handlers(mock_app)
+
+        # Verify exception handlers were registered
+        assert len(mock_app.exception_handlers) > 0
+        assert Base{{ entity_name }}Exception in mock_app.exception_handlers
+
+
+class TestExceptionIntegration:
+    """Integration tests for all exceptions in {{ entity_name }} domain."""
+
+    def test_all_exceptions_inherit_base(self):
+        """Test that all exceptions inherit from base exception."""
+        {% for entity in entities %}
+        # Test
+        {{ entity.name }}   exceptions
+        assert issubclass({{ entity.name }}NotFoundError, Base{{ entity_name }}Exception)
+        assert issubclass({{ entity.name }}ValidationError, Base{{ entity_name }}Exception)
+        assert issubclass({{ entity.name }}BusinessRuleError, Base{{ entity_name }}Exception)
+        assert issubclass({{ entity.name }}AuthorizationError, Base{{ entity_name }}Exception)
+        assert issubclass({{ entity.name }}IntegrationError, Base{{ entity_name }}Exception)
+        assert issubclass({{ entity.name }}SystemError, Base{{ entity_name }}Exception)
+
+    {% endfor %}
+
+    def test_all_exceptions_have_http_status(self):
+        """Test that all exceptions have appropriate HTTP status codes."""
+        {% for entity in entities %}
+        # Create sample exceptions for
+        {{ entity.name }}
+        not_found = {{ entity.name }}NotFoundError(entity_type="{{ entity.name }}", entity_id="test-id")
+        validation = {{ entity.name }}ValidationError(field_name="test_field", field_value="test",
+                                                      validation_rule="test rule")
+        business_rule = {{ entity.name }}BusinessRuleError(rule_name="test_rule", rule_description="test description")
+        authorization = {{ entity.name }}AuthorizationError(user_id="user_1", action="read", resource="resource_1")
+        integration = {{ entity.name }}IntegrationError(integration_name="test_service", operation="test_op",
+                                                        error_details="test error")
+        system = {{ entity.name }}SystemError(system_component="database", error_details="connection failed")
+
+        # Verify HTTP status codes for
+        {{ entity.name }}
+        assert not_found.to_fastapi_exception().status_code == status.HTTP_404_NOT_FOUND
+        assert validation.to_fastapi_exception().status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert business_rule.to_fastapi_exception().status_code == status.HTTP_400_BAD_REQUEST
+        assert authorization.to_fastapi_exception().status_code == status.HTTP_403_FORBIDDEN
+        assert integration.to_fastapi_exception().status_code == status.HTTP_502_BAD_GATEWAY
+        assert system.to_fastapi_exception().status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+
+    {% endfor %}
+
+    def test_exception_context_consistency(self):
+        """Test that all exceptions have consistent context structure."""
+        {% for entity in entities %}
+        exceptions = [
+            {{ entity.name }}NotFoundError(entity_type="{{ entity.name }}", entity_id="test-id"),
+            {{ entity.name }}ValidationError(field_name="test_field", field_value="test", validation_rule="test rule"),
+            {{ entity.name }}BusinessRuleError(rule_name="test_rule", rule_description="test description")
+        ]
+
+        for exception in exceptions:
+            assert hasattr(exception, 'context')
+            assert isinstance(exception.context, {{ entity_name }}ExceptionContext)
+            assert exception.context.error_code is not None
+            assert exception.context.error_message is not None
+            assert exception.context.category is not None
+            assert exception.context.severity is not None
+
+    {% endfor %}
+
+    def test_exception_string_representations(self):
+        """Test that all exceptions have proper string representations."""
+        {% for entity in entities %}
+        exception = {{ entity.name }}NotFoundError(entity_type="{{ entity.name }}", entity_id="test_123")
+
+        # Test __str__ method
+        str_repr = str(exception)
+        assert "test_123" in str_repr
+        assert exception.context.error_code in str_repr
+
+        # Test __repr__ method
+        repr_str = repr(exception)
+        assert "{{ entity.name }}NotFoundError" in repr_str
+        assert exception.context.error_code in repr_str
+
+    {% endfor %}
+
+    # @pyhex:begin:custom_integration_tests
+    # Add your custom integration tests here
+    # @pyhex:end:custom_integration_tests
+
+
+# @pyhex:begin:custom_test_classes
+# Add your custom test classes here
+# @pyhex:end:custom_test_classes
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

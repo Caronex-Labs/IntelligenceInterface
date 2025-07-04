@@ -22,7 +22,7 @@ entities:
       - "UUIDMixin"      # Inherited from domain.yaml
       - "TimestampMixin" # Inherited from domain.yaml
       # SoftDeleteMixin: false in domain.yaml, can be enabled here if needed
-      
+
     # Field definitions
     fields:
       # Business fields (example: user entity)
@@ -35,7 +35,7 @@ entities:
           max_length: 100
         index: true
         example: "John Doe"
-        
+
       - name: "email"
         type: "email"
         description: "{{domain|title}} email address"
@@ -44,7 +44,7 @@ entities:
         validation:
           email_format: true
         example: "user@example.com"
-        
+
       - name: "description"
         type: "optional_string"
         description: "{{domain|title}} description"
@@ -52,30 +52,30 @@ entities:
         validation:
           max_length: 500
         example: "User description"
-        
+
       - name: "status"
         type: "string"
         description: "{{domain|title}} status"
         required: true
         default: "active"
-        enum_values: ["active", "inactive", "pending"]
+        enum_values: [ "active", "inactive", "pending" ]
         validation:
-          choices: ["active", "inactive", "pending"]
+          choices: [ "active", "inactive", "pending" ]
         example: "active"
-        
+
       - name: "metadata"
         type: "json"
         description: "{{domain|title}} metadata"
         required: false
         default_factory: "dict"
-        example: {"key": "value"}
-        
+        example: { "key": "value" }
+
       - name: "tags"
         type: "string_list"
         description: "{{domain|title}} tags"
         required: false
         default_factory: "list"
-        example: ["tag1", "tag2"]
+        example: [ "tag1", "tag2" ]
 
     # Relationship specifications
     relationships:
@@ -88,7 +88,7 @@ entities:
         cascade: "save-update, merge"
         lazy: "select"
         description: "Related items for this {{domain}}"
-        
+
       # Many-to-many relationship example  
       - name: "categories"
         type: "many_to_many"
@@ -98,7 +98,7 @@ entities:
         cascade: "save-update"
         lazy: "select"
         description: "Categories associated with this {{domain}}"
-        
+
       # One-to-one relationship example
       - name: "profile"
         type: "one_to_one"
@@ -113,14 +113,14 @@ entities:
     database:
       table_args:
         indexes:
-          - fields: ["name", "email"]
+          - fields: [ "name", "email" ]
             unique: true
             name: "{{domain}}_name_email_idx"
-          - fields: ["status"]
+          - fields: [ "status" ]
             name: "{{domain}}_status_idx"
-          - fields: ["created_at"]
+          - fields: [ "created_at" ]
             name: "{{domain}}_created_at_idx"
-            
+
         constraints:
           - type: "check"
             name: "{{domain}}_status_check"
@@ -135,18 +135,18 @@ entities:
         - name: "unique_email_validation"
           description: "Email must be unique across all {{domain}} entities"
           type: "unique_constraint"
-          fields: ["email"]
-          
+          fields: [ "email" ]
+
         - name: "status_transition_validation"
           description: "Status transitions must follow business rules"
           type: "custom_validator"
           method: "validate_status_transition"
-          
+
         - name: "name_format_validation"
           description: "Name must follow proper format"
           type: "regex_validator"
           pattern: "^[A-Za-z\\s]+$"
-          fields: ["name"]
+          fields: [ "name" ]
 
     # Entity-specific overrides for domain configuration
     overrides:
@@ -156,37 +156,37 @@ entities:
           description: "When this {{domain}} was created"
         updated_at:
           description: "When this {{domain}} was last updated"
-          
+
       # Override validation rules
       validation:
         string_rules:
           min_length: 2  # Override domain default of 1
-          
+
       # Override database naming
       database:
         table_naming:
           prefix: "{{domain}}_"  # Keep domain prefix
           suffix: "_v1"          # Add version suffix
-          
+
     # Entity-specific generation settings
     generation:
       templates:
         include_examples: true
         generate_factory_methods: true
         generate_builder_pattern: false
-        
+
       methods:
         # Custom methods to generate
         - name: "is_active"
           description: "Check if {{domain}} is active"
           return_type: "bool"
           implementation: "return self.status == 'active'"
-          
+
         - name: "get_display_name"
           description: "Get display name for {{domain}}"
           return_type: "str"
           implementation: "return f'{self.name} ({self.email})'"
-          
+
         - name: "to_dict"
           description: "Convert {{domain}} to dictionary"
           return_type: "Dict[str, Any]"
@@ -205,7 +205,7 @@ entities:
         validation:
           min_length: 1
           max_length: 200
-          
+
       - name: "value"
         type: "float"
         description: "Item value"
@@ -213,7 +213,7 @@ entities:
         default: 0.0
         validation:
           minimum: 0.0
-          
+
       - name: "{{domain}}_id"
         type: "UUID"
         description: "Reference to parent {{domain}}"
@@ -227,7 +227,7 @@ entities:
         target_entity: "{{domain|title}}"
         foreign_key: "{{domain}}_id"
         back_populates: "related_items"
-        
+
   # Profile entity (example)
   - name: "{{domain|title}}Profile"
     description: "Extended profile for {{domain|title}}"
@@ -239,12 +239,12 @@ entities:
         description: "{{domain|title}} biography"
         validation:
           max_length: 1000
-          
+
       - name: "preferences"
         type: "json"
         description: "{{domain|title}} preferences"
         default_factory: "dict"
-        
+
       - name: "{{domain}}_id"
         type: "UUID"
         description: "Reference to {{domain}}"
@@ -266,11 +266,11 @@ global_overrides:
     preserve_custom_code: true
     auto_format: true
     include_docstrings: true
-    
+
   validation:
     enforce_type_hints: true
     require_field_descriptions: true
-    
+
   quality:
     max_fields_per_entity: 20
     require_examples: true
@@ -290,14 +290,14 @@ template_context:
     enable_audit_log: true
     enable_full_text_search: false
     enable_caching: true
-    
+
   # Integration settings
   integrations:
     fastapi:
       generate_crud_routes: true
       include_openapi_examples: true
       enable_response_model: true
-      
+
     testing:
       generate_test_fixtures: true
       include_factory_boy: true

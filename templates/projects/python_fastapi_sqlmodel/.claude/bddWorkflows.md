@@ -3,7 +3,9 @@
 ## BDD Philosophy for Template Systems
 
 ### Behavior-Driven Template Development
+
 The Python FastAPI SQLModel template system follows BDD principles at multiple levels:
+
 - **Template Behavior**: How templates generate code with expected characteristics
 - **Generated Code Behavior**: How generated applications behave for end users
 - **Tool Behavior**: How code generation tools behave for developers
@@ -12,7 +14,9 @@ The Python FastAPI SQLModel template system follows BDD principles at multiple l
 ### Multi-Level BDD Approach
 
 #### Level 1: Template System BDD
+
 Focus on the behavior of the template generation system itself.
+
 ```gherkin
 Feature: Template Code Generation
   As a developer
@@ -28,7 +32,9 @@ Scenario: Generate Domain from Simple Configuration
 ```
 
 #### Level 2: Generated Application BDD
+
 Focus on the behavior of applications created by the template system.
+
 ```gherkin
 Feature: Generated CRUD Operations
   As an API user
@@ -44,7 +50,9 @@ Scenario: Create New Entity
 ```
 
 #### Level 3: Code Quality BDD
+
 Focus on the quality characteristics of generated code.
+
 ```gherkin
 Feature: Generated Code Quality
   As a developer using generated code
@@ -64,16 +72,19 @@ Scenario: Generated Code Follows Architecture Patterns
 ### Red-Green-Refactor for Templates
 
 #### Red Phase: Write Failing BDD Scenarios
+
 1. **Define Template Behavior**: Write Gherkin scenarios for template generation
 2. **Create Step Definitions**: Implement step definitions that will fail
 3. **Verify Failure**: Confirm tests fail because functionality doesn't exist yet
 
 #### Green Phase: Implement Template Logic
+
 1. **Minimal Implementation**: Write just enough template code to make tests pass
 2. **Focus on Behavior**: Ensure generated code exhibits expected behavior
 3. **Validate Success**: Confirm all BDD scenarios pass
 
 #### Refactor Phase: Improve Template Quality
+
 1. **Code Quality**: Improve template organization and clarity
 2. **Pattern Consistency**: Ensure all templates follow consistent patterns
 3. **Performance**: Optimize template generation speed
@@ -82,6 +93,7 @@ Scenario: Generated Code Follows Architecture Patterns
 ### BDD Implementation Workflow
 
 #### Template Development Workflow
+
 ```mermaid
 flowchart TD
     A[Write BDD Scenario] --> B[Create Step Definitions]
@@ -96,6 +108,7 @@ flowchart TD
 ```
 
 #### Generated Code Validation Workflow
+
 ```mermaid
 flowchart TD
     A[Generate Test Application] --> B[Run Generated Tests]
@@ -113,6 +126,7 @@ flowchart TD
 ### Template System Scenarios
 
 #### Basic Code Generation
+
 ```gherkin
 Feature: Basic Domain Generation
   As a backend developer
@@ -153,6 +167,7 @@ Scenario: Handle Invalid Configuration
 ```
 
 #### Advanced Template Features
+
 ```gherkin
 Feature: Advanced Template Features
   As a developer working with complex domains
@@ -209,6 +224,7 @@ Scenario: Generate Complex Validation Rules
 ### Generated Application Scenarios
 
 #### API Functionality
+
 ```gherkin
 Feature: Generated API Endpoints
   As an API consumer
@@ -280,6 +296,7 @@ Scenario: List Books with Pagination
 ```
 
 #### Database Integration
+
 ```gherkin
 Feature: Generated Database Integration
   As a developer
@@ -315,6 +332,7 @@ Scenario: Database Constraints
 ### Step Definition Patterns
 
 #### Template Generation Steps
+
 ```python
 # Step definitions for template generation testing
 from behave import given, when, then
@@ -397,6 +415,7 @@ def step_then_code_passes_type_checking(context):
 ```
 
 #### API Testing Steps
+
 ```python
 # Step definitions for generated API testing
 from behave import given, when, then
@@ -441,6 +460,7 @@ def step_then_response_includes_entity_with_id(context, entity):
 ### Test Data Management
 
 #### Configuration Fixtures
+
 ```python
 # Test configuration management
 class ConfigurationFixtures:
@@ -500,6 +520,7 @@ class ConfigurationFixtures:
 ```
 
 #### Test Environment Setup
+
 ```python
 # Environment setup for BDD testing
 class TestEnvironment:
@@ -533,12 +554,14 @@ class TestEnvironment:
 ## BDD Integration with Development Workflow
 
 ### Development Cycle Integration
+
 1. **Feature Planning**: Write BDD scenarios before implementation
 2. **Template Development**: Implement templates to satisfy scenarios
 3. **Generated Code Testing**: Validate generated applications meet scenarios
 4. **Refactoring**: Improve templates while maintaining scenario compliance
 
 ### Continuous Integration
+
 ```yaml
 # BDD testing in CI pipeline
 name: BDD Template Testing
@@ -575,9 +598,11 @@ jobs:
 ```
 
 ### Quality Gates
+
 - **Template BDD Compliance**: All template scenarios must pass
 - **Generated Code BDD Compliance**: Generated applications must pass their scenarios
 - **Performance Scenarios**: Generation and runtime performance scenarios must pass
 - **Integration Scenarios**: End-to-end integration scenarios must pass
 
-This BDD workflow ensures that the template system reliably produces high-quality, well-tested applications that meet user expectations and business requirements.
+This BDD workflow ensures that the template system reliably produces high-quality, well-tested applications that meet
+user expectations and business requirements.

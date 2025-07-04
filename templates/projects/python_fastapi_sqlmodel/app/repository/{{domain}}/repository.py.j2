@@ -1,0 +1,851 @@
+"""{{ entity_name }} Repository Implementation - Co-location Architecture
+This module provides the SQLModel-based repository implementation for {{ entity_name }} data access.
+The implementation follows hexagonal architecture principles with async/await patterns
+for PostgreSQL database operations.
+Generated from: app/repository/{{ domain }}/repository.py.j2
+Configuration: app/repository/{{ domain }}/repository.yaml
+"""
+import logging
+from typing import Optional
+
+# @pyhex:begin:custom_repository_imports
+# Add custom repository imports here - preserved during regeneration
+# @pyhex:end:custom_repository_imports
+# Domain imports
+from app.domain.{{domain}}.entities import {{ entity_name }}
+# SQLModel and SQLAlchemy imports
+from sqlalchemy.ext.asyncio import AsyncSession
+from .protocols import {{ entity_name }}RepositoryProtocol
+{% if repository.query_methods %}
+,
+{{ entity_name }}
+QueryBuilderProtocol
+{% endif %}
+{% if repository.caching.enabled %}
+,
+{{ entity_name }}
+CacheProtocol
+{% endif %}
+
+# Repository exceptions
+class {{ entity_name }}RepositoryError(Exception):
+
+
+    """Base exception for {{ entity_name }} repository operations."""
+pass
+
+
+class {{ entity_name }}NotFoundError({{ entity_name }}RepositoryError):
+
+
+    """Raised when {{ entity_name }} entity is not found."""
+pass
+
+
+class {{ entity_name }}DuplicateError({{ entity_name }}RepositoryError):
+
+
+    """Raised when {{ entity_name }} entity violates unique constraints."""
+pass
+
+
+class {{ entity_name }}ValidationError({{ entity_name }}RepositoryError):
+
+
+    """Raised when {{ entity_name }} entity validation fails."""
+pass
+
+
+class SQLModel{{ entity_name }}Repository({{ entity_name }}RepositoryProtocol):
+
+
+    """
+    SQLModel-based repository implementation for {{ entity_name }} entities.
+This repository provides async database operations with PostgreSQL using SQLModel.
+It implements the {{ entity_name }}RepositoryProtocol interface ensuring consistent
+data access patterns across the application.
+Features:
+- Async/await database operations
+- Connection pooling and session management
+- Transaction support with rollback handling
+- Business validation and error handling
+- {{ "Soft delete" if repository.crud_operations.delete.soft_delete else "Hard delete" }} operations
+- Custom query methods for complex data access
+{% if repository.caching.enabled %}
+  - Caching with
+  {{ repository.caching.backend }}
+  backend
+{% endif %}
+{% if repository.performance.query_logging %}
+- Query logging and performance monitoring
+{% endif %}
+Database Configuration:
+- Provider: {{ repository.database.provider }}
+- Dialect: {{ repository.database.dialect }}
+- Connection Pool: {{ repository.database.connection_pool.min_size }}-{{ repository.database.connection_pool.max_size }} connections
+- Session Management: {{ repository.async_operations.session_management }}
+"""
+
+
+def __init__(
+        self,
+        session: AsyncSession
+        {% if repository.caching.enabled %}
+        ,
+        cache_manager: Optional[{{ entity_name }}CacheProtocol] = None
+        {% endif %}
+):
+
+
+    """
+    Initialize {{ entity_name }} repository with async database session.
+Args:
+session: AsyncSession for database operations
+{% if repository.caching.enabled %}
+cache_manager: Optional cache manager for performance optimization
+{% endif %}
+"""
+self.session = session
+self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+{% if repository.caching.enabled %}
+self.cache_manager = cache_manager
+{% endif %}
+# @pyhex:begin:custom_repository_init
+# Add custom repository initialization here - preserved during regeneration
+# @pyhex:end:custom_repository_init
+# CRUD Operations Implementation
+{% if repository.crud_operations.create.enabled %}
+
+async def create(
+        self,
+        entity: {{ entity_name }},
+        *,
+        validate: bool = {{ repository.crud_operations.create.validation }},
+        return_created: bool = {{ repository.crud_operations.create.return_created }}
+) -> {{ entity_name }}:
+
+
+    """
+    Create a new {{ entity_name }} entity in the database.
+  This method handles entity creation with business validation,
+  duplicate detection, and proper error handling.
+  """
+try:
+{%     if repository.performance is defined and repository.performance.query_logging %}
+    self.logger.info(f"Creating new {{ entity_name }} entity")
+{%     endif %}
+# Business validation
+if validate:
+    await self._validate_entity_creation(entity)
+# @pyhex:begin:custom_create_logic
+# Add custom creation logic here - preserved during regeneration
+# @pyhex:end:custom_create_logic
+# Add entity to session
+self.session.add(entity)
+# Flush to get generated ID but don't commit yet
+await self.session.flush()
+{%     if repository.crud_operations is defined and repository.crud_operations.create is defined and repository.crud_operations.create.auto_refresh %}
+# Refresh to get all generated fields
+await self.session.refresh(entity)
+{%     endif %}
+# Commit transaction
+await self.session.commit()
+{%     if repository.caching is defined and repository.caching.enabled %}
+# Cache the created entity
+if self.cache_manager:
+    cache_key = f"{{ domain }}_id_{entity.id}"
+await self.cache_manager.set_cached(cache_key, entity)
+{%     endif %}
+{%     if repository.performance is defined and repository.performance.query_logging %}
+self.logger.info(f"Successfully created {{ entity_name }} with ID: {entity.id}")
+{%     endif %}
+return entity
+except IntegrityError as e:
+await self.session.rollback()
+if "unique constraint" in str(e).lower():
+    raise {{ entity_name }}DuplicateError(f"{{ entity_name }} already exists: {e}")
+raise {{ entity_name }}RepositoryError(f"Database integrity error: {e}")
+except SQLAlchemyError as e:
+await self.session.rollback()
+self.logger.error(f"Database error creating {{ entity_name }}: {e}")
+raise {{ entity_name }}RepositoryError(f"Failed to create {{ entity_name }}: {e}")
+except Exception as e:
+await self.session.rollback()
+self.logger.error(f"Unexpected error creating {{ entity_name }}: {e}")
+raise {{ entity_name }}RepositoryError(f"Unexpected error: {e}")
+{% endif %}
+{% if repository.crud_operations is defined and repository.crud_operations.read is defined and repository.crud_operations.read.enabled %}
+
+async def get_by_id(
+        self,
+        entity_id: UUID,
+        *,
+        include_deleted: bool =
+        {%     if repository.crud_operations is defined and repository.crud_operations.read is defined %}
+        {{ repository.crud_operations.read.include_deleted }}
+        {%     else %}
+        False
+        {%     endif %}
+        ,
+        eager_load: Optional[List[str]] = None
+) -> Optional[{{ entity_name }}]:
+
+
+    """
+    Retrieve {{ entity_name }} entity by unique identifier.
+  This method supports eager loading of relationships and
+  optional inclusion of soft-deleted entities.
+  """
+try:
+{%     if repository.performance is defined and repository.performance.query_logging %}
+    self.logger.debug(f"Fetching {{ entity_name }} with ID: {entity_id}")
+    {%     endif %}
+    {%     if repository.caching is defined and repository.caching.enabled %}
+    # Check cache first
+    if self.cache_manager and not include_deleted and not eager_load:
+        cache_key = f"{{ domain }}_id_{entity_id}"
+    cached_entity = await self.cache_manager.get_cached(cache_key)
+    if cached_entity:
+    {%         if repository.performance is defined and repository.performance.query_logging %}
+        self.logger.debug(f"Cache hit for {{ entity_name }} ID: {entity_id}")
+    {%         endif %}
+    return cached_entity
+{%     endif %}
+# Build query
+statement = select({{ entity_name }}).where({{ entity_name }}.id == entity_id)
+{%     if repository.crud_operations is defined and repository.crud_operations.read is defined and repository.crud_operations.read.soft_delete_aware %}
+# Handle soft delete filtering
+if not include_deleted:
+{%         if repository.crud_operations is defined and repository.crud_operations.delete is defined and repository.crud_operations.delete.soft_delete %}
+    statement = statement.where({{ entity_name }}.is_deleted == False)
+{%         endif %}
+{%     endif %}
+# Add eager loading if specified
+if eager_load:
+    for relationship in eager_load:
+    if hasattr({{ entity_name }}, relationship):
+    statement = statement.options(selectinload(getattr({{ entity_name }}, relationship)))
+# @pyhex:begin:custom_get_by_id_logic
+# Add custom get_by_id logic here - preserved during regeneration
+# @pyhex:end:custom_get_by_id_logic
+# Execute query
+result = await self.session.exec(statement)
+entity = result.first()
+{%     if repository.caching.enabled %}
+# Cache the result if found and not using custom options
+if entity and self.cache_manager and not include_deleted and not eager_load:
+    cache_key = f"{{ domain }}_id_{entity_id}"
+await self.cache_manager.set_cached(cache_key, entity)
+{%     endif %}
+{%     if repository.performance.query_logging %}
+if entity:
+    self.logger.debug(f"Found {{ entity_name }} with ID: {entity_id}")
+else:
+self.logger.debug(f"{{ entity_name }} not found with ID: {entity_id}")
+{%     endif %}
+return entity
+except SQLAlchemyError as e:
+self.logger.error(f"Database error fetching {{ entity_name }} {entity_id}: {e}")
+raise {{ entity_name }}RepositoryError(f"Failed to fetch {{ entity_name }}: {e}")
+{% endif %}
+{# Always include update method for repository layer #}
+
+async def update(
+        self,
+        entity_id: UUID,
+        updates: Dict[str, Any],
+        *,
+        partial: bool = True,
+        validate: bool = True
+) -> Optional[{{ entity_name }}]:
+
+
+    """
+    Update existing {{ entity_name }} entity with new data.
+This method supports partial updates and business validation
+with proper transaction handling.
+"""
+try:
+{% if repository.performance.query_logging %}
+    self.logger.info(f"Updating {{ entity_name }} {entity_id} with {len(updates)} changes")
+{% endif %}
+# Get existing entity
+entity = await self.get_by_id(entity_id)
+if not entity:
+    return None
+# Validate updates
+if validate:
+    await self._validate_entity_update(entity, updates)
+# @pyhex:begin:custom_update_logic
+# Add custom update logic here - preserved during regeneration
+# @pyhex:end:custom_update_logic
+# Apply updates
+for field, value in updates.items():
+    if hasattr(entity, field):
+    setattr(entity, field, value)
+elif not partial:
+raise {{ entity_name }}ValidationError(f"Field '{field}' does not exist on {{ entity_name }}")
+# Update timestamp
+if hasattr(entity, 'updated_at'):
+    entity.updated_at = datetime.utcnow()
+# Flush changes
+await self.session.flush()
+{% if repository.crud_operations.update.auto_refresh %}
+# Refresh to get updated fields
+await self.session.refresh(entity)
+{% endif %}
+# Commit transaction
+await self.session.commit()
+{% if repository.caching.enabled %}
+# Update cache
+if self.cache_manager:
+    cache_key = f"{{ domain }}_id_{entity_id}"
+await self.cache_manager.set_cached(cache_key, entity)
+{% endif %}
+{% if repository.performance.query_logging %}
+self.logger.info(f"Successfully updated {{ entity_name }} {entity_id}")
+{% endif %}
+return entity
+except IntegrityError as e:
+await self.session.rollback()
+if "unique constraint" in str(e).lower():
+    raise {{ entity_name }}DuplicateError(f"Update violates unique constraint: {e}")
+raise {{ entity_name }}RepositoryError(f"Database integrity error: {e}")
+except SQLAlchemyError as e:
+await self.session.rollback()
+self.logger.error(f"Database error updating {{ entity_name }} {entity_id}: {e}")
+raise {{ entity_name }}RepositoryError(f"Failed to update {{ entity_name }}: {e}")
+{% if repository.crud_operations.delete.enabled %}
+
+async def delete(
+        self,
+        entity_id: UUID,
+        *,
+        soft_delete: bool = {{ repository.crud_operations.delete.soft_delete }},
+        cascade: bool = {{ repository.crud_operations.delete.cascade_handling }}
+) -> bool:
+
+
+    """
+    Delete {{ entity_name }} entity from the database.
+  This method supports both soft and hard delete operations
+  with cascade handling for related entities.
+  """
+try:
+{%     if repository.performance.query_logging %}
+    self.logger.info(f"Deleting {{ entity_name }} {entity_id} (soft={soft_delete})")
+{%     endif %}
+# Get existing entity
+entity = await self.get_by_id(entity_id)
+if not entity:
+    return False
+# Business validation for deletion
+{%     if repository.crud_operations.delete.business_rules_validation %}
+if True:  # Business validation enabled
+    await self._validate_entity_deletion(entity)
+{%     endif %}
+# @pyhex:begin:custom_delete_logic
+# Add custom deletion logic here - preserved during regeneration
+# @pyhex:end:custom_delete_logic
+if soft_delete and hasattr(entity, 'is_deleted'):
+# Soft delete: mark as deleted
+entity.is_deleted = True
+if hasattr(entity, 'deleted_at'):
+    entity.deleted_at = datetime.utcnow()
+# Handle cascade soft delete
+if cascade:
+    await self._cascade_soft_delete(entity)
+else:
+# Hard delete: remove from database
+if cascade:
+    await self._cascade_hard_delete(entity)
+await self.session.delete(entity)
+# Commit transaction
+await self.session.commit()
+{%     if repository.caching.enabled %}
+# Remove from cache
+if self.cache_manager:
+    cache_key = f"{{ domain }}_id_{entity_id}"
+await self.cache_manager.invalidate(cache_key)
+{%     endif %}
+{%     if repository.performance.query_logging %}
+self.logger.info(f"Successfully deleted {{ entity_name }} {entity_id}")
+{%     endif %}
+return True
+except SQLAlchemyError as e:
+await self.session.rollback()
+self.logger.error(f"Database error deleting {{ entity_name }} {entity_id}: {e}")
+raise {{ entity_name }}RepositoryError(f"Failed to delete {{ entity_name }}: {e}")
+{% endif %}
+{% if repository.crud_operations.list.enabled %}
+
+async def list(
+        self,
+        *,
+        offset: int = 0,
+        limit: int = {{ repository.crud_operations.list.default_page_size }},
+        filters: Optional[Dict[str, Any]] = None,
+        sort_by: Optional[str] = None,
+        sort_order: str = "asc",
+        include_deleted: bool = False
+) -> List[{{ entity_name }}]:
+
+
+    """
+    List {{ entity_name }} entities with pagination, filtering, and sorting.
+  This method provides comprehensive querying capabilities with
+  performance optimization and proper error handling.
+  """
+try:
+{%     if repository.performance.query_logging %}
+    self.logger.debug(f"Listing {{ entity_name }} entities: offset={offset}, limit={limit}")
+{%     endif %}
+# Validate pagination parameters
+if limit > {{ repository.crud_operations.list.max_page_size }}:
+    limit = {{ repository.crud_operations.list.max_page_size }}
+# Build base query
+statement = select({{ entity_name }})
+{%     if repository.crud_operations.read.soft_delete_aware %}
+# Handle soft delete filtering
+if not include_deleted:
+{%         if repository.crud_operations.delete.soft_delete %}
+    statement = statement.where({{ entity_name }}.is_deleted == False)
+{%         endif %}
+{%     endif %}
+# Apply filters
+if filters:
+    statement = self._apply_filters(statement, filters)
+# Apply sorting
+if sort_by and hasattr({{ entity_name }}, sort_by):
+    sort_column = getattr({{ entity_name }}, sort_by)
+if sort_order.lower() == "desc":
+    statement = statement.order_by(desc(sort_column))
+else:
+statement = statement.order_by(asc(sort_column))
+else:
+# Default sorting by created_at
+if hasattr({{ entity_name }}, 'created_at'):
+    statement = statement.order_by(desc({{ entity_name }}.created_at))
+# Apply pagination
+statement = statement.offset(offset).limit(limit)
+# @pyhex:begin:custom_list_logic
+# Add custom listing logic here - preserved during regeneration
+# @pyhex:end:custom_list_logic
+# Execute query
+result = await self.session.exec(statement)
+entities = result.all()
+{%     if repository.performance.query_logging %}
+self.logger.debug(f"Found {len(entities)} {{ entity_name }} entities")
+{%     endif %}
+return list(entities)
+except SQLAlchemyError as e:
+self.logger.error(f"Database error listing {{ entity_name }} entities: {e}")
+raise {{ entity_name }}RepositoryError(f"Failed to list {{ entity_name }} entities: {e}")
+
+
+async def count(
+        self,
+        *,
+        filters: Optional[Dict[str, Any]] = None,
+        include_deleted: bool = False
+) -> int:
+
+
+    """Count {{ entity_name }} entities matching criteria."""
+try:
+# Build count query
+statement = select(func.count({{ entity_name }}.id))
+{%     if repository.crud_operations.read.soft_delete_aware %}
+# Handle soft delete filtering
+if not include_deleted:
+{%         if repository.crud_operations.delete.soft_delete %}
+    statement = statement.where({{ entity_name }}.is_deleted == False)
+{%         endif %}
+{%     endif %}
+# Apply filters
+if filters:
+    statement = self._apply_filters(statement, filters)
+# Execute count query
+result = await self.session.exec(statement)
+count = result.one()
+return count
+except SQLAlchemyError as e:
+self.logger.error(f"Database error counting {{ entity_name }} entities: {e}")
+raise {{ entity_name }}RepositoryError(f"Failed to count {{ entity_name }} entities: {e}")
+{% endif %}
+# Custom Query Methods
+{% for method in repository.query_methods %}
+
+async def{{ method.name }}(
+         self,
+         {%     for param in method.parameters %}
+         {{ param.name }}: {{ param.type }}
+         {%         if not param.required %}
+         = None
+         {%         endif %}
+         {%         if not loop.last %}
+         ,
+         {%         endif %}
+         {%     endfor %}
+         ) -> {{ method.return_type }}:
+
+
+    """
+{{ method.description }}
+     {%     if method.cache %}
+    This method uses caching with TTL of
+    {{ method.cache_ttl }}
+    seconds.
+     {%     endif %}
+  """
+try:
+{%     if repository.performance.query_logging %}
+    self.logger.debug(f"Executing
+    {{ method.name }}
+    query
+    ")
+    {%     endif %}
+    {%     if method.cache %}
+    # Check cache first
+    if self.cache_manager:
+        cache_key = f"{{ domain }}_{{ method.name }}_{hash(
+        {%         for param in method.parameters %}
+        {{ param.name }}
+        {%             if not loop.last %}
+        ,
+        {%             endif %}
+        {%         endfor %}
+        )}"
+    cached_result = await self.cache_manager.get_cached(cache_key)
+    if cached_result:
+        return cached_result
+    {%     endif %}
+    # Build query based on method configuration
+    {%     if method.query_type == "single" %}
+    statement = select({{ entity_name }})
+    {%     elif method.query_type == "list" %}
+    statement = select({{ entity_name }})
+    {%     elif method.query_type == "aggregate" %}
+    statement = select(func.{{ method.aggregate_function }}({{ entity_name }}.id))
+    {%     elif method.query_type == "search" %}
+    statement = select({{ entity_name }})
+    {%     endif %}
+    {%     if method.filters %}
+    # Apply predefined filters
+    {%         for filter in method.filters %}
+    {%             if filter.operator == "eq" %}
+    statement = statement.where({{ entity_name }}.{{ filter.field }} == {{ filter.value }})
+    {%             elif filter.operator == "between" %}
+    statement = statement.where({{ entity_name }}.{{ filter.field }}.between({{ filter.values[0] }}, {{ filter.values[1] }}))
+    {%             endif %}
+    {%         endfor %}
+    {%     endif %}
+    {%     if method.parameters %}
+    # Apply parameter-based filters
+    {%         for param in method.parameters %}
+    {%             if param.name == "email" %}
+    if {{ param.name }}:
+        statement = statement.where({{ entity_name }}.email == {{ param.name }})
+    {%             elif param.name in ["start_date", "end_date"] %}
+    # Date range filtering handled in predefined filters
+    {%             elif param.name == "search_term" %}
+    if {{ param.name }}:
+        statement = statement.where({{ entity_name }}.name.ilike("%" + {{ param.name }} + "%"))
+    {%             elif param.name == "status" %}
+    if {{ param.name }}:
+        statement = statement.where({{ entity_name }}.status == {{ param.name }})
+    {%             elif param.name == "category_name" %}
+    if {{ param.name }}:
+    # Join with categories table
+    statement = statement.join({{ entity_name }}.categories).where(Category.name == {{ param.name }})
+    {%             endif %}
+    {%         endfor %}
+    {%     endif %}
+    {%     if method.joins %}
+    # Apply joins
+    {%         for join in method.joins %}
+    # Join configuration:
+    {{ join.table }}   (
+    {{ join.type }}  )
+{%         endfor %}
+{%     endif %}
+{%     if method.eager_load %}
+# Add eager loading
+{%         for relationship in method.eager_load %}
+statement = statement.options(selectinload({{ entity_name }}.{{ relationship }}))
+{%         endfor %}
+{%     endif %}
+{%     if method.ordering %}
+# Apply ordering
+{%         for order in method.ordering %}
+{%             if order.direction == "desc" %}
+statement = statement.order_by(desc({{ entity_name }}.{{ order.field }}))
+{%             else %}
+statement = statement.order_by(asc({{ entity_name }}.{{ order.field }}))
+{%             endif %}
+{%         endfor %}
+{%     endif %}
+{%     if method.query_type == "single" %}
+# Execute single result query
+result = await self.session.exec(statement)
+entity = result.first()
+{%     elif method.query_type == "list" %}
+# Execute list query
+result = await self.session.exec(statement)
+entity = result.all()
+{%     elif method.query_type == "aggregate" %}
+# Execute aggregate query
+result = await self.session.exec(statement)
+entity = result.one()
+{%     endif %}
+# @pyhex:begin:custom_
+{{ method.name }}  _logic
+# Add custom
+{{ method.name }}   logic
+here - preserved
+during
+regeneration
+# @pyhex:end:custom_
+{{ method.name }}  _logic
+{%     if method.cache %}
+# Cache the result
+if self.cache_manager and entity:
+    cache_key = f"{{ domain }}_{{ method.name }}_{hash(
+    {%         for param in method.parameters %}
+    {{ param.name }}
+    {%             if not loop.last %}
+    ,
+    {%             endif %}
+    {%         endfor %}
+    )}"
+await self.cache_manager.set_cached(cache_key, entity, {{ method.cache_ttl }})
+{%     endif %}
+{%     if method.query_type == "list" %}
+return list(entity)
+{%     else %}
+return entity
+{%     endif %}
+except SQLAlchemyError as e:
+self.logger.error(f"Database error in {{ method.name }}: {e}")
+raise {{ entity_name }}RepositoryError(f"Failed to execute {{ method.name }}: {e}")
+{% endfor %}
+# Transaction Management
+{% if repository.transactions.auto_transaction %}
+
+async def begin_transaction(self) -> None:
+
+
+    """Begin a new database transaction."""
+"""Begin a new database transaction."""
+# AsyncSession automatically handles transactions
+pass
+
+
+async def commit_transaction(self) -> None:
+
+
+    """Commit the current database transaction."""
+"""Commit the current database transaction."""
+await self.session.commit()
+
+
+async def rollback_transaction(self) -> None:
+
+
+    """Rollback the current database transaction."""
+"""Rollback the current database transaction."""
+await self.session.rollback()
+{% endif %}
+
+# Helper Methods
+def _apply_filters(self, statement, filters: Dict[str, Any]):
+
+
+    """Apply filters to query statement."""
+"""Apply filters to query statement."""
+for field, value in filters.items():
+    if hasattr({{ entity_name }}, field):
+    column = getattr({{ entity_name }}, field)
+if isinstance(value, dict):
+# Handle complex filter operations
+for op, val in value.items():
+    if op == "eq":
+    statement = statement.where(column == val)
+elif op == "ne":
+statement = statement.where(column != val)
+elif op == "gt":
+statement = statement.where(column > val)
+elif op == "gte":
+statement = statement.where(column >= val)
+elif op == "lt":
+statement = statement.where(column < val)
+elif op == "lte":
+statement = statement.where(column <= val)
+elif op == "in":
+statement = statement.where(column.in_(val))
+elif op == "like":
+statement = statement.where(column.like(f"%{val}%"))
+elif op == "ilike":
+statement = statement.where(column.ilike(f"%{val}%"))
+else:
+# Simple equality filter
+statement = statement.where(column == value)
+return statement
+
+
+async def _validate_entity_creation(self, entity: {{ entity_name }}) -> None:
+
+
+    """Validate entity before creation."""
+"""Validate entity before creation."""
+# @pyhex:begin:custom_create_validation
+# Add custom creation validation here - preserved during regeneration
+# @pyhex:end:custom_create_validation
+pass
+
+
+async def _validate_entity_update(self, entity: {{ entity_name }}, updates: Dict[str, Any]) -> None:
+
+
+    """Validate entity before update."""
+"""Validate entity before update."""
+# @pyhex:begin:custom_update_validation
+# Add custom update validation here - preserved during regeneration
+# @pyhex:end:custom_update_validation
+pass
+
+
+async def _validate_entity_deletion(self, entity: {{ entity_name }}) -> None:
+
+
+    """Validate entity before deletion."""
+"""Validate entity before deletion."""
+# @pyhex:begin:custom_delete_validation
+# Add custom deletion validation here - preserved during regeneration
+# @pyhex:end:custom_delete_validation
+pass
+{% if repository.crud_operations.delete.cascade_handling %}
+
+async def _cascade_soft_delete(self, entity: {{ entity_name }}) -> None:
+
+
+    """Handle cascade soft delete for related entities."""
+"""Handle cascade soft delete for related entities."""
+# @pyhex:begin:custom_cascade_soft_delete
+# Add custom cascade soft delete logic here - preserved during regeneration
+# @pyhex:end:custom_cascade_soft_delete
+pass
+
+
+async def _cascade_hard_delete(self, entity: {{ entity_name }}) -> None:
+
+
+    """Handle cascade hard delete for related entities."""
+"""Handle cascade hard delete for related entities."""
+# @pyhex:begin:custom_cascade_hard_delete
+# Add custom cascade hard delete logic here - preserved during regeneration
+# @pyhex:end:custom_cascade_hard_delete
+pass
+{% endif %}
+# @pyhex:begin:custom_repository_methods
+# Add custom repository methods here - preserved during regeneration
+# @pyhex:end:custom_repository_methods
+{% if repository.query_methods %}
+
+class {{ entity_name }}QueryBuilder({{ entity_name }}QueryBuilderProtocol):
+
+
+    """Query builder for complex {{ entity_name }} queries."""
+
+
+def __init__(self, session: AsyncSession):
+
+
+    self.session = session
+self.session = session
+self.statement = select({{ entity_name }})
+
+
+def filter_by(self, **kwargs) -> "{{ entity_name }}QueryBuilder":
+
+
+    """Add filter conditions to the query."""
+"""Add filter conditions to the query."""
+for field, value in kwargs.items():
+    if hasattr({{ entity_name }}, field):
+    column = getattr({{ entity_name }}, field)
+self.statement = self.statement.where(column == value)
+return self
+
+
+def order_by(self, field: str, direction: str = "asc") -> "{{ entity_name }}QueryBuilder":
+
+
+    """Add ordering to the query."""
+"""Add ordering to the query."""
+if hasattr({{ entity_name }}, field):
+    column = getattr({{ entity_name }}, field)
+if direction.lower() == "desc":
+    self.statement = self.statement.order_by(desc(column))
+else:
+self.statement = self.statement.order_by(asc(column))
+return self
+
+
+def join(self, relationship: str, join_type: str = "inner") -> "{{ entity_name }}QueryBuilder":
+
+
+    """Add join to the query."""
+"""Add join to the query."""
+# Join implementation depends on specific relationships
+return self
+
+
+def limit(self, count: int) -> "{{ entity_name }}QueryBuilder":
+
+
+    """Limit query results."""
+"""Limit query results."""
+self.statement = self.statement.limit(count)
+return self
+
+
+def offset(self, count: int) -> "{{ entity_name }}QueryBuilder":
+
+
+    """Skip query results."""
+"""Skip query results."""
+self.statement = self.statement.offset(count)
+return self
+
+
+async def execute(self) -> List[{{ entity_name }}]:
+
+
+    """Execute the built query and return results."""
+"""Execute the built query and return results."""
+result = await self.session.exec(self.statement)
+return list(result.all())
+
+
+async def first(self) -> Optional[{{ entity_name }}]:
+
+
+    """Execute query and return first result."""
+"""Execute query and return first result."""
+result = await self.session.exec(self.statement)
+return result.first()
+
+
+async def count(self) -> int:
+
+
+    """Execute query and return count of results."""
+"""Execute query and return count of results."""
+count_statement = select(func.count()).select_from(self.statement.subquery())
+result = await self.session.exec(count_statement)
+return result.one()
+{% endif %}
+# @pyhex:begin:custom_repository_classes
+# Add custom repository classes here - preserved during regeneration
+# @pyhex:end:custom_repository_classes

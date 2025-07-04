@@ -1,0 +1,240 @@
+"""
+Application Configuration - {{ app_name or 'Application' }}
+This module manages application configuration using Pydantic settings
+with support for environment variables and multiple environments.
+Generated from: app/config.py.j2
+"""
+import os
+from functools import lru_cache
+from typing import List, Optional
+
+from pydantic import field_validator, Field
+from pydantic_settings import BaseSettings
+
+
+class Settings(BaseSettings):
+    """
+    Application settings with environment variable support.
+    All settings can be overridden via environment variables with
+    the prefix '{{ app_name.upper() or 'APP' }}_' (e.g., {{ app_name.upper() or 'APP' }}_DATABASE_URL).
+    """
+    # Application settings
+    app_name: str = Field(default="{{ app_info.title or app_name or 'FastAPI Application' }}")
+    version: str = Field(default="{{ app_info.version or '1.0.0' }}")
+    description: str = Field(default="{{ app_info.description or 'Generated FastAPI application' }}")
+    environment: str = Field(default="development")
+    debug: bool = Field(default=True)
+    # Server settings
+    host: str = Field(default="0.0.0.0")
+    port: int = Field(default=8000)
+    workers: int = Field(default=1)
+    # Database settings
+    database_url: str = Field(
+        default="sqlite:///./{{ app_name or 'app' }}.db",
+        description="Database connection URL"
+    )
+    database_echo: bool = Field(default=False)
+    database_pool_size: int = Field(default=5)
+    database_max_overflow: int = Field(default=10)
+    # Security settings
+    secret_key: str = Field(
+        default="your-secret-key-change-in-production",
+        description="Secret key for JWT tokens and sessions",
+        min_length=32  # Enforce minimum security key length
+    )
+    algorithm: str = Field(default="HS256")
+    access_token_expire_minutes: int = Field(default=30)
+    # Security headers
+    security_headers_enabled: bool = Field(default=True)
+    hsts_enabled: bool = Field(default=True)
+    content_security_policy: str = Field(default="default-src 'self'")
+    # SSL/TLS settings
+    ssl_enabled: bool = Field(default=False)
+    ssl_cert_file: Optional[str] = Field(default=None)
+    ssl_key_file: Optional[str] = Field(default=None)
+    # CORS settings
+    cors_enabled: bool = Field(default=True)
+    cors_origins: List[str] = Field(default=["http://localhost:3000", "http://localhost:8080"])
+    # Middleware settings
+    compression_enabled: bool = Field(default=True)
+    # Logging settings
+    log_level: str = Field(default="INFO")
+    log_to_file: bool = Field(default=False)
+    log_file_path: str = Field(default="app.log")
+    # API settings
+    api_v1_prefix: str = Field(default="/api/v1")
+    docs_enabled: bool = Field(default=True)
+    # Rate limiting
+    rate_limit_enabled: bool = Field(default=False)
+    rate_limit_requests: int = Field(default=100)
+    rate_limit_window: int = Field(default=3600)  # seconds
+    # Cache settings
+    cache_enabled: bool = Field(default=False)
+    cache_url: str = Field(default="redis://localhost:6379")
+    cache_ttl: int = Field(default=300)  # seconds
+    # Monitoring settings
+    metrics_enabled: bool = Field(default=False)
+    health_check_enabled: bool = Field(default=True)
+    # Container/Docker settings
+    container_mode: bool = Field(default=False)
+    graceful_shutdown_timeout: int = Field(default=30)
+    # External service settings
+    external_api_timeout: int = Field(default=30)
+    external_api_retries: int = Field(default=3)
+    # Feature flags
+    feature_flags: dict = Field(default_factory=dict)
+    # Email settings (if needed)
+    email_enabled: bool = Field(default=False)
+    smtp_host: Optional[str] = Field(default=None)
+    smtp_port: int = Field(default=587)
+    smtp_username: Optional[str] = Field(default=None)
+    smtp_password: Optional[str] = Field(default=None)
+    smtp_use_tls: bool = Field(default=True)
+
+    @field_validator('environment')
+    @classmethod
+    def validate_environment(cls, v):
+        """Validate environment setting."""
+        allowed = ['development', 'staging', 'production', 'testing']
+        if v not in allowed:
+            raise ValueError(f'Environment must be one of: {allowed}')
+        return v
+
+    @field_validator('log_level')
+    @classmethod
+    def validate_log_level(cls, v):
+        """Validate log level setting."""
+        allowed = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+        if v.upper() not in allowed:
+            raise ValueError(f'Log level must be one of: {allowed}')
+        return v.upper()
+
+    @field_validator('port')
+    @classmethod
+    def validate_port(cls, v):
+        """Validate port setting."""
+        if not 1 <= v <= 65535:
+            raise ValueError('Port must be between 1 and 65535')
+        return v
+
+    @field_validator('database_url')
+    @classmethod
+    def validate_database_url(cls, v):
+        """Validate database URL format."""
+        if not v:
+            raise ValueError('Database URL cannot be empty')
+        # Basic URL validation
+        if not any(v.startswith(scheme) for scheme in ['sqlite://', 'postgresql://', 'mysql://']):
+            raise ValueError('Database URL must start with sqlite://, postgresql://, or mysql://')
+        return v
+
+    @field_validator('secret_key')
+    @classmethod
+    def validate_secret_key(cls, v):
+        """Validate secret key security requirements."""
+        if len(v) < 32:
+            raise ValueError('Secret key must be at least 32 characters long')
+        if v == "your-secret-key-change-in-production":
+            import os
+            if os.getenv("{{ app_name.upper() or 'APP' }}_ENVIRONMENT", "development") == "production":
+                raise ValueError('Default secret key cannot be used in production')
+        return v
+
+    @field_validator('container_mode')
+    @classmethod
+    def validate_container_mode(cls, v):
+        """Auto-detect container mode if not explicitly set."""
+        if not v:
+            import os
+            # Check for common container environment indicators
+            v = any([
+                os.path.exists('/.dockerenv'),
+                os.getenv('KUBERNETES_SERVICE_HOST'),
+                os.getenv('CONTAINER') == 'docker'
+            ])
+        return v
+
+    @property
+    def is_development(self) -> bool:
+        """Check if running in development mode."""
+        return self.environment == 'development'
+
+    @property
+    def is_production(self) -> bool:
+        """Check if running in production mode."""
+        return self.environment == 'production'
+
+    @property
+    def is_testing(self) -> bool:
+        """Check if running in testing mode."""
+        return self.environment == 'testing'
+
+    def get_database_url(self, async_driver: bool = False) -> str:
+        """
+        Get database URL with optional async driver.
+        Args:
+            async_driver: Whether to use async database driver
+        Returns:
+            Database URL string
+        """
+        if async_driver and self.database_url.startswith('postgresql://'):
+            return self.database_url.replace('postgresql://', 'postgresql+asyncpg://')
+        elif async_driver and self.database_url.startswith('mysql://'):
+            return self.database_url.replace('mysql://', 'mysql+aiomysql://')
+        return self.database_url
+
+
+class DevelopmentSettings(Settings):
+    """Development environment settings."""
+    environment: str = "development"
+    debug: bool = True
+    database_echo: bool = True
+    log_level: str = "DEBUG"
+    cors_origins: List[str] = ["*"]
+
+
+class ProductionSettings(Settings):
+    """Production environment settings with enhanced security."""
+    environment: str = "production"
+    debug: bool = False
+    database_echo: bool = False
+    log_level: str = "WARNING"
+    docs_enabled: bool = False
+    cors_origins: List[str] = []
+    # Enhanced security for production
+    security_headers_enabled: bool = True
+    hsts_enabled: bool = True
+    container_mode: bool = True
+    # Performance optimizations
+    workers: int = 4
+    database_pool_size: int = 20
+    database_max_overflow: int = 30
+    # Monitoring enabled in production
+    metrics_enabled: bool = True
+    health_check_enabled: bool = True
+
+
+class TestingSettings(Settings):
+    """Testing environment settings."""
+    environment: str = "testing"
+    debug: bool = True
+    database_url: str = "sqlite:///:memory:"
+    log_level: str = "ERROR"
+
+
+@lru_cache()
+def get_settings() -> Settings:
+    """
+    Get application settings with caching.
+    Settings are determined by the APP_ENVIRONMENT environment variable.
+    Falls back to development settings if not specified.
+    Returns:
+        Settings instance for current environment
+    """
+    environment = os.getenv("{{ app_name.upper() or 'APP' }}_ENVIRONMENT", "development").lower()
+    if environment == "production":
+        return ProductionSettings()
+    elif environment == "testing":
+        return TestingSettings()
+    else:
+        return DevelopmentSettings()

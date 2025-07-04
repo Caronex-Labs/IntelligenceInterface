@@ -6,9 +6,9 @@ methods:
     output_schema: "UserResponse"
     transaction_boundary: true
     dependencies:
-      repositories: ["user_repository"]
-      services: ["email_service", "validation_service"]
-    business_rules: ["email_uniqueness", "password_strength"]
+      repositories: [ "user_repository" ]
+      services: [ "email_service", "validation_service" ]
+    business_rules: [ "email_uniqueness", "password_strength" ]
     orchestration_steps:
       - "validate_user_data"
       - "check_email_uniqueness"
@@ -16,24 +16,24 @@ methods:
       - "create_user_record"
       - "send_welcome_email"
     description: "Create a new user with email validation and welcome notification"
-  
+
   - name: "get_user_by_id"
     input_schema: "GetUserRequest"
     output_schema: "UserResponse"
     transaction_boundary: false
     dependencies:
-      repositories: ["user_repository"]
-    business_rules: ["user_exists"]
+      repositories: [ "user_repository" ]
+    business_rules: [ "user_exists" ]
     description: "Retrieve user by ID with existence validation"
-  
+
   - name: "update_user_profile"
     input_schema: "UpdateUserRequest"
     output_schema: "UserResponse"
     transaction_boundary: true
     dependencies:
-      repositories: ["user_repository"]
-      services: ["validation_service"]
-    business_rules: ["user_exists", "profile_update_allowed"]
+      repositories: [ "user_repository" ]
+      services: [ "validation_service" ]
+    business_rules: [ "user_exists", "profile_update_allowed" ]
     orchestration_steps:
       - "validate_update_data"
       - "check_user_permissions"
@@ -42,8 +42,8 @@ methods:
     description: "Update user profile with permission and validation checks"
 
 dependencies:
-  repositories: ["user_repository"]
-  services: ["email_service", "validation_service", "logging_service"]
+  repositories: [ "user_repository" ]
+  services: [ "email_service", "validation_service", "logging_service" ]
 
 error_handling:
   aggregation_strategy: "collect_all_errors"
@@ -76,6 +76,6 @@ dependency_injection:
   transient_dependencies:
     - "validation_service"
 
-entity_dependencies: ["User", "UserProfile"]
-repository_dependencies: ["user_repository"]
-external_dependencies: ["email_service", "validation_service"]
+entity_dependencies: [ "User", "UserProfile" ]
+repository_dependencies: [ "user_repository" ]
+external_dependencies: [ "email_service", "validation_service" ]

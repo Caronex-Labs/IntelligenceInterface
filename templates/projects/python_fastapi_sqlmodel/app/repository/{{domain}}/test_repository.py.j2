@@ -1,0 +1,882 @@
+"""{{ entity_name }} Repository Tests - Co-location Architecture
+This module provides comprehensive tests for the {{ entity_name }} repository implementation,
+ensuring async database operations work correctly with proper transaction handling.
+Generated from: app/repository/{{ domain }}/test_repository.py.j2
+Configuration: app/repository/{{ domain }}/repository.yaml
+"""
+# @pyhex:begin:custom_test_imports
+# Add custom test imports here - preserved during regeneration
+# @pyhex:end:custom_test_imports
+# Domain and repository imports
+from app.domain.{{ domain }}.entities import {{ entity_name }}
+# Testing imports
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.pool import StaticPool
+from app.repository.{{ domain }}.repository import (
+    SQLModel{{ entity_name }}Repository,
+    {{ entity_name }}NotFoundError,
+    {{ entity_name }}DuplicateError,
+    {{ entity_name }}ValidationError,
+    {{ entity_name }}RepositoryError
+)
+from app.repository.{{ domain }}.protocols import {{ entity_name }}RepositoryProtocol
+
+
+class TestAsyncDatabaseSetup:
+
+
+    """Test database setup utilities for async operations."""
+
+
+@staticmethod
+def get_async_test_engine():
+
+
+    """Create async test database engine."""
+"""Create async test database engine."""
+# Use in-memory SQLite for fast testing
+database_url = "sqlite+aiosqlite:///:memory:"
+engine = create_async_engine(
+    database_url,
+    echo=False,
+    poolclass=StaticPool,
+    connect_args={"check_same_thread": False}
+)
+return engine
+
+
+@staticmethod
+async def create_tables(engine):
+
+
+    """Create database tables for testing."""
+"""Create
+database tables for testing."""
+async with engine.begin() as conn:
+    await conn.run_sync(SQLModel.metadata.create_all)
+
+
+@staticmethod
+async def drop_tables(engine):
+
+
+    """Drop database tables after testing."""
+"""Drop
+database tables after testing."""
+async with engine.begin() as conn:
+    await conn.run_sync(SQLModel.metadata.drop_all)
+
+
+@pytest_asyncio.fixture
+async def async_test_engine():
+
+
+    """Pytest fixture for async test database engine."""
+"""Pytest fixture for async test database engine."""
+engine = TestAsyncDatabaseSetup.get_async_test_engine()
+await TestAsyncDatabaseSetup.create_tables(engine)
+yield engine
+await TestAsyncDatabaseSetup.drop_tables(engine)
+await engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def async_test_session(async_test_engine):
+
+
+    """Pytest fixture for async test database session."""
+"""Pytest fixture for async test database session."""
+async_session_maker = async_sessionmaker(
+    async_test_engine,
+    class_=AsyncSession,
+    expire_on_commit=False
+)
+async with async_session_maker() as session:
+    yield session
+await session.rollback()
+
+
+@pytest_asyncio.fixture
+async def test_repository(async_test_session):
+
+
+    """Pytest fixture for {{ entity_name }} repository."""
+"""Pytest fixture for {{ entity_name }} repository."""
+return SQLModel{{ entity_name }}Repository(async_test_session)
+
+
+@pytest_asyncio.fixture
+async def sample_{{ domain }}_data():
+
+
+    """Pytest fixture for sample {{ entity_name }} test data."""
+"""Pytest fixture for sample {{ entity_name }} test data."""
+return {
+    "name": "Test {{ entity_name }}",
+    "email": f"test_{uuid4().hex[:8]}@example.com",
+    "description": "Test {{ entity_name }} description",
+    "status": "active",
+    "metadata": {"test": True},
+    "tags": ["test", "sample"]
+}
+
+
+@pytest_asyncio.fixture
+async def created_{{ domain }}(test_repository, sample_{{ domain }}_data):
+
+
+    """Pytest fixture for pre-created {{ entity_name }} entity."""
+"""Pytest fixture for pre-created {{ entity_name }} entity."""
+entity = {{ entity_name }}(** sample_{{ domain }}_data)
+return await test_repository.create(entity)
+
+
+class Test{{ entity_name }}RepositoryProtocolCompliance:
+
+
+    """Test repository protocol compliance and interface implementation."""
+
+
+def test_repository_implements_protocol(self, test_repository):
+
+
+    """Test that repository implements the required protocol."""
+"""Test that repository implements the required protocol."""
+assert isinstance(test_repository, {{ entity_name }}RepositoryProtocol)
+# Check all required methods exist
+required_methods = [
+    {% if repository.crud_operations.create.enabled %}
+    "create",
+    {% endif %}
+    {% if repository.crud_operations.read.enabled %}
+    "get_by_id",
+    {% endif %}
+    {% if repository.crud_operations.update.enabled %}
+    "update",
+    {% endif %}
+    {% if repository.crud_operations.delete.enabled %}
+    "delete",
+    {% endif %}
+    {% if repository.crud_operations.list.enabled %}
+    "list", "count",
+    {% endif %}
+    {% for method in repository.query_methods %}
+    "
+    {{ method.name }}
+    ",
+    {% endfor %}
+]
+for method_name in required_methods:
+    assert hasattr(test_repository, method_name)
+assert callable(getattr(test_repository, method_name))
+{% if repository.crud_operations.create.enabled %}
+
+class Test{{ entity_name }}RepositoryCreate:
+
+
+    """Test {{ entity_name }} repository create operations."""
+
+
+@pytest.mark.asyncio
+async def test_create_{{ domain }}_success(self, test_repository, sample_{{ domain }}_data):
+
+
+    """Test successful {{ entity_name }} creation."""
+"""Test successful {{ entity_name }} creation."""
+# Arrange
+entity = {{ entity_name }}(** sample_{{ domain }}_data)
+# Act
+created_entity = await test_repository.create(entity)
+# Assert
+assert created_entity is not None
+assert created_entity.id is not None
+assert isinstance(created_entity.id, UUID)
+assert created_entity.name == sample_{{ domain }}_data["name"]
+assert created_entity.email == sample_{{ domain }}_data["email"]
+assert created_entity.status == sample_{{ domain }}_data["status"]
+assert created_entity.created_at is not None
+assert created_entity.updated_at is not None
+
+
+@pytest.mark.asyncio
+async def test_create_{{ domain }}_with_validation(self, test_repository, sample_{{ domain }}_data):
+
+
+    """Test {{ entity_name }} creation with business validation."""
+"""Test {{ entity_name }} creation with business validation."""
+# Arrange
+entity = {{ entity_name }}(** sample_{{ domain }}_data)
+# Act
+created_entity = await test_repository.create(entity, validate=True)
+# Assert
+assert created_entity is not None
+assert created_entity.id is not None
+
+
+@pytest.mark.asyncio
+async def test_create_{{ domain }}_duplicate_email_fails(self, test_repository, sample_{{ domain }}_data):
+
+
+    """Test that duplicate email creation fails."""
+"""Test that duplicate email creation fails."""
+# Arrange
+entity1 = {{ entity_name }}(** sample_{{ domain }}_data)
+entity2 = {{ entity_name }}(** sample_{{ domain }}_data)  # Same email
+# Act
+await test_repository.create(entity1)
+# Assert
+with pytest.raises({{ entity_name }}DuplicateError):
+    await test_repository.create(entity2)
+
+
+@pytest.mark.asyncio
+async def test_create_{{ domain }}_invalid_data_fails(self, test_repository):
+
+
+    """Test that invalid data creation fails."""
+"""Test that invalid data creation fails."""
+# Arrange
+invalid_data = {
+    "name": "",  # Invalid: empty name
+    "email": "invalid-email",  # Invalid: bad email format
+    "status": "invalid_status"  # Invalid: not in allowed values
+}
+entity = {{ entity_name }}(** invalid_data)
+# Act & Assert
+with pytest.raises(({{ entity_name }}ValidationError, ValueError)):
+    await test_repository.create(entity, validate=True)
+{% endif %}
+{% if repository.crud_operations.read.enabled %}
+
+class Test{{ entity_name }}RepositoryRead:
+
+
+    """Test {{ entity_name }} repository read operations."""
+
+
+@pytest.mark.asyncio
+async def test_get_by_id_success(self, test_repository, created_{{ domain }}):
+
+
+    """Test successful {{ entity_name }} retrieval by ID."""
+"""Test successful {{ entity_name }} retrieval by ID."""
+# Act
+retrieved_entity = await test_repository.get_by_id(created_{{ domain }}.id)
+# Assert
+assert retrieved_entity is not None
+assert retrieved_entity.id == created_{{ domain }}.id
+assert retrieved_entity.name == created_{{ domain }}.name
+assert retrieved_entity.email == created_{{ domain }}.email
+
+
+@pytest.mark.asyncio
+async def test_get_by_id_not_found(self, test_repository):
+
+
+    """Test {{ entity_name }} retrieval with non-existent ID."""
+"""Test {{ entity_name }} retrieval with non-existent ID."""
+# Arrange
+non_existent_id = uuid4()
+# Act
+retrieved_entity = await test_repository.get_by_id(non_existent_id)
+# Assert
+assert retrieved_entity is None
+
+
+@pytest.mark.asyncio
+async def test_get_by_id_with_eager_loading(self, test_repository, created_{{ domain }}):
+
+
+    """Test {{ entity_name }} retrieval with relationship eager loading."""
+"""Test {{ entity_name }} retrieval with relationship eager loading."""
+# Act
+retrieved_entity = await test_repository.get_by_id(
+    created_{{ domain }}.id,
+    eager_load=["related_items", "categories"]
+)
+# Assert
+assert retrieved_entity is not None
+assert retrieved_entity.id == created_{{ domain }}.id
+{%     if repository.crud_operations.delete.soft_delete %}
+
+@pytest.mark.asyncio
+async def test_get_by_id_soft_deleted_excluded(self, test_repository, created_{{ domain }}):
+
+
+    """Test that soft-deleted entities are excluded by default."""
+"""Test that soft-deleted entities are excluded by default."""
+# Arrange - soft delete the entity
+await test_repository.delete(created_{{ domain }}.id, soft_delete=True)
+# Act
+retrieved_entity = await test_repository.get_by_id(created_{{ domain }}.id)
+# Assert
+assert retrieved_entity is None
+
+
+@pytest.mark.asyncio
+async def test_get_by_id_soft_deleted_included(self, test_repository, created_{{ domain }}):
+
+
+    """Test that soft-deleted entities can be included when requested."""
+"""Test that soft-deleted entities can be included when requested."""
+# Arrange - soft delete the entity
+await test_repository.delete(created_{{ domain }}.id, soft_delete=True)
+# Act
+retrieved_entity = await test_repository.get_by_id(
+    created_{{ domain }}.id,
+    include_deleted=True
+)
+# Assert
+assert retrieved_entity is not None
+assert retrieved_entity.id == created_{{ domain }}.id
+assert retrieved_entity.is_deleted == True
+{%     endif %}
+{% endif %}
+{% if repository.crud_operations.update.enabled %}
+
+class Test{{ entity_name }}RepositoryUpdate:
+
+
+    """Test {{ entity_name }} repository update operations."""
+
+
+@pytest.mark.asyncio
+async def test_update_{{ domain }}_success(self, test_repository, created_{{ domain }}):
+
+
+    """Test successful {{ entity_name }} update."""
+"""Test successful {{ entity_name }} update."""
+# Arrange
+updates = {
+    "name": "Updated {{ entity_name }} Name",
+    "description": "Updated description",
+    "status": "inactive"
+}
+# Act
+updated_entity = await test_repository.update(created_{{ domain }}.id, updates)
+# Assert
+assert updated_entity is not None
+assert updated_entity.id == created_{{ domain }}.id
+assert updated_entity.name == updates["name"]
+assert updated_entity.description == updates["description"]
+assert updated_entity.status == updates["status"]
+assert updated_entity.updated_at > created_{{ domain }}.updated_at
+
+
+@pytest.mark.asyncio
+async def test_update_{{ domain }}_partial(self, test_repository, created_{{ domain }}):
+
+
+    """Test partial {{ entity_name }} update."""
+"""Test partial {{ entity_name }} update."""
+# Arrange
+original_description = created_{{ domain }}.description
+updates = {"name": "Partially Updated Name"}
+# Act
+updated_entity = await test_repository.update(
+    created_{{ domain }}.id,
+    updates,
+    partial=True
+)
+# Assert
+assert updated_entity is not None
+assert updated_entity.name == updates["name"]
+assert updated_entity.description == original_description  # Unchanged
+
+
+@pytest.mark.asyncio
+async def test_update_{{ domain }}_not_found(self, test_repository):
+
+
+    """Test update of non-existent {{ entity_name }}."""
+"""Test update of non-existent {{ entity_name }}."""
+# Arrange
+non_existent_id = uuid4()
+updates = {"name": "Should Not Work"}
+# Act
+updated_entity = await test_repository.update(non_existent_id, updates)
+# Assert
+assert updated_entity is None
+
+
+@pytest.mark.asyncio
+async def test_update_{{ domain }}_invalid_field(self, test_repository, created_{{ domain }}):
+
+
+    """Test update with invalid field name."""
+"""Test update with invalid field name."""
+# Arrange
+updates = {"nonexistent_field": "value"}
+# Act & Assert
+with pytest.raises({{ entity_name }}ValidationError):
+    await test_repository.update(created_{{ domain }}.id, updates, partial=False)
+
+
+@pytest.mark.asyncio
+async def test_update_{{ domain }}_with_validation(self, test_repository, created_{{ domain }}):
+
+
+    """Test {{ entity_name }} update with business validation."""
+"""Test {{ entity_name }} update with business validation."""
+# Arrange
+updates = {"status": "pending"}  # Valid status change
+# Act
+updated_entity = await test_repository.update(
+    created_{{ domain }}.id,
+    updates,
+    validate=True
+)
+# Assert
+assert updated_entity is not None
+assert updated_entity.status == "pending"
+{% endif %}
+{% if repository.crud_operations.delete.enabled %}
+
+class Test{{ entity_name }}RepositoryDelete:
+
+
+    """Test {{ entity_name }} repository delete operations."""
+{%     if repository.crud_operations.delete.soft_delete %}
+
+@pytest.mark.asyncio
+async def test_soft_delete_{{ domain }}_success(self, test_repository, created_{{ domain }}):
+
+
+    """Test successful {{ entity_name }} soft deletion."""
+"""Test successful {{ entity_name }} soft deletion."""
+# Act
+result = await test_repository.delete(created_{{ domain }}.id, soft_delete=True)
+# Assert
+assert result == True
+# Verify entity is marked as deleted
+entity = await test_repository.get_by_id(created_{{ domain }}.id, include_deleted=True)
+assert entity is not None
+assert entity.is_deleted == True
+assert entity.deleted_at is not None
+# Verify entity is not returned in normal queries
+entity_normal = await test_repository.get_by_id(created_{{ domain }}.id)
+assert entity_normal is None
+{%     endif %}
+
+@pytest.mark.asyncio
+async def test_hard_delete_{{ domain }}_success(self, test_repository, created_{{ domain }}):
+
+
+    """Test successful {{ entity_name }} hard deletion."""
+"""Test successful {{ entity_name }} hard deletion."""
+# Act
+result = await test_repository.delete(created_{{ domain }}.id, soft_delete=False)
+# Assert
+assert result == True
+# Verify entity is completely removed
+entity = await test_repository.get_by_id(created_{{ domain }}.id, include_deleted=True)
+assert entity is None
+
+
+@pytest.mark.asyncio
+async def test_delete_{{ domain }}_not_found(self, test_repository):
+
+
+    """Test deletion of non-existent {{ entity_name }}."""
+"""Test deletion of non-existent {{ entity_name }}."""
+# Arrange
+non_existent_id = uuid4()
+# Act
+result = await test_repository.delete(non_existent_id)
+# Assert
+assert result == False
+{% endif %}
+{% if repository.crud_operations.list.enabled %}
+
+class Test{{ entity_name }}RepositoryList:
+
+
+    """Test {{ entity_name }} repository list operations."""
+
+
+@pytest_asyncio.fixture
+async def multiple_{{ domain }}_entities(self, test_repository, sample_{{ domain }}_data):
+
+
+    """Create multiple {{ entity_name }} entities for testing."""
+"""Create multiple {{ entity_name }} entities for testing."""
+entities = []
+for i in range(5):
+    data = sample_{{ domain }}_data.copy()
+data["name"] = f"Test {{ entity_name }} {i}"
+data["email"] = f"test_{i}_{uuid4().hex[:8]}@example.com"
+data["status"] = "active" if i % 2 == 0 else "inactive"
+entity = {{ entity_name }}(** data)
+created_entity = await test_repository.create(entity)
+entities.append(created_entity)
+return entities
+
+
+@pytest.mark.asyncio
+async def test_list_{{ domain }}_entities_default(self, test_repository, multiple_{{ domain }}_entities):
+
+
+    """Test listing {{ entity_name }} entities with default parameters."""
+"""Test listing {{ entity_name }} entities with default parameters."""
+# Act
+entities = await test_repository.list()
+# Assert
+assert len(entities) == 5
+assert all(isinstance(entity, {{ entity_name }}) for entity in entities)
+
+
+@pytest.mark.asyncio
+async def test_list_{{ domain }}_entities_pagination(self, test_repository, multiple_{{ domain }}_entities):
+
+
+    """Test {{ entity_name }} list pagination."""
+"""Test {{ entity_name }} list pagination."""
+# Act - First page
+page1 = await test_repository.list(offset=0, limit=2)
+page2 = await test_repository.list(offset=2, limit=2)
+page3 = await test_repository.list(offset=4, limit=2)
+# Assert
+assert len(page1) == 2
+assert len(page2) == 2
+assert len(page3) == 1  # Only 5 total entities
+# Verify no overlap between pages
+all_ids = [e.id for e in page1] + [e.id for e in page2] + [e.id for e in page3]
+assert len(set(all_ids)) == 5  # All unique
+
+
+@pytest.mark.asyncio
+async def test_list_{{ domain }}_entities_filtering(self, test_repository, multiple_{{ domain }}_entities):
+
+
+    """Test {{ entity_name }} list filtering."""
+"""Test {{ entity_name }} list filtering."""
+# Act
+active_entities = await test_repository.list(filters={"status": "active"})
+inactive_entities = await test_repository.list(filters={"status": "inactive"})
+# Assert
+assert len(active_entities) == 3  # Entities 0, 2, 4
+assert len(inactive_entities) == 2  # Entities 1, 3
+assert all(e.status == "active" for e in active_entities)
+assert all(e.status == "inactive" for e in inactive_entities)
+
+
+@pytest.mark.asyncio
+async def test_list_{{ domain }}_entities_sorting(self, test_repository, multiple_{{ domain }}_entities):
+
+
+    """Test {{ entity_name }} list sorting."""
+"""Test {{ entity_name }} list sorting."""
+# Act
+entities_asc = await test_repository.list(sort_by="name", sort_order="asc")
+entities_desc = await test_repository.list(sort_by="name", sort_order="desc")
+# Assert
+assert len(entities_asc) == 5
+assert len(entities_desc) == 5
+# Verify sort order
+names_asc = [e.name for e in entities_asc]
+names_desc = [e.name for e in entities_desc]
+assert names_asc == sorted(names_asc)
+assert names_desc == sorted(names_desc, reverse=True)
+
+
+@pytest.mark.asyncio
+async def test_count_{{ domain }}_entities(self, test_repository, multiple_{{ domain }}_entities):
+
+
+    """Test counting {{ entity_name }} entities."""
+"""Test counting {{ entity_name }} entities."""
+# Act
+total_count = await test_repository.count()
+active_count = await test_repository.count(filters={"status": "active"})
+inactive_count = await test_repository.count(filters={"status": "inactive"})
+# Assert
+assert total_count == 5
+assert active_count == 3
+assert inactive_count == 2
+{% endif %}
+# Custom Query Method Tests
+{% for method in repository.query_methods %}
+
+class Test{{ entity_name }}Repository{{ method.name | title }}:
+
+
+    """Test {{ entity_name }} repository {{ method.name }} method."""
+
+
+@pytest.mark.asyncio
+async def test_{{ method.name }}_success(self, test_repository, created_{{ domain }}):
+
+
+    """Test successful {{ method.name }} query."""
+"""Test successful {{ method.name }} query."""
+{%     if method.name == "find_by_email" %}
+# Act
+result = await test_repository.{{ method.name }}(created_{{ domain }}.email)
+# Assert
+assert result is not None
+assert result.id == created_{{ domain }}.id
+assert result.email == created_{{ domain }}.email
+{%     elif method.name == "find_active_entities" %}
+# Ensure entity is active
+if created_{{ domain }}.status != "active":
+    await test_repository.update(created_{{ domain }}.id, {"status": "active"})
+# Act
+result = await test_repository.{{ method.name }}()
+# Assert
+assert isinstance(result, list)
+assert len(result) >= 1
+assert any(e.id == created_{{ domain }}.id for e in result)
+assert all(e.status == "active" for e in result)
+{%     elif method.name == "find_by_status" %}
+# Act
+result = await test_repository.{{ method.name }}(created_{{ domain }}.status)
+# Assert
+assert isinstance(result, list)
+assert len(result) >= 1
+assert any(e.id == created_{{ domain }}.id for e in result)
+assert all(e.status == created_{{ domain }}.status for e in result)
+{%     elif method.name == "count_by_status" %}
+# Act
+result = await test_repository.{{ method.name }}(created_{{ domain }}.status)
+# Assert
+assert isinstance(result, int)
+assert result >= 1
+{%     elif method.name == "find_created_in_range" %}
+# Arrange
+start_date = datetime.utcnow() - timedelta(hours=1)
+end_date = datetime.utcnow() + timedelta(hours=1)
+# Act
+result = await test_repository.{{ method.name }}(start_date, end_date)
+# Assert
+assert isinstance(result, list)
+assert len(result) >= 1
+assert any(e.id == created_{{ domain }}.id for e in result)
+{%     elif method.name == "search_by_name" %}
+# Act
+result = await test_repository.{{ method.name }}(created_{{ domain }}.name[:5])
+# Assert
+assert isinstance(result, list)
+assert len(result) >= 1
+assert any(e.id == created_{{ domain }}.id for e in result)
+{%     else %}
+# Generic test for
+{{ method.name }}
+# Act
+{%         if method.parameters %}
+# This method requires parameters - implement specific test logic
+pytest.skip("{{ method.name }} requires specific test implementation")
+{%         else %}
+result = await test_repository.{{ method.name }}()
+# Assert
+assert result is not None
+{%         endif %}
+{%     endif %}
+{%     if method.parameters %}
+
+@pytest.mark.asyncio
+async def test_{{ method.name }}_invalid_parameters(self, test_repository):
+
+
+    """Test {{ method.name }} with invalid parameters."""
+"""Test {{ method.name }} with invalid parameters."""
+{%         for param in method.parameters %}
+{%             if param.validation and param.validation.choices %}
+# Test invalid
+{{ param.name }}
+with pytest.raises(({{ entity_name }}ValidationError, ValueError)):
+    await test_repository.{{ method.name }}(
+                          {%                 if loop.first %}
+                          "invalid_{{ param.name }}"
+{%                 else %}
+valid_param
+{%                 endif %}
+)
+{%             endif %}
+{%         endfor %}
+{%     endif %}
+{%     if method.cache %}
+
+@pytest.mark.asyncio
+async def test_{{ method.name }}_caching(self, test_repository, created_{{ domain }}):
+
+
+    """Test {{ method.name }} caching behavior."""
+"""Test {{ method.name }} caching behavior."""
+# This test would require cache manager mock
+# Implementation depends on cache backend configuration
+pytest.skip("Caching tests require cache manager configuration")
+{%     endif %}
+{% endfor %}
+
+class Test{{ entity_name }}RepositoryPerformance:
+
+
+    """Test {{ entity_name }} repository performance characteristics."""
+
+
+@pytest.mark.asyncio
+async def test_create_performance_batch(self, test_repository, sample_{{ domain }}_data):
+
+
+    """Test bulk create performance."""
+"""Test bulk create performance."""
+# Arrange
+batch_size = 100
+entities = []
+for i in range(batch_size):
+    data = sample_{{ domain }}_data.copy()
+data["email"] = f"perf_test_{i}_{uuid4().hex[:8]}@example.com"
+entities.append({{ entity_name }}(** data))
+# Act
+start_time = datetime.utcnow()
+for entity in entities:
+    await test_repository.create(entity)
+end_time = datetime.utcnow()
+# Assert
+duration = (end_time - start_time).total_seconds()
+assert duration < {{ repository.performance.query_performance.max_execution_time * 100 }}  # Reasonable time for batch
+
+
+@pytest.mark.asyncio
+async def test_query_performance(self, test_repository, created_{{ domain }}):
+
+
+    """Test query performance benchmarks."""
+"""Test query performance benchmarks."""
+# Act
+start_time = datetime.utcnow()
+await test_repository.get_by_id(created_{{ domain }}.id)
+end_time = datetime.utcnow()
+# Assert
+duration = (end_time - start_time).total_seconds()
+assert duration < {{ repository.performance.query_performance.max_execution_time }}
+
+class Test{{ entity_name }}RepositoryErrorHandling:
+
+
+    """Test {{ entity_name }} repository error handling."""
+
+
+@pytest.mark.asyncio
+async def test_database_connection_error_handling(self, test_repository):
+
+
+    """Test handling of database connection errors."""
+"""Test handling of database connection errors."""
+# This test would require database connection mocking
+# Implementation depends on specific error scenarios
+pass
+
+
+@pytest.mark.asyncio
+async def test_transaction_rollback_on_error(self, test_repository, sample_{{ domain }}_data):
+
+
+    """Test transaction rollback on database errors."""
+"""Test transaction rollback on database errors."""
+# Arrange
+entity = {{ entity_name }}(** sample_{{ domain }}_data)
+# Act & Assert
+# This test would require forcing a database error
+# Implementation depends on specific error injection
+pass
+
+
+class Test{{ entity_name }}RepositoryTransactions:
+
+
+    """Test {{ entity_name }} repository transaction handling."""
+{% if repository.transactions.auto_transaction %}
+
+@pytest.mark.asyncio
+async def test_transaction_commit_success(self, test_repository, sample_{{ domain }}_data):
+
+
+    """Test successful transaction commit."""
+"""Test successful transaction commit."""
+# Arrange
+entity = {{ entity_name }}(** sample_{{ domain }}_data)
+# Act
+await test_repository.begin_transaction()
+created_entity = await test_repository.create(entity)
+await test_repository.commit_transaction()
+# Assert
+retrieved_entity = await test_repository.get_by_id(created_entity.id)
+assert retrieved_entity is not None
+
+
+@pytest.mark.asyncio
+async def test_transaction_rollback_success(self, test_repository, sample_{{ domain }}_data):
+
+
+    """Test successful transaction rollback."""
+"""Test successful transaction rollback."""
+# Arrange
+entity = {{ entity_name }}(** sample_{{ domain }}_data)
+# Act
+await test_repository.begin_transaction()
+created_entity = await test_repository.create(entity)
+await test_repository.rollback_transaction()
+# Assert
+retrieved_entity = await test_repository.get_by_id(created_entity.id)
+assert retrieved_entity is None
+{% endif %}
+
+# @pyhex:begin:custom_repository_tests
+# Add custom repository test classes here - preserved during regeneration
+# @pyhex:end:custom_repository_tests
+# Test Configuration and Utilities
+class {{ entity_name }}RepositoryTestConfig:
+
+
+    """Configuration for {{ entity_name }} repository tests."""
+
+
+# Test data generators
+@staticmethod
+def generate_test_{{ domain }}_data(count: int = 1) -> List[Dict[str, Any]]:
+
+
+    """Generate test data for {{ entity_name }} entities."""
+"""Generate test data for {{ entity_name }} entities."""
+data = []
+for i in range(count):
+    data.append({
+        "name": f"Test {{ entity_name }} {i}",
+        "email": f"test_{i}_{uuid4().hex[:8]}@example.com",
+        "description": f"Test description {i}",
+        "status": "active" if i % 2 == 0 else "inactive",
+        "metadata": {"test": True, "index": i},
+        "tags": [f"tag{i}", "test"]
+    })
+return data
+
+
+# Test assertion helpers
+@staticmethod
+def assert_{{ domain }}_equals(actual: {{ entity_name }}, expected_data: Dict[str, Any]):
+
+
+    """Assert {{ entity_name }} entity matches expected data."""
+"""Assert {{ entity_name }} entity matches expected data."""
+assert actual.name == expected_data["name"]
+assert actual.email == expected_data["email"]
+assert actual.description == expected_data["description"]
+assert actual.status == expected_data["status"]
+assert actual.metadata == expected_data["metadata"]
+assert actual.tags == expected_data["tags"]
+# Performance benchmarks
+PERFORMANCE_BENCHMARKS = {
+    "create_max_time": {{ repository.performance.query_performance.max_execution_time }},
+"read_max_time": {{ repository.performance.query_performance.max_execution_time }},
+"update_max_time": {{ repository.performance.query_performance.max_execution_time }},
+"delete_max_time": {{ repository.performance.query_performance.max_execution_time }},
+"list_max_time": {{ repository.performance.query_performance.max_execution_time }},
+}
+# Integration Test Markers
+pytestmark = [
+    pytest.mark.asyncio,
+    pytest.mark.repository,
+    pytest.mark.{{ domain }},
+    pytest.mark.integration
+]

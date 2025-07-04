@@ -8,7 +8,7 @@ database:
     options:
       pool_size: 10
       timeout: 30
-  
+
 features:
   - "authentication"
   - "authorization"

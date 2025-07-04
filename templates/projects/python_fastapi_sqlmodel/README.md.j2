@@ -1,0 +1,221 @@
+#  {{ app_info.title or app_name or 'FastAPI Application' }}
+{{ app_info.description or 'A modern FastAPI application with clean architecture, built using the Python FastAPI SQLModel template generator.' }}
+## 🚀 Features
+- **FastAPI Framework**: Modern, fast web framework for building APIs
+- **SQLModel**: Type-safe database operations with Pydantic models
+- **Clean Architecture**: Separation of concerns with Domain, Repository, UseCase, and Interface layers
+- **Async Support**: Full async/await support throughout the application
+- **Type Safety**: Complete type annotations with mypy support
+- **Authentication**: JWT-based authentication and authorization
+- **Database Support**: SQLite, PostgreSQL, and MySQL support
+- **Docker Ready**: Complete Docker and docker-compose configuration
+- **Monitoring**: Built-in health checks and metrics endpoints
+- **Documentation**: Auto-generated OpenAPI/Swagger documentation
+## 📋 Requirements
+- Python 3.11+
+- pip or uv package manager
+  {% if database_type == 'postgresql' %}
+    - PostgreSQL 12+ (for production)
+    {% elif database_type == 'mysql' %}
+    - MySQL 8.0+ (for production)
+{% endif %}
+- Docker and Docker Compose (optional)
+## 🛠️ Installation
+### Local Development
+1. **Clone the repository**
+```bash
+git clone <repository-url>
+cd {{ app_name or 'fastapi-app' }}
+```
+2. **Create virtual environment**
+```bash
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+```
+3. **Install dependencies**
+```bash
+pip install -r requirements.txt
+# Or using uv (faster)
+uv pip install -r requirements.txt
+```
+4. **Set up environment variables**
+```bash
+cp .env.example .env
+# Edit .env with your configuration
+```
+5. **Initialize database**
+```bash
+python -c "from app.database import create_database_tables; create_database_tables()"
+```
+6. **Run the application**
+```bash
+python -m app.main
+# Or using uvicorn directly
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+### Docker Development
+1. **Using docker-compose (recommended)**
+```bash
+docker-compose up --build
+```
+2. **Using Docker directly**
+```bash
+docker build -t {{ app_name or 'fastapi-app' }} .
+docker run -p 8000:8000 {{ app_name or 'fastapi-app' }}
+```
+## 🔧 Configuration
+The application uses environment variables for configuration. Create a `.env` file:
+```env
+# Application Settings
+{{ app_name.upper() or 'APP' }}_ENVIRONMENT=development
+{{ app_name.upper() or 'APP' }}_DEBUG=true
+{{ app_name.upper() or 'APP' }}_SECRET_KEY=your-secret-key-here
+# Database Configuration
+{{ app_name.upper() or 'APP' }}_DATABASE_URL=sqlite:///./{{ app_name or 'app' }}.db
+# For PostgreSQL: postgresql://user:password@localhost:5432/dbname
+# For MySQL: mysql://user:password@localhost:3306/dbname
+# Server Configuration
+{{ app_name.upper() or 'APP' }}_HOST=0.0.0.0
+{{ app_name.upper() or 'APP' }}_PORT=8000
+# CORS Configuration
+{{ app_name.upper() or 'APP' }}_CORS_ORIGINS=["http://localhost:3000", "http://localhost:8080"]
+# Logging
+{{ app_name.upper() or 'APP' }}_LOG_LEVEL=INFO
+{{ app_name.upper() or 'APP' }}_LOG_TO_FILE=false
+```
+## 🏗️ Architecture
+This application follows Clean Architecture principles with four distinct layers:
+### Domain Layer (`app/domain/`)
+- **Entities**: Core business objects and data models
+- **Exceptions**: Domain-specific exceptions
+- **Business Rules**: Core business logic and validation
+### Repository Layer (`app/repository/`)
+- **Protocols**: Abstract interfaces for data access
+- **Implementations**: Concrete repository implementations
+- **Database Operations**: CRUD operations and queries
+### UseCase Layer (`app/usecase/`)
+- **Protocols**: Abstract interfaces for business operations
+- **Implementations**: Business logic orchestration
+- **Schemas**: Request/response models for use cases
+### Interface Layer (`app/interface/`)
+- **Routers**: FastAPI route definitions
+- **Dependencies**: Dependency injection setup
+- **Protocols**: Abstract interfaces for HTTP layer
+## 📚 API Documentation
+Once the application is running, you can access:
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+- **OpenAPI JSON**: http://localhost:8000/api/openapi.json
+## 🔍 Available Endpoints
+### System Endpoints
+- `GET /` - Application root and information
+- `GET /health` - Health check endpoint
+### Domain Endpoints
+{% for domain in domains %}
+####  {{ domain.name|title }} Operations
+- `POST /api/v1/{{ domain.name_plural }}` - Create {{ domain.name }}
+- `GET /api/v1/{{ domain.name_plural }}/{id}` - Get {{ domain.name }} by ID
+- `PUT /api/v1/{{ domain.name_plural }}/{id}` - Update {{ domain.name }}
+- `DELETE /api/v1/{{ domain.name_plural }}/{id}` - Delete {{ domain.name }}
+- `GET /api/v1/{{ domain.name_plural }}` - List {{ domain.name_plural }} with filtering
+{% endfor %}
+## 🧪 Testing
+### Running Tests
+```bash
+# Run all tests
+pytest
+# Run with coverage
+pytest --cov=app --cov-report=html
+# Run specific test file
+pytest tests/test_domain.py
+# Run tests with verbose output
+pytest -v
+```
+### Test Structure
+```
+tests/
+├── conftest.py              # Test configuration and fixtures
+├── test_domain/             # Domain layer tests
+├── test_repository/         # Repository layer tests
+├── test_usecase/            # UseCase layer tests
+├── test_interface/          # Interface layer tests
+└── test_integration/        # Integration tests
+```
+## 📊 Monitoring and Health Checks
+### Health Check
+```bash
+curl http://localhost:8000/health
+```
+### Metrics (if enabled)
+```bash
+curl http://localhost:8000/metrics
+```
+### Logging
+Logs are configured based on the `LOG_LEVEL` environment variable:
+- **DEBUG**: Detailed debugging information
+- **INFO**: General application information
+- **WARNING**: Warning messages
+- **ERROR**: Error messages only
+- **CRITICAL**: Critical errors only
+## 🚀 Deployment
+### Production Configuration
+1. Set environment to production:
+```env
+{{ app_name.upper() or 'APP' }}_ENVIRONMENT=production
+{{ app_name.upper() or 'APP' }}_DEBUG=false
+```
+2. Use a production database:
+```env
+{{ app_name.upper() or 'APP' }}_DATABASE_URL=postgresql://user:pass@host:port/db
+```
+3. Set a secure secret key:
+```env
+{{ app_name.upper() or 'APP' }}_SECRET_KEY=your-very-secure-secret-key
+```
+### Docker Production
+```bash
+# Build production image
+docker build -f Dockerfile.prod -t {{ app_name or 'fastapi-app' }}:prod .
+# Run production container
+docker run -d -p 8000:8000 --env-file .env.prod {{ app_name or 'fastapi-app' }}:prod
+```
+### Using Gunicorn
+```bash
+gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+```
+## 🔧 Development
+### Code Quality Tools
+```bash
+# Format code
+black app/ tests/
+isort app/ tests/
+# Lint code
+flake8 app/ tests/
+mypy app/
+# Run all quality checks
+pre-commit run --all-files
+```
+### Database Operations
+```bash
+# Create new migration
+alembic revision --autogenerate -m "Description"
+# Apply migrations
+alembic upgrade head
+# Rollback migration
+alembic downgrade -1
+```
+## 📄 License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## 🤝 Contributing
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+## 📞 Support
+For support and questions:
+- Create an issue in the repository
+- Check the documentation at `/docs`
+- Review the API documentation at `/redoc`
+---
+Generated with ❤️ using the Python FastAPI SQLModel Template Generator

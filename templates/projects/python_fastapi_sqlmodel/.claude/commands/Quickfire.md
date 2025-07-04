@@ -1,10 +1,12 @@
 # Rapid Task Resolution Agent
 
-Ultra-light agent for immediate issue resolution and simple task execution with minimal context loading and maximum efficiency.
+Ultra-light agent for immediate issue resolution and simple task execution with minimal context loading and maximum
+efficiency.
 
 ## Primary Commands
 
 ### **QuickFix [DESCRIPTION]** - Immediate issue resolution from description
+
 ### **QuickTask [DART_TASK_ID]** - Simple task execution from Dart
 
 ## Streamlined Workflow: Issue → Minimal Context → Quick Plan → Fix
@@ -12,13 +14,17 @@ Ultra-light agent for immediate issue resolution and simple task execution with 
 ### 1. Ultra-Minimal Context Loading
 
 **For QuickFix [DESCRIPTION]**:
+
 - Work directly from issue description
 - Load only `.claude/systemPatterns.md` for architecture compliance
+- Load `.claude/uv_usage_note.md` for CRITICAL Python execution requirements
 - No additional memory context required
 
 **For QuickTask [DART_TASK_ID]**:
+
 - Read specified Dart task using `mcp__dart__get_task`
-- Load only `.claude/systemPatterns.md` for architecture compliance  
+- Load only `.claude/systemPatterns.md` for architecture compliance
+- Load `.claude/uv_usage_note.md` for CRITICAL Python execution requirements
 - Skip parent chain reading for speed
 
 ### 2. Immediate Issue Assessment
@@ -30,6 +36,7 @@ Ultra-light agent for immediate issue resolution and simple task execution with 
 ### 3. Rapid Planning (MANDATORY)
 
 **Simple 3-5 Task Plan Creation**:
+
 1. **Issue Analysis**: What needs to be fixed/changed
 2. **Approach Definition**: How to implement the change
 3. **Architecture Validation**: Ensure compliance with systemPatterns.md
@@ -37,6 +44,7 @@ Ultra-light agent for immediate issue resolution and simple task execution with 
 5. **User Approval**: Brief plan presentation and confirmation
 
 **Quickfire Scope Guidelines**:
+
 - **Simple Fixes**: Configuration changes, bug fixes, minor improvements
 - **Template Updates**: Small template modifications and corrections
 - **Documentation**: Quick documentation updates and corrections
@@ -45,7 +53,9 @@ Ultra-light agent for immediate issue resolution and simple task execution with 
 ### 4. Immediate Implementation (APPROVED PLAN)
 
 **Ultra-Fast Execution**:
+
 - Execute 3-5 tasks in sequence
+- ALWAYS use `uv run` for Python script execution (from .claude/uv_usage_note.md)
 - Update Dart task status if DART_TASK_ID provided
 - Validate changes work correctly
 - Document completion in implementation logs
@@ -55,6 +65,7 @@ Ultra-light agent for immediate issue resolution and simple task execution with 
 ### Rapid Completion Requirements
 
 **Task Complete When**:
+
 - [ ] **Simple plan created** - 3-5 task breakdown with user approval
 - [ ] **All tasks executed** - Changes implemented and validated
 - [ ] **Architecture compliance** - Changes follow systemPatterns.md
@@ -73,6 +84,7 @@ Quick Dart Updates:
 ### Implementation Logging
 
 **Quick Log Entry Format**:
+
 ```markdown
 ## [Date] - Quickfire: [Issue/Task Title]
 
@@ -87,6 +99,7 @@ Quick Dart Updates:
 ## Usage Examples
 
 ### QuickFix Command
+
 ```
 User: "QuickFix: Fix typo in user_domain.yaml configuration file"
 
@@ -98,7 +111,8 @@ Agent Response:
 5. Document completion
 ```
 
-### QuickTask Command  
+### QuickTask Command
+
 ```
 User: "QuickTask Y35o7i1XOXM6"
 
@@ -125,18 +139,21 @@ Agent Response:
 **Ready for rapid, architecture-compliant issue resolution with minimal overhead!**
 
 ### Usage Note
+
 > **Commands**: `QuickFix [DESCRIPTION]` or `QuickTask [DART_TASK_ID]` for immediate, lightweight issue resolution
 
 ## Task Classification Guidelines
 
 ### Appropriate for Quickfire:
+
 - ✅ **Configuration changes**: Simple YAML/JSON updates
-- ✅ **Template corrections**: Minor placeholder or syntax fixes  
+- ✅ **Template corrections**: Minor placeholder or syntax fixes
 - ✅ **Documentation updates**: Quick corrections and improvements
 - ✅ **Bug fixes**: Simple, isolated issues
 - ✅ **File organization**: Moving files, renaming, simple cleanup
 
 ### Escalate to Implementation Agent:
+
 - ❌ **New features**: Any new functionality or capability
 - ❌ **Architecture changes**: Multi-component or structural changes
 - ❌ **Complex templates**: New template creation or major modifications
@@ -145,28 +162,30 @@ Agent Response:
 
 ## Quickfire vs Implementation Agent Decision Matrix
 
-| Change Type                   | Quickfire | Implementation Agent |
-|-------------------------------|-----------|---------------------|
-| Fix typo in config file       | ✅        | ❌                  |
-| Update template placeholder   | ✅        | ❌                  |
-| Correct documentation        | ✅        | ❌                  |
-| Simple validation fix        | ✅        | ❌                  |
-| Create new template          | ❌        | ✅                  |
-| Add new domain entity        | ❌        | ✅                  |
-| Implement code generation    | ❌        | ✅                  |
-| Architecture refactoring     | ❌        | ✅                  |
+| Change Type                 | Quickfire | Implementation Agent |
+|-----------------------------|-----------|----------------------|
+| Fix typo in config file     | ✅         | ❌                    |
+| Update template placeholder | ✅         | ❌                    |
+| Correct documentation       | ✅         | ❌                    |
+| Simple validation fix       | ✅         | ❌                    |
+| Create new template         | ❌         | ✅                    |
+| Add new domain entity       | ❌         | ✅                    |
+| Implement code generation   | ❌         | ✅                    |
+| Architecture refactoring    | ❌         | ✅                    |
 
 ## Agent Coordination
 
 ### When to Escalate:
+
 - **Scope Uncertainty**: Unclear if change is simple enough for Quickfire
 - **Architecture Impact**: Change might affect multiple components
 - **Complex Requirements**: Multiple steps or dependencies involved
 - **Testing Needs**: Comprehensive testing required
 
 ### Escalation Process:
+
 1. **Stop Implementation**: Do not proceed with complex changes
-2. **Document Analysis**: Brief analysis of why escalation is needed  
+2. **Document Analysis**: Brief analysis of why escalation is needed
 3. **Recommend Agent**: Suggest Implementation Agent with reasoning
 4. **Provide Context**: Share analysis and initial investigation
 

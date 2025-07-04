@@ -28,7 +28,7 @@ mixins:
         type: "datetime"
         default: "datetime.utcnow"
         description: "Last update timestamp"
-  
+
   - name: "Authored"
     description: "Content with author reference"
     fields:
@@ -37,7 +37,7 @@ mixins:
         required: true
         description: "Author reference"
         sqlmodel_field: "Field(foreign_key='users.id')"
-  
+
   - name: "Published"
     description: "Publishable content"
     fields:
@@ -59,19 +59,19 @@ relationships:
     to_entity: "Post"
     type: "one_to_many"
     back_populates: "author"
-  
+
   - name: "user_comments"
-    from_entity: "User" 
+    from_entity: "User"
     to_entity: "Comment"
     type: "one_to_many"
     back_populates: "author"
-  
+
   - name: "post_comments"
     from_entity: "Post"
     to_entity: "Comment"
     type: "one_to_many"
     back_populates: "post"
-  
+
   - name: "post_tags"
     from_entity: "Post"
     to_entity: "Tag"
@@ -83,10 +83,10 @@ sqlmodel_config:
   table_naming: "snake_case"
   field_naming: "snake_case"
   generate_id_fields: true
-  timestamp_fields: ["created_at", "updated_at"]
+  timestamp_fields: [ "created_at", "updated_at" ]
 
 metadata:
   version: "1.0.0"
   domain_type: "content_management"
   complexity: "high"
-  features: ["relationships", "publishing", "tagging"]
+  features: [ "relationships", "publishing", "tagging" ]

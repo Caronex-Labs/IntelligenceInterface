@@ -3,15 +3,19 @@
 ## Co-location Architecture Pattern
 
 ### Template and Configuration Co-location Strategy
-**Core Innovation**: Templates (.j2), configurations (.yaml), and generated files (.py) are co-located in the same directory structure for optimal developer experience.
+
+**Core Innovation**: Templates (.j2), configurations (.yaml), and generated files (.py) are co-located in the same
+directory structure for optimal developer experience.
 
 #### Benefits of Co-location
+
 - **Immediate Context**: Developers see templates, configs, and outputs together
 - **Easier Maintenance**: Changes to domain logic update templates and configs in same location
 - **Reduced Cognitive Load**: No navigation between separate template and config directories
 - **Intuitive Organization**: Complete layer context visible at once
 
 #### File Organization Pattern
+
 ```
 app/{{domain}}/
 ├── layer_name/
@@ -21,9 +25,11 @@ app/{{domain}}/
 ```
 
 ### Hierarchical Configuration Merging
+
 **Strategy**: YAML configurations merge hierarchically with override capability.
 
 #### Configuration Hierarchy
+
 ```
 Domain Level (app/domain/{{domain}}/domain.yaml)
     ↓ (inherits + overrides)
@@ -35,8 +41,9 @@ Interface Level (app/interface/http/{{domain}}/api.yaml)
 ```
 
 #### Development Workflow
+
 1. **Domain Modeling**: Define entities and business rules in `domain/` layer
-2. **Data Access**: Configure repository patterns in `repository/` layer  
+2. **Data Access**: Configure repository patterns in `repository/` layer
 3. **Business Logic**: Define use cases and workflows in `usecase/` layer
 4. **API Interface**: Configure endpoints and validation in `interface/` layer
 5. **Generation**: Tool merges all configurations and generates from co-located templates
@@ -44,6 +51,7 @@ Interface Level (app/interface/http/{{domain}}/api.yaml)
 ## Hexagonal Architecture Implementation (Go-Style Structure)
 
 ### Core Principles
+
 - **Domain-Centric Design**: Business logic isolated from external concerns
 - **Dependency Inversion**: Dependencies point inward toward domain
 - **Port and Adapter Pattern**: Clear interfaces between layers
@@ -52,14 +60,17 @@ Interface Level (app/interface/http/{{domain}}/api.yaml)
 ### Layer Definitions
 
 #### Domain Layer (`app/domain/{{domain}}/`) - Go-Style with Co-location
+
 **Purpose**: Core business entities and domain logic
 **Responsibilities**:
+
 - Domain entities with business rules
 - Value objects and domain services
 - Domain events and aggregates
 - Business invariants and constraints
 
 **Co-located Files**:
+
 ```
 app/domain/{{domain}}/
 ├── entities.py.j2           # Template: Pure business entities
@@ -71,6 +82,7 @@ app/domain/{{domain}}/
 ```
 
 **Patterns**:
+
 ```python
 # Entity with business logic
 class {{DOMAIN}}Entity:
@@ -83,14 +95,17 @@ class {{DOMAIN}}Entity:
 ```
 
 #### Use Case Layer (`app/usecase/{{domain}}/`) - Go-Style with Co-location
+
 **Purpose**: Use cases and application services
 **Responsibilities**:
+
 - Orchestrate domain operations
 - Transaction management
 - Input/output coordination
 - Application-specific business logic
 
 **Co-located Files**:
+
 ```
 app/usecase/{{domain}}/
 ├── protocols.py.j2          # Template: Use case interfaces
@@ -104,6 +119,7 @@ app/usecase/{{domain}}/
 ```
 
 **Patterns**:
+
 ```python
 # Use case with dependency injection
 class {{DOMAIN}}UseCase:
@@ -116,14 +132,17 @@ class {{DOMAIN}}UseCase:
 ```
 
 #### Repository Layer (`app/repository/{{domain}}/`) - Go-Style with Co-location
+
 **Purpose**: Data access and persistence
 **Responsibilities**:
+
 - Database persistence
 - Query operations
 - Transaction management
 - Data mapping
 
 **Co-located Files**:
+
 ```
 app/repository/{{domain}}/
 ├── protocols.py.j2          # Template: Repository interfaces
@@ -137,6 +156,7 @@ app/repository/{{domain}}/
 ```
 
 **Patterns**:
+
 ```python
 # Repository implementation
 class SQLModel{{DOMAIN}}Repository({{DOMAIN}}Repository):
@@ -149,14 +169,17 @@ class SQLModel{{DOMAIN}}Repository({{DOMAIN}}Repository):
 ```
 
 #### Interface Layer (`app/interface/http/{{domain}}/`) - Go-Style with Co-location
+
 **Purpose**: HTTP API and external interfaces
 **Responsibilities**:
+
 - FastAPI route handlers
 - Request/response transformation
 - Authentication and authorization
 - Input validation
 
 **Co-located Files**:
+
 ```
 app/interface/http/{{domain}}/
 ├── schemas.py.j2            # Template: API request/response schemas
@@ -170,6 +193,7 @@ app/interface/http/{{domain}}/
 ```
 
 **Patterns**:
+
 ```python
 # FastAPI handler with dependency injection
 @router.post("/{{domain}}/")
@@ -183,18 +207,22 @@ async def create_{{domain}}(
 ## Code Generation Patterns
 
 ### Template Placeholder System
+
 **Primary Placeholder**: `{{DOMAIN}}` - replaced with domain name
 **Variations**:
+
 - `{{DOMAIN}}` → `User` (PascalCase)
 - `{{domain}}` → `user` (lowercase)
 - `{{DOMAIN_PLURAL}}` → `Users` (PascalCase plural)
 - `{{domain_plural}}` → `users` (lowercase plural)
 
 ### File Generation Strategy
+
 **Template Location**: `templates/{{DOMAIN}}/`
 **Output Location**: `src/{layer}/{{domain}}/`
 
 **File Naming Patterns**:
+
 ```
 templates/entity.py.jinja2 → src/domain/{{domain}}/entity.py
 templates/repository.py.jinja2 → src/infrastructure/{{domain}}/repository.py
@@ -203,7 +231,9 @@ templates/handler.py.jinja2 → src/interface/{{domain}}/handler.py
 ```
 
 ### Code Preservation Strategy
+
 **Preservation Markers**:
+
 ```python
 # @pyhex:begin(custom_imports)
 # Custom imports here
@@ -216,6 +246,7 @@ class {{DOMAIN}}Entity:
 ```
 
 **Preservation Process**:
+
 1. Extract custom code blocks before regeneration
 2. Generate new template content
 3. Restore custom code blocks to designated regions
@@ -224,6 +255,7 @@ class {{DOMAIN}}Entity:
 ## SQLModel Integration Patterns
 
 ### Entity Definition Pattern
+
 ```python
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List
@@ -260,6 +292,7 @@ class {{DOMAIN}}Response({{DOMAIN}}Base):
 ```
 
 ### Repository Pattern Implementation
+
 ```python
 from sqlmodel import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -307,6 +340,7 @@ class SQLModel{{DOMAIN}}Repository({{DOMAIN}}Repository):
 ## FastAPI Integration Patterns
 
 ### Router Structure
+
 ```python
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
@@ -346,6 +380,7 @@ async def list_{{domain_plural}}(
 ```
 
 ### Dependency Injection Pattern
+
 ```python
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -366,6 +401,7 @@ async def get_{{domain}}_use_case(
 ## Configuration Management Patterns
 
 ### YAML Domain Configuration
+
 ```yaml
 domain:
   name: "{{DOMAIN}}"
@@ -411,6 +447,7 @@ endpoints:
 ## Quality Patterns
 
 ### Testing Strategy
+
 ```python
 # Test structure for each layer
 tests/
@@ -425,6 +462,7 @@ tests/
 ```
 
 ### Error Handling Pattern
+
 ```python
 class {{DOMAIN}}Error(Exception):
     """Base exception for {{DOMAIN}} operations"""
@@ -440,6 +478,7 @@ class {{DOMAIN}}ValidationError({{DOMAIN}}Error):
 ```
 
 ### Logging Pattern
+
 ```python
 import logging
 from typing import Any
@@ -463,12 +502,14 @@ class {{DOMAIN}}UseCase:
 ### Sophisticated Template System Patterns Discovered
 
 **Hexagonal Architecture Excellence**:
+
 - **Pure Domain Entities**: Go entities are completely infrastructure-agnostic with conversion methods
-- **Interface-First Design**: Every layer defines interfaces before implementations  
+- **Interface-First Design**: Every layer defines interfaces before implementations
 - **Dependency Injection**: Dynamic component registration with reflection-based container
 - **Configuration-Driven Generation**: YAML configuration controls all aspects of code generation
 
 **Advanced Code Generation Intelligence**:
+
 ```go
 // Template processing pipeline discovered
 1. YAML Configuration → DomainConfig struct (with validation)
@@ -479,6 +520,7 @@ class {{DOMAIN}}UseCase:
 ```
 
 **Template Function Intelligence**:
+
 ```go
 // Custom template functions for Python mapping
 toSnakeCase    → to_snake_case filter    # UserAccount → user_account
@@ -489,6 +531,7 @@ printf         → format filter           # "Hello {}"|format(name)
 ```
 
 **Code Preservation Patterns**:
+
 ```go
 // @gohex markers → @pyhex markers mapping
 // @gohex:begin:custom:fields        → # @pyhex:begin:custom:fields
@@ -499,12 +542,14 @@ printf         → format filter           # "Hello {}"|format(name)
 ### Python FastAPI SQLModel Architecture Intelligence
 
 **Technology Stack Superiority**:
+
 - **Type Safety Enhancement**: Pydantic + SQLModel provides superior type validation vs Go
 - **Async Performance**: Native async/await throughout entire stack
 - **Auto Documentation**: FastAPI OpenAPI generation surpasses Go manual documentation
 - **Modern Validation**: Built-in request/response validation vs manual Go validation
 
 **Hexagonal Architecture Python Translation**:
+
 ```python
 # Go layers → Python equivalents with enhancements
 internal/core/entity/     → app/domain/           # Pydantic business entities
@@ -516,6 +561,7 @@ internal/di/              → app/infrastructure/di/              # dependency-i
 ```
 
 **Template System Enhancement Intelligence**:
+
 ```python
 # Python template system advantages over Go
 1. Jinja2 > Go text/template (more powerful, better ecosystem)
@@ -526,6 +572,7 @@ internal/di/              → app/infrastructure/di/              # dependency-i
 ```
 
 **Code Generation Pipeline Intelligence**:
+
 ```python
 # Enhanced Python pipeline
 1. YAML → Pydantic models (with automatic validation)
@@ -539,12 +586,14 @@ internal/di/              → app/infrastructure/di/              # dependency-i
 ### Implementation-Ready Architecture Specifications
 
 **Complete Directory Structure**:
+
 - Designed 14-layer Python template system mirroring Go sophistication
 - 50+ template files covering all aspects of hexagonal architecture
 - Complete CLI tool with scaffold, validate, and generate commands
 - Comprehensive testing architecture with fixtures and async support
 
 **Advanced Features Preserved**:
+
 - Configuration-driven template selection (simple vs advanced templates)
 - Smart default value injection at multiple configuration levels
 - Relationship handling for complex domain models
@@ -553,12 +602,14 @@ internal/di/              → app/infrastructure/di/              # dependency-i
 - Performance optimization patterns (caching, pagination, filtering)
 
 **Template System Intelligence Evolution**:
+
 - Complete architecture designed and implementation-ready
 - All Go patterns successfully mapped to Python equivalents
 - Enhanced capabilities through modern Python ecosystem
 - Professional-grade code generation with preservation system
 
 **Next Implementation Phase Intelligence**:
+
 - Template file creation (50+ Jinja2 templates required)
 - CLI tool implementation (Click-based with 5 core commands)
 - Code preservation system (regex-based @pyhex marker processing)

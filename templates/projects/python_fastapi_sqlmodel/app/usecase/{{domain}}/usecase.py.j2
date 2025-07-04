@@ -1,0 +1,481 @@
+"""
+{{ entity_name }} Use Case Implementation - Co-location Architecture
+This module implements the business logic orchestration for {{ entity_name }} operations,
+coordinating repositories, services, and business rules to execute complex workflows.
+Generated from: app/usecase/{{ domain }}/usecase.py.j2
+Configuration: app/usecase/{{ domain }}/usecase.yaml, business-rules.yaml
+"""
+import logging
+
+# @pyhex:begin:custom:imports
+# Add custom imports here
+# @pyhex:end:custom:imports
+from app.domain.{{domain}}.entities import {{ entity_name }}
+from app.repository.{{ domain }}.protocols import {{ entity_name }}RepositoryProtocol
+from .protocols import (
+    {{ entity_name }}UseCaseProtocol,
+    {{ entity_name }}BusinessRulesProtocol,
+    {{ entity_name }}EventProtocol,
+)
+from .schemas import (
+    Create{{ entity_name }}Request,
+    Update{{ entity_name }}Request,
+    Delete{{ entity_name }}Request,
+    Get{{ entity_name }}Request,
+    List{{ domain_name_plural | title }}Request,
+    {{ entity_name }}Response,
+    List{{ domain_name_plural | title }}Response,
+    DeleteResponse,
+)
+# Business rule and validation exceptions
+from app.domain.{{ domain }}.exceptions import (
+    {{ entity_name }}ValidationError,
+    {{ entity_name }}NotFoundError,
+    BusinessConstraintViolationError,
+    UnauthorizedOperationError,
+)
+
+logger = logging.getLogger(__name__)
+
+
+class {{ entity_name }}UseCase({{ entity_name }}UseCaseProtocol):
+    """
+    {{ entity_name }} use case implementation for business logic orchestration.
+    This class implements all {{ entity_name }} business operations, coordinating
+    repositories, services, and business rules to execute complex workflows.
+    Dependencies:
+    {% for repo in usecase.dependencies.repositories %}
+      - {{ repo }}: {{ repo.replace('_', ' ') | title }} for data persistence
+    {% endfor %}
+    {% for service in usecase.dependencies.services %}
+      - {{ service }}: {{ service.replace('_', ' ') | title }} for {{ service.replace('_', ' ') }} operations
+    {% endfor %}
+    Business Rules:
+    {% for rule in business_rules.rules %}
+    -
+    {{ rule.name }}
+    :
+    {{ rule.get('description', rule.error_message) }}
+    {% endfor %}
+    """
+
+    def __init__(
+            self,
+            {{ domain }}_repository: {{ entity_name }}RepositoryProtocol,
+            business_rules: {{ entity_name }}BusinessRulesProtocol,
+            event_publisher: {{ entity_name }}EventProtocol,
+            {% for service in usecase.dependencies.services %}
+            {{ service }}: Any,  #
+            {{ service.replace('_', ' ') | title }}   service interface
+
+    {% endfor %}
+    ):
+    """
+    Initialize {{ entity_name }} use case with dependencies.
+        Args:
+            {{ domain }}_repository: Repository for {{ entity_name }} data operations
+            business_rules: Business rules validation service
+            event_publisher: Event publishing service
+            {% for service in usecase.dependencies.services %}
+            {{ service }}: {{ service.replace('_', ' ') | title }} service
+            {% endfor %}
+        """
+    self._{{ domain }}_repository = {{ domain }}_repository
+    self._business_rules = business_rules
+    self._event_publisher = event_publisher
+    {% for service in usecase.dependencies.services %}
+    self._
+    {{ service }}
+    =
+    {{ service }}
+    {% endfor %}
+    # @pyhex:begin:custom:init_attributes
+    # Add custom initialization attributes here
+    # @pyhex:end:custom:init_attributes
+
+    {% for method in usecase.methods %}
+
+    async def{{ method.name }}(
+             self,
+             request: {{ method.input_schema }}
+             ) -> {{ method.output_schema }}:
+        """
+        {{ method.description }}
+     {%     if method.orchestration_steps %}
+        Orchestration Steps:
+         {%         for step in method.orchestration_steps %}
+        {{ loop.index }}
+        .
+        {{ step.replace('_', ' ') | title }}
+         {%         endfor %}
+     {%     endif %}
+     {%     if method.business_rules %}
+        Business Rules Applied:
+         {%         for rule in method.business_rules %}
+        -
+        {{ rule }}
+        : Validates
+        {{ rule.replace('_', ' ') }}
+         {%         endfor %}
+     {%     endif %}
+        Args:
+            request: {{ method.input_schema }} containing operation data
+        Returns:
+            {{ method.output_schema }}: Result of {{ method.name.replace('_', ' ') }} operation
+        Raises:
+     {%     if method.error_handling %}
+         {%         for error in method.error_handling %}
+            {{ error.exception }}
+            : When
+            {{ error.conditions | join(" or ") }}
+         {%         endfor %}
+     {%     endif %}
+            ValidationError: When business rules validation fails
+        """
+        logger.info(f"Starting {{ method.name }} operation", extra={"request": request.model_dump()})
+        # Schema validation check
+        if not hasattr(request, 'model_dump'):
+            raise {{ entity_name }}ValidationError(f"Invalid request schema for {{ method.name }}")
+        # Validate request schema structure
+        request_dict = request.model_dump()
+        if not isinstance(request_dict, dict):
+            raise {{ entity_name }}ValidationError(f"Request schema validation failed for {{ method.name }}")
+        try:
+        {%     if method.transaction_boundary %}
+            # Begin transaction for
+            {{ method.name }}   operation
+            async with self._{{ domain }}_repository.transaction():
+            {%     endif %}
+            {%     if method.orchestration_steps %}
+            {%         for step in method.orchestration_steps %}
+                # Step
+                {{ loop.index }}  :
+                {{ step.replace('_', ' ') | title }}
+                await self._{{ step }}(request)
+                {%         endfor %}
+                {%     endif %}
+                {%     if method.name.startswith('create_') %}
+                # Create {{ entity_name }} entity from request
+                {{ domain }}_entity = {{ entity_name }}(
+                                      # Map request fields to entity
+                                      # @pyhex:begin:custom:
+                                      {{ method.name }}  _entity_creation
+                                      ** request.model_dump(exclude_unset=True)
+                # @pyhex:end:custom:
+                {{ method.name }}  _entity_creation
+                )
+                # Save {{ entity_name }} to repository
+                created_{{ domain }} = await self._{{ domain }}_repository.create({{ domain }}_entity)
+                # Publish {{ entity_name }} created event
+                await self._event_publisher.publish_{{ domain }}_created(
+                    created_{{ domain }},
+                    {"request_id": getattr(request, 'request_id', None)}
+                )
+                logger.info(f"{{ entity_name }} created successfully", extra={"entity_id": created_{{ domain }}.id})
+                # Convert entity to response schema with validation
+                response_schema = {{ method.output_schema }}.from_entity(created_{{ domain }})
+                # Additional schema validation for response
+                if hasattr(response_schema, 'model_dump'):
+                    response_dict = response_schema.model_dump()
+                    logger.debug(f"Response schema validation passed",
+                                 extra={"response_keys": list(response_dict.keys())})
+                return response_schema
+                {%     elif method.name.startswith('get_') and method.name.endswith('_by_id') %}
+                # Retrieve {{ entity_name }} by ID
+                {{ domain }}_entity = await self._{{ domain }}_repository.get_by_id(request.id)
+                if not {{ domain }}_entity:
+                    raise {{ entity_name }}NotFoundError(f"{{ entity_name }} with ID {request.id} not found")
+                logger.info(f"{{ entity_name }} retrieved successfully", extra={"entity_id": request.id})
+                # Convert entity to response schema with validation
+                response_schema = {{ method.output_schema }}.from_entity({{ domain }}_entity)
+                # Schema validation for response
+                response_dict = response_schema.model_dump()
+                logger.debug(f"Response schema generated", extra={"response_type": type(response_schema).__name__})
+                return response_schema
+                {%     elif method.name.startswith('update_') %}
+                # Retrieve existing {{ entity_name }}
+                {{ domain }}_entity = await self._{{ domain }}_repository.get_by_id(request.id)
+                if not {{ domain }}_entity:
+                    raise {{ entity_name }}NotFoundError(f"{{ entity_name }} with ID {request.id} not found")
+                # Apply updates to entity
+                # Extract update data with schema validation
+                update_data = request.model_dump(exclude_unset=True, exclude={'id'})
+                # Schema validation for update data
+                if not update_data:
+                    raise {{ entity_name }}ValidationError(f"No valid update data in request schema")
+                # Validate update data schema structure
+                for field_name, field_value in update_data.items():
+                    logger.debug(f"Validating update field schema",
+                                 extra={"field": field_name, "type": type(field_value).__name__})
+                for field, value in update_data.items():
+                    if hasattr({{ domain }}_entity, field):
+                        setattr({{ domain }}_entity, field, value)
+                # @pyhex:begin:custom:
+                {{ method.name }}  _update_logic
+                # Add custom update logic here
+                # @pyhex:end:custom:
+                {{ method.name }}  _update_logic
+                # Save updated {{ entity_name }}
+                updated_{{ domain }} = await self._{{ domain }}_repository.update({{ domain }}_entity)
+                # Publish {{ entity_name }} updated event
+                await self._event_publisher.publish_{{ domain }}_updated(
+                    updated_{{ domain }},
+                    update_data,
+                    {"request_id": getattr(request, 'request_id', None)}
+                )
+                logger.info(f"{{ entity_name }} updated successfully", extra={"entity_id": request.id})
+                # Convert updated entity to response schema with validation
+                response_schema = {{ method.output_schema }}.from_entity(updated_{{ domain }})
+                # Schema validation and model_dump for response
+                response_dict = response_schema.model_dump()
+                logger.debug(f"Updated response schema", extra={"response_fields": len(response_dict)})
+                return response_schema
+                {%     elif method.name.startswith('delete_') %}
+                # Retrieve {{ entity_name }} for deletion
+                {{ domain }}_entity = await self._{{ domain }}_repository.get_by_id(request.id)
+                if not {{ domain }}_entity:
+                    raise {{ entity_name }}NotFoundError(f"{{ entity_name }} with ID {request.id} not found")
+                # Delete {{ entity_name }}
+                deleted = await self._{{ domain }}_repository.delete(request.id)
+                if deleted:
+                    # Publish {{ entity_name }} deleted event
+                    await self._event_publisher.publish_{{ domain }}_deleted(
+                        request.id,
+                        {"request_id": getattr(request, 'request_id', None)}
+                    )
+                    logger.info(f"{{ entity_name }} deleted successfully", extra={"entity_id": request.id})
+                return DeleteResponse(success=deleted, message=f"{{ entity_name }} deleted successfully")
+                {%     elif method.name.startswith('list_') %}
+                # Apply filters and pagination
+                filters = getattr(request, 'filters', {})
+                pagination = {
+                    'skip': getattr(request, 'skip', 0),
+                    'limit': getattr(request, 'limit', 100)
+                }
+                # List
+                {{ domain_name_plural }}   with filters
+                {{ domain_name_plural }}, total_count = await self._{{ domain }}_repository.list_with_count(
+                    filters=filters,
+                    **pagination
+                )
+                logger.info(f"Listed {{ domain_name_plural }}",
+                            extra={"count": len({{ domain_name_plural }}), "total": total_count})
+                return List{{ domain_name_plural | title }}Response(
+                    items=[{{ method.output_schema.replace('List', '').replace('Response', 'Response') }}.from_entity(
+                        {{ domain }}) for {{ domain }} in {{ domain_name_plural }}],
+                total_count = total_count,
+                skip = pagination['skip'],
+                limit = pagination['limit']
+                )
+                {%     else %}
+                # @pyhex:begin:custom:
+                {{ method.name }}  _implementation
+                # Implement custom
+                {{ method.name }}   logic here
+                pass
+                # @pyhex:end:custom:
+                {{ method.name }}  _implementation
+        {%     endif %}
+        except Exception as e:
+            logger.error(f"{{ method.name }} operation failed",
+                         extra={"error": str(e), "request": request.model_dump()})
+            {%     if method.transaction_boundary %}
+            # Rollback transaction on error
+            if hasattr(self._{{ domain }}_repository, 'rollback'):
+                await self._{{ domain }}_repository.rollback()
+            {%     endif %}
+            raise
+
+    {% endfor %}
+    # Business Rule Orchestration Methods
+    {% for method in usecase.methods %}
+    {%     if method.orchestration_steps %}
+    {%         for step in method.orchestration_steps %}
+
+    async def _{{ step }}(self, request: {{ method.input_schema }}) -> None:
+        """
+        {{ step.replace('_', ' ') | title }} for {{ method.name }} operation.
+        This method implements the {{ step }} orchestration step,
+        handling {{ step.replace('_', ' ') }} logic and validation.
+        """
+        # @pyhex:begin:custom:
+        {{ step }}  _implementation
+        # Implement
+        {{ step }}   logic here
+        logger.debug(f"Executing {{ step }} for {{ method.name }}")
+        {%             if 'validate' in step %}
+        # Validation step implementation
+        validation_context = {
+            "request": request.model_dump(),
+            "operation": "{{ method.name }}"
+        }
+        # Apply business rules validation with comprehensive error handling
+        try:
+        {%                 for rule in method.business_rules %}
+            rule_result = await self._business_rules.validate_{{ rule }}(validation_context)
+            if not rule_result:
+                raise BusinessConstraintViolationError(
+                    f"Business rule {{ rule }} validation failed for {{ method.name }}")
+        {%                 endfor %}
+        except BusinessConstraintViolationError:
+            logger.error(f"Business constraint violation in {{ method.name }}", extra=validation_context)
+            raise
+        except Exception as validation_error:
+            logger.error(f"Validation error in {{ method.name }}: {validation_error}", extra=validation_context)
+            raise {{ entity_name }}ValidationError(f"Validation failed: {validation_error}") from validation_error
+        {%             elif 'check' in step %}
+        # Check step implementation
+        check_context = {
+            "request": request.model_dump(),
+            "operation": "{{ method.name }}"
+        }
+        # Perform necessary checks
+        # Add specific check logic based on step name
+        {%             elif 'create' in step or 'update' in step or 'delete' in step %}
+        # Database operation step
+        # This step handles the actual data persistence
+        # Implementation delegated to main method
+        {%             elif 'publish' in step %}
+        # Event publishing step
+        # This step handles domain event publishing
+        # Implementation delegated to main method
+        {%             else %}
+        # Generic orchestration step
+        # Implement specific logic based on step requirements
+        {%             endif %}
+        # @pyhex:end:custom:
+        {{ step }}  _implementation
+
+    {%         endfor %}
+    {%     endif %}
+    {% endfor %}
+
+    # Business Logic Orchestration Utilities
+    async def _orchestration_step_validator(self, step_name: str, context: Dict[str, Any]) -> bool:
+        """
+        Generic orchestration step validation utility.
+        This method provides common validation logic for orchestration steps,
+        ensuring consistent validation patterns across all business operations.
+        """
+        logger.debug(f"Validating orchestration step: {step_name}")
+        # @pyhex:begin:custom:orchestration_validation
+        # Add custom orchestration validation logic here
+        return True
+        # @pyhex:end:custom:orchestration_validation
+
+    async def _orchestration_error_handler(self, step_name: str, error: Exception, context: Dict[str, Any]) -> None:
+        """
+        Generic orchestration error handling utility.
+        This method provides centralized error handling for orchestration steps,
+        ensuring consistent error management across all business operations.
+        """
+        logger.error(f"Orchestration step {step_name} failed", extra={"error": str(error), "context": context})
+
+        # @pyhex:begin:custom:orchestration_error_handling
+        # Add custom orchestration error handling logic here
+        # @pyhex:end:custom:orchestration_error_handling
+        # @pyhex:begin:custom:helper_methods
+        # Add custom helper methods here
+        # @pyhex:end:custom:helper_methods
+
+
+class {{ entity_name }}BusinessRules({{ entity_name }}BusinessRulesProtocol):
+    """
+    {{ entity_name }} business rules validation implementation.
+    This class implements business rules validation for {{ entity_name }} operations,
+    ensuring that all business constraints and validation requirements are enforced.
+    """
+
+    def __init__(
+            self,
+            {{ domain }}_repository: {{ entity_name }}RepositoryProtocol,
+    ):
+        """Initialize business rules with dependencies."""
+        self._{{ domain }}_repository = {{ domain }}_repository
+
+    {% for rule in business_rules.rules %}
+
+    async def validate_{{ rule.name }}(
+                       self,
+                       context: Dict[str, Any],
+                       {{ domain }}: Optional[{{ entity_name }}] = None
+                       ) -> bool:
+        """
+        Validate {{ rule.name }} business rule.
+        Rule: {{ rule.condition }}
+        Type: {{ rule.type }}
+        Context: {{ rule.context }}
+        """
+        # @pyhex:begin:custom:
+        {{ rule.name }}  _validation
+        # Implement
+        {{ rule.name }}   validation logic here
+        {%     if rule.type == 'validation' %}
+        # Data validation rule
+        if {{ domain }}:
+            # Validate entity data integrity
+            return {{ domain }}.is_valid() if hasattr({{ domain }}, 'is_valid') else True
+        return True
+        {%     elif rule.type == 'constraint' %}
+        # Business constraint rule
+        {%         if 'exists' in rule.name %}
+        if {{ domain }}:
+            existing = await self._{{ domain }}_repository.get_by_id({{ domain }}.id)
+            return existing is not None
+        return False
+        {%         else %}
+        # Generic constraint validation
+        return True
+        {%         endif %}
+        {%     elif rule.type == 'security' %}
+        # Security/permission rule
+        user_context = context.get('user_context')
+        if not user_context:
+            return False
+        # Check user permissions
+        required_permission = "{{ rule.name.split("_")[0] }}_{{ domain }}"
+        return user_context.has_permission(required_permission) if hasattr(user_context, 'has_permission') else True
+        {%     else %}
+        # Generic business logic rule
+        return True
+        {%     endif %}
+        # @pyhex:end:custom:
+        {{ rule.name }}  _validation
+
+    {% endfor %}
+
+    async def validate_group(
+            self,
+            group_name: str,
+            context: Dict[str, Any],
+            {{ domain }}: Optional[{{ entity_name }}] = None
+    ) -> List[str]:
+        """Validate a group of business rules."""
+        errors = []
+        {% for group in business_rules.validation_groups %}
+        if group_name == "{{ group.name }}":
+            #
+            {{ group.description }}
+            {%     for rule in group.rules %}
+            try:
+                if not await self.validate_{{ rule }}(context, {{ domain }}):
+                    # Find error message for this rule
+                    {%         for rule_def in business_rules.rules %}
+                    {%             if rule_def.name == rule %}
+                    errors.append("
+                                  {{ rule_def.error_message }}
+                                  ")
+                    {%             endif %}
+                    {%         endfor %}
+                    except Exception as e:
+                errors.append(f"{{ rule }} validation failed: {str(e)}")
+        {%     endfor %}
+        {% endfor %}
+        return errors
+    # @pyhex:begin:custom:business_rules_methods
+    # Add custom business rules methods here
+    # @pyhex:end:custom:business_rules_methods
+
+# @pyhex:begin:custom:classes
+# Add custom use case classes here
+# @pyhex:end:custom:classes

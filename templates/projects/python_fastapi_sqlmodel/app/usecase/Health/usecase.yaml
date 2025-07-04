@@ -1,0 +1,48 @@
+# Use Case Layer Configuration - Co-located YAML
+#
+# This usecase.yaml file defines business logic configurations
+# for the Health domain use case layer.
+
+usecase:
+  name: "HealthUseCase"
+  description: "Health domain business logic orchestration"
+  interface: "HealthUseCaseProtocol"
+  
+  # Business operations
+  operations:
+    create_health_check:
+      description: "Create a new health check entry"
+      validation: "strict"
+
+    get_health_check:
+      description: "Retrieve health check by ID"
+      caching: true
+
+    update_health_check:
+      description: "Update existing health check"
+      validation: "strict"
+
+    delete_health_check:
+      description: "Remove health check entry"
+      soft_delete: false
+
+    list_health_checks:
+      description: "List health checks with filtering"
+      pagination: true
+      sorting: true
+
+  # Business rules
+  business_rules:
+    validation:
+      required_fields: [ "service_name", "status" ]
+      status_values: [ "healthy", "unhealthy", "unknown" ]
+
+    constraints:
+      max_response_time: 30000  # 30 seconds
+      service_name_unique: false
+
+  # Error handling
+  error_handling:
+    validation_errors: "detailed"
+    business_rule_violations: "user_friendly"
+    system_errors: "logged_only"

@@ -14,27 +14,27 @@ entities:
         type: "int"
         required: false
         index: true
-      
+
       - name: "username"
         type: "str"
         required: true
         unique: true
         index: true
-      
+
       - name: "email"
         type: "EmailStr"
         required: true
         unique: true
-      
+
       - name: "full_name"
         type: "str"
         required: true
-      
+
       - name: "bio"
         type: "Optional[str]"
         required: false
         description: "User biography"
-      
+
       - name: "created_at"
         type: "datetime"
         default: "datetime.utcnow"
@@ -43,7 +43,7 @@ entities:
       - entity: "Post"
         type: "one_to_many"
         back_populates: "author"
-      
+
       - entity: "Comment"
         type: "one_to_many"
         back_populates: "author"
@@ -55,46 +55,46 @@ entities:
         type: "int"
         required: false
         index: true
-      
+
       - name: "title"
         type: "str"
         required: true
         index: true
-      
+
       - name: "slug"
         type: "str"
         required: true
         unique: true
         index: true
         description: "URL-friendly post identifier"
-      
+
       - name: "content"
         type: "str"
         required: true
         description: "Post content in markdown"
-      
+
       - name: "excerpt"
         type: "Optional[str]"
         required: false
         description: "Short post summary"
-      
+
       - name: "published"
         type: "bool"
         required: true
         default: "false"
-      
+
       - name: "published_at"
         type: "Optional[datetime]"
         required: false
-      
+
       - name: "created_at"
         type: "datetime"
         default: "datetime.utcnow"
-      
+
       - name: "updated_at"
         type: "datetime"
         default: "datetime.utcnow"
-      
+
       - name: "author_id"
         type: "int"
         required: true
@@ -105,7 +105,7 @@ entities:
         type: "many_to_one"
         back_populates: "posts"
         foreign_key: "user.id"
-      
+
       - entity: "Comment"
         type: "one_to_many"
         back_populates: "post"
@@ -117,27 +117,27 @@ entities:
         type: "int"
         required: false
         index: true
-      
+
       - name: "content"
         type: "str"
         required: true
         description: "Comment content"
-      
+
       - name: "approved"
         type: "bool"
         required: true
         default: "false"
         description: "Whether comment is approved for display"
-      
+
       - name: "created_at"
         type: "datetime"
         default: "datetime.utcnow"
-      
+
       - name: "post_id"
         type: "int"
         required: true
         description: "Foreign key to Post"
-      
+
       - name: "author_id"
         type: "int"
         required: true
@@ -148,7 +148,7 @@ entities:
         type: "many_to_one"
         back_populates: "comments"
         foreign_key: "post.id"
-      
+
       - entity: "User"
         type: "many_to_one"
         back_populates: "comments"
@@ -159,11 +159,11 @@ endpoints:
   - method: "POST"
     path: "/users/"
     operation: "create_user"
-  
+
   - method: "GET"
     path: "/users/{id}"
     operation: "get_user"
-  
+
   - method: "GET"
     path: "/users/"
     operation: "list_users"
@@ -172,15 +172,15 @@ endpoints:
   - method: "POST"
     path: "/posts/"
     operation: "create_post"
-  
+
   - method: "GET"
     path: "/posts/{id}"
     operation: "get_post"
-  
+
   - method: "GET"
     path: "/posts/"
     operation: "list_posts"
-  
+
   - method: "GET"
     path: "/posts/published"
     operation: "list_published_posts"
@@ -189,7 +189,7 @@ endpoints:
   - method: "POST"
     path: "/posts/{post_id}/comments/"
     operation: "create_comment"
-  
+
   - method: "GET"
     path: "/posts/{post_id}/comments/"
     operation: "list_post_comments"

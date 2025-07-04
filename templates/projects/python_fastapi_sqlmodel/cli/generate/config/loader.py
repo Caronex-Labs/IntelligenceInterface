@@ -5,14 +5,13 @@ This module provides the core configuration loading functionality, including saf
 type validation through Pydantic models, and descriptive error messages for all failure modes.
 """
 
-import os
 import logging
 from pathlib import Path
 from typing import Union, Dict, Any, Optional
 import yaml
 from pydantic import ValidationError
 
-from .models import Configuration, EntityDomainConfig, EntityConfig, UseCaseDomainConfig, UseCaseConfig, BusinessRulesConfig
+from .models import Configuration, EntityDomainConfig, UseCaseDomainConfig
 from .exceptions import ConfigurationError, ConfigurationValidationError, ConfigurationFileError
 
 logger = logging.getLogger(__name__)
@@ -277,6 +276,35 @@ class ConfigurationLoader:
             return "Check field values - ensure they meet validation requirements"
         
         return "Review configuration structure and field requirements"
+    
+    def load_hierarchical_config(self, domain_yaml: str, entities_yaml: str) -> Dict[str, Any]:
+        """
+        Load hierarchical configuration from domain and entities YAML strings.
+        
+        Args:
+            domain_yaml: Domain configuration as YAML string
+            entities_yaml: Entities configuration as YAML string
+            
+        Returns:
+            Dictionary with merged configuration
+        """
+        try:
+            domain_data = yaml.safe_load(domain_yaml) or {}
+            entities_data = yaml.safe_load(entities_yaml) or {}
+            
+            # Merge configurations
+            merged_config = {
+                'domain': domain_data,
+                'entities': entities_data
+            }
+            
+            logger.info("Successfully loaded hierarchical configuration")
+            return merged_config
+            
+        except yaml.YAMLError as e:
+            raise ConfigurationValidationError(f"YAML parsing error: {e}")
+        except Exception as e:
+            raise ConfigurationError(f"Failed to load hierarchical config: {e}")
 
 
 def load_configuration(file_path: Union[str, Path], strict_mode: bool = True) -> Configuration:
@@ -369,7 +397,7 @@ class EntityDomainLoader:
             return entity_domain_config
             
         except ValidationError as e:
-            error_msg = f"Entity domain configuration validation failed"
+            error_msg = "Entity domain configuration validation failed"
             logger.error(error_msg)
             
             # Create detailed error message from Pydantic validation errors
@@ -747,7 +775,7 @@ class UseCaseLoader:
             return usecase_domain_config
             
         except ValidationError as e:
-            error_msg = f"Use case domain configuration validation failed"
+            error_msg = "Use case domain configuration validation failed"
             logger.error(error_msg)
             
             # Create detailed error message from Pydantic validation errors
@@ -1077,3 +1105,381 @@ def load_usecase_domain_from_strings(usecase_yaml: str, business_rules_yaml: str
     """
     loader = UseCaseLoader(strict_mode=strict_mode)
     return loader.load_from_strings(usecase_yaml, business_rules_yaml)
+
+
+class CoLocationConfigLoader:
+    """
+    Specialized loader for co-located configuration architecture.
+    
+    Loads templates and configs from domain directory structure where they live
+    alongside generated code:
+    
+    app/domain/User/
+    ├── entities.py          # Generated code
+    ├── entities.py.j2       # Template (co-located)
+    ├── domain.yaml          # Config (co-located)  
+    └── entities.yaml        # Config (co-located)
+    """
+    
+    def __init__(self, strict_mode: bool = True):
+        """
+        Initialize co-location config loader.
+        
+        Args:
+            strict_mode: If True, apply strict validation
+        """
+        self.strict_mode = strict_mode
+        self.entity_loader = EntityDomainLoader(strict_mode=strict_mode)
+        self.config_loader = ConfigurationLoader(strict_mode=strict_mode)
+        logger.info("CoLocationConfigLoader initialized with strict_mode=%s", strict_mode)
+    
+    def load_co_located_configs(self, domain_dir: Path) -> Configuration:
+        """
+        Load and merge configs from co-located files in domain directory.
+        
+        Args:
+            domain_dir: Domain directory containing co-located templates and configs
+            
+        Returns:
+            Merged Configuration object
+            
+        Raises:
+            ConfigurationFileError: If required files cannot be found
+            ConfigurationValidationError: If validation fails
+        """
+        logger.info("Loading co-located configuration from: %s", domain_dir)
+        
+        if not domain_dir.exists():
+            raise ConfigurationFileError(
+                f"Domain directory not found: {domain_dir}",
+                file_path=str(domain_dir),
+                suggestion="Ensure the domain directory exists"
+            )
+        
+        # Look for co-located config files
+        domain_config_file = domain_dir / 'domain.yaml'
+        entities_config_file = domain_dir / 'entities.yaml'
+        
+        # Fallback to traditional config structure if co-located files not found
+        if not domain_config_file.exists() or not entities_config_file.exists():
+            logger.info("Co-located configs not found, falling back to traditional config loading")
+            return self._fallback_to_traditional_loading(domain_dir)
+        
+        try:
+            # Load co-located configurations using EntityDomainLoader
+            config = self.entity_loader.load_from_files(domain_config_file, entities_config_file)
+            
+            logger.info("Successfully loaded co-located configuration")
+            return self._convert_entity_domain_to_configuration(config)
+            
+        except Exception as e:
+            logger.error("Failed to load co-located configuration: %s", e)
+            
+            # Try fallback to traditional loading
+            logger.info("Attempting fallback to traditional config loading")
+            return self._fallback_to_traditional_loading(domain_dir)
+    
+    def _fallback_to_traditional_loading(self, domain_dir: Path) -> Configuration:
+        """
+        Fallback to traditional config loading when co-located files not found.
+        
+        Args:
+            domain_dir: Domain directory
+            
+        Returns:
+            Configuration object from traditional config files
+        """
+        domain_name = domain_dir.name
+        
+        # Look for traditional config files in parent configs directory
+        config_dir = domain_dir.parent.parent.parent / 'configs'  # Go up from app/domain/DomainName to configs
+        
+        # Try different naming patterns
+        traditional_config_patterns = [
+            config_dir / f"{domain_name.lower()}_domain.yaml",
+            config_dir / f"{domain_name}_domain.yaml", 
+            config_dir / f"{domain_name.lower()}.yaml",
+            config_dir / f"{domain_name}.yaml"
+        ]
+        
+        for config_file in traditional_config_patterns:
+            if config_file.exists():
+                logger.info("Found traditional config file: %s", config_file)
+                return self.config_loader.load_from_file(config_file)
+        
+        # If no traditional configs found, create minimal config
+        logger.warning("No configuration files found, creating minimal config for domain: %s", domain_name)
+        return self._create_minimal_configuration(domain_name)
+    
+    def _convert_entity_domain_to_configuration(self, entity_config: EntityDomainConfig) -> Configuration:
+        """
+        Convert EntityDomainConfig to Configuration object.
+        
+        Args:
+            entity_config: EntityDomainConfig object
+            
+        Returns:
+            Configuration object
+        """
+        try:
+            # Convert EntityDomainConfig structure to Configuration structure
+            config_dict = {
+                'domain': {
+                    'name': entity_config.name,
+                    'plural': entity_config.plural,
+                    'description': getattr(entity_config, 'description', ''),
+                    'package': entity_config.package
+                },
+                'entities': entity_config.entities,
+                'endpoints': getattr(entity_config, 'endpoints', []),
+                'metadata': getattr(entity_config, 'metadata', {})
+            }
+            
+            # Create Configuration object
+            return Configuration(**config_dict)
+            
+        except Exception as e:
+            logger.error("Failed to convert EntityDomainConfig to Configuration: %s", e)
+            raise ConfigurationValidationError(
+                f"Failed to convert configuration format: {e}",
+                suggestion="Check configuration structure and field compatibility"
+            ) from e
+    
+    def _create_minimal_configuration(self, domain_name: str) -> Configuration:
+        """
+        Create minimal configuration when no config files are found.
+        
+        Args:
+            domain_name: Name of the domain
+            
+        Returns:
+            Minimal Configuration object
+        """
+        minimal_config = {
+            'domain': {
+                'name': domain_name,
+                'plural': f"{domain_name}s",
+                'description': f'Auto-generated {domain_name} domain',
+                'package': domain_name.lower()
+            },
+            'entities': [
+                {
+                    'name': domain_name,
+                    'fields': [
+                        {
+                            'name': 'id',
+                            'type': 'UUID',
+                            'required': True,
+                            'primary_key': True,
+                            'sqlmodel_field': 'Field(primary_key=True, default_factory=uuid4)'
+                        },
+                        {
+                            'name': 'created_at',
+                            'type': 'datetime',
+                            'required': True,
+                            'sqlmodel_field': 'Field(default_factory=datetime.utcnow)'
+                        },
+                        {
+                            'name': 'updated_at',
+                            'type': 'datetime',
+                            'required': True,
+                            'sqlmodel_field': 'Field(default_factory=datetime.utcnow)'
+                        }
+                    ],
+                    'relationships': []
+                }
+            ],
+            'endpoints': [
+                {
+                    'path': f'/{domain_name.lower()}s',
+                    'operation': 'create',
+                    'method': 'POST'
+                },
+                {
+                    'path': f'/{domain_name.lower()}s/{{id}}',
+                    'operation': 'get_by_id',
+                    'method': 'GET'
+                },
+                {
+                    'path': f'/{domain_name.lower()}s',
+                    'operation': 'list',
+                    'method': 'GET'
+                },
+                {
+                    'path': f'/{domain_name.lower()}s/{{id}}',
+                    'operation': 'update',
+                    'method': 'PUT'
+                },
+                {
+                    'path': f'/{domain_name.lower()}s/{{id}}',
+                    'operation': 'delete',
+                    'method': 'DELETE'
+                }
+            ],
+            'metadata': {
+                'generated_by': 'co_location_loader',
+                'auto_generated': True
+            }
+        }
+        
+        try:
+            return Configuration(**minimal_config)
+        except Exception as e:
+            logger.error("Failed to create minimal configuration: %s", e)
+            raise ConfigurationValidationError(
+                f"Failed to create minimal configuration: {e}",
+                suggestion="Check default configuration structure"
+            ) from e
+    
+    def has_co_located_configs(self, domain_dir: Path) -> bool:
+        """
+        Check if domain directory has co-located configuration files.
+        
+        Args:
+            domain_dir: Domain directory to check
+            
+        Returns:
+            True if co-located configs are present
+        """
+        domain_config = domain_dir / 'domain.yaml'
+        entities_config = domain_dir / 'entities.yaml'
+        
+        return domain_config.exists() and entities_config.exists()
+    
+    def has_co_located_templates(self, domain_dir: Path) -> bool:
+        """
+        Check if domain directory has co-located template files.
+        
+        Args:
+            domain_dir: Domain directory to check
+            
+        Returns:
+            True if co-located templates are present
+        """
+        template_files = [
+            'entities.py.j2',
+            'exceptions.py.j2',
+            'test_entities.py.j2',
+            'test_exceptions.py.j2'
+        ]
+        
+        return any((domain_dir / template_file).exists() for template_file in template_files)
+
+
+def load_co_located_configuration(domain_dir: Union[str, Path], strict_mode: bool = True) -> Configuration:
+    """
+    Convenience function to load co-located configuration from domain directory.
+    
+    Args:
+        domain_dir: Path to domain directory with co-located configs
+        strict_mode: If True, apply strict validation
+        
+    Returns:
+        Validated Configuration object
+    """
+    loader = CoLocationConfigLoader(strict_mode=strict_mode)
+    return loader.load_co_located_configs(Path(domain_dir))
+
+
+def merge_co_located_configurations(base_config: Configuration, overrides: Dict[str, Any]) -> Configuration:
+    """
+    Merge co-located configurations with hierarchical override support.
+    
+    Args:
+        base_config: Base configuration object
+        overrides: Dictionary of configuration overrides
+        
+    Returns:
+        Merged Configuration object with co-location metadata
+    """
+    logger.info("Merging co-located configurations with hierarchical overrides")
+    
+    try:
+        # Convert base configuration to dictionary for merging
+        if hasattr(base_config, 'dict'):
+            base_dict = base_config.dict()
+        elif hasattr(base_config, '__dict__'):
+            base_dict = base_config.__dict__.copy()
+        else:
+            base_dict = {}
+        
+        # Apply hierarchical merging
+        merged_dict = _deep_merge_dicts(base_dict, overrides)
+        
+        # Track co-location metadata
+        co_location_meta = {
+            'template_source': overrides.get('template_source', 'co_located'),
+            'config_source': 'merged',
+            'generation_mode': overrides.get('generation_mode', 'co_located'),
+            'co_located_directory': overrides.get('co_located_directory'),
+            'template_version': overrides.get('template_version'),
+            'last_updated': datetime.now(),
+            'custom_templates': overrides.get('custom_templates', []),
+            'override_count': _count_overrides(base_dict, overrides)
+        }
+        
+        # Add co-location metadata to merged configuration
+        merged_dict['co_location'] = co_location_meta
+        
+        # Create and return merged configuration
+        merged_config = Configuration(**merged_dict)
+        
+        logger.info(f"Successfully merged configuration with {co_location_meta['override_count']} overrides")
+        return merged_config
+        
+    except Exception as e:
+        logger.error(f"Failed to merge co-located configurations: {e}")
+        raise ConfigurationError(f"Configuration merging failed: {e}") from e
+
+
+def _deep_merge_dicts(base: Dict[str, Any], overrides: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Perform deep merge of two dictionaries with override precedence.
+    
+    Args:
+        base: Base dictionary
+        overrides: Override dictionary
+        
+    Returns:
+        Merged dictionary with overrides taking precedence
+    """
+    merged = base.copy()
+    
+    for key, value in overrides.items():
+        if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
+            # Recursively merge nested dictionaries
+            merged[key] = _deep_merge_dicts(merged[key], value)
+        elif key in merged and isinstance(merged[key], list) and isinstance(value, list):
+            # Merge lists by extending base with overrides
+            merged[key] = merged[key] + [item for item in value if item not in merged[key]]
+        else:
+            # Override takes precedence for all other types
+            merged[key] = value
+    
+    return merged
+
+
+def _count_overrides(base: Dict[str, Any], overrides: Dict[str, Any]) -> int:
+    """
+    Count the number of configuration overrides applied.
+    
+    Args:
+        base: Base configuration dictionary
+        overrides: Override configuration dictionary
+        
+    Returns:
+        Number of overrides applied
+    """
+    count = 0
+    
+    for key, value in overrides.items():
+        if key not in base:
+            count += 1  # New key added
+        elif base[key] != value:
+            if isinstance(base[key], dict) and isinstance(value, dict):
+                # Recursively count nested overrides
+                count += _count_overrides(base[key], value)
+            else:
+                count += 1  # Value changed
+    
+    return count

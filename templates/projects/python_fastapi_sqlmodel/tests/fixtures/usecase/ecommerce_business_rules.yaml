@@ -6,7 +6,7 @@ rules:
     severity: "error"
     context: "ecommerce_checkout"
     custom_exception: "EmptyCartError"
-  
+
   - name: "customer_authenticated"
     type: "security"
     condition: "customer.is_authenticated and customer.is_active"
@@ -14,7 +14,7 @@ rules:
     severity: "error"
     context: "ecommerce_checkout"
     custom_exception: "AuthenticationRequiredError"
-  
+
   - name: "payment_method_valid"
     type: "validation"
     condition: "payment_method.is_valid() and payment_method.is_not_expired()"
@@ -22,14 +22,14 @@ rules:
     severity: "error"
     context: "ecommerce_checkout"
     custom_exception: "InvalidPaymentMethodError"
-  
+
   - name: "shipping_address_valid"
     type: "validation"
     condition: "shipping_address.is_complete() and shipping_address.is_deliverable()"
     error_message: "Shipping address is incomplete or not deliverable"
     severity: "error"
     context: "ecommerce_checkout"
-  
+
   - name: "inventory_available"
     type: "business_logic"
     condition: "all(item.requested_quantity <= item.available_quantity for item in cart.items)"
@@ -37,7 +37,7 @@ rules:
     severity: "error"
     context: "ecommerce_checkout"
     custom_exception: "InsufficientInventoryError"
-  
+
   - name: "fraud_check_passed"
     type: "security"
     condition: "fraud_score < fraud_threshold and not customer.is_flagged"
@@ -45,28 +45,28 @@ rules:
     severity: "error"
     context: "ecommerce_checkout"
     custom_exception: "FraudDetectionError"
-  
+
   - name: "total_amount_valid"
     type: "business_logic"
     condition: "order_total > 0 and order_total <= maximum_order_amount"
     error_message: "Order total is invalid or exceeds maximum allowed amount"
     severity: "error"
     context: "ecommerce_checkout"
-  
+
   - name: "valid_shipping_method"
     type: "validation"
     condition: "shipping_method in available_shipping_methods and shipping_method.supports_address(shipping_address)"
     error_message: "Selected shipping method is not available for this address"
     severity: "error"
     context: "ecommerce_checkout"
-  
+
   - name: "customer_credit_limit"
     type: "business_logic"
     condition: "order_total <= customer.available_credit_limit"
     error_message: "Order total exceeds customer credit limit"
     severity: "warning"
     context: "ecommerce_checkout"
-  
+
   - name: "promotional_code_valid"
     type: "business_logic"
     condition: "promotional_code.is_active() and promotional_code.is_applicable_to_cart(cart)"
@@ -76,26 +76,26 @@ rules:
 
 validation_groups:
   - name: "pre_checkout_validation"
-    rules: ["cart_not_empty", "customer_authenticated", "shipping_address_valid"]
-    execution_order: ["customer_authenticated", "cart_not_empty", "shipping_address_valid"]
+    rules: [ "cart_not_empty", "customer_authenticated", "shipping_address_valid" ]
+    execution_order: [ "customer_authenticated", "cart_not_empty", "shipping_address_valid" ]
     description: "Initial validation before checkout process begins"
-  
+
   - name: "payment_validation"
-    rules: ["payment_method_valid", "total_amount_valid", "customer_credit_limit", "fraud_check_passed"]
-    execution_order: ["payment_method_valid", "total_amount_valid", "fraud_check_passed", "customer_credit_limit"]
+    rules: [ "payment_method_valid", "total_amount_valid", "customer_credit_limit", "fraud_check_passed" ]
+    execution_order: [ "payment_method_valid", "total_amount_valid", "fraud_check_passed", "customer_credit_limit" ]
     description: "Payment-related validation rules"
-  
+
   - name: "inventory_validation"
-    rules: ["inventory_available"]
+    rules: [ "inventory_available" ]
     description: "Inventory availability validation"
-  
+
   - name: "shipping_validation"
-    rules: ["shipping_address_valid", "valid_shipping_method"]
-    execution_order: ["shipping_address_valid", "valid_shipping_method"]
+    rules: [ "shipping_address_valid", "valid_shipping_method" ]
+    execution_order: [ "shipping_address_valid", "valid_shipping_method" ]
     description: "Shipping-related validation rules"
-  
+
   - name: "promotion_validation"
-    rules: ["promotional_code_valid"]
+    rules: [ "promotional_code_valid" ]
     description: "Promotional code validation rules"
 
 error_handling:

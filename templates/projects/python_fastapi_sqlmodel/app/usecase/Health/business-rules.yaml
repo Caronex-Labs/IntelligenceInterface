@@ -1,0 +1,49 @@
+# Business Rules Configuration - Co-located YAML
+#
+# This business-rules.yaml file defines specific business rules
+# and validation logic for the Health domain.
+
+business_rules:
+  validation_rules:
+    - name: "service_name_validation"
+      description: "Validate service name format and length"
+      rule: "service_name must be 1-100 characters, alphanumeric with hyphens and underscores"
+      implementation: "validate_service_name"
+
+    - name: "status_validation"
+      description: "Validate health status values"
+      rule: "status must be one of: healthy, unhealthy, unknown"
+      implementation: "validate_health_status"
+
+    - name: "response_time_validation"
+      description: "Validate response time values"
+      rule: "response_time_ms must be non-negative integer"
+      implementation: "validate_response_time"
+
+  business_constraints:
+    - name: "duplicate_service_checks"
+      description: "Allow multiple health checks for the same service"
+      constraint: "Multiple health checks allowed per service"
+      enforcement: "informational"
+
+    - name: "error_message_requirement"
+      description: "Error message required for unhealthy status"
+      constraint: "error_message must be provided when status is unhealthy"
+      enforcement: "strict"
+
+  workflow_rules:
+    - name: "health_check_lifecycle"
+      description: "Health check status transition rules"
+      transitions:
+        - from: "unknown"
+          to: [ "healthy", "unhealthy" ]
+        - from: "healthy"
+          to: [ "unhealthy", "unknown" ]
+        - from: "unhealthy"
+          to: [ "healthy", "unknown" ]
+
+  audit_rules:
+    - name: "health_check_tracking"
+      description: "Track all health check operations"
+      operations: [ "create", "update", "delete" ]
+      fields: [ "service_name", "status", "last_check_time" ]

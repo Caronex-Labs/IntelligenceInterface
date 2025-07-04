@@ -16,7 +16,7 @@ domain:
   description: "{{domain|title}} domain with hexagonal architecture"
   package: "app.domain.{{domain}}"
   version: "1.0.0"
-  
+
 # Base Entity Configuration
 entity:
   # Base classes and inheritance
@@ -29,15 +29,15 @@ entity:
       description: "UUID primary key generation"
       enabled: true
       import_path: "app.domain.mixins.uuid_mixin"
-      
-    - name: "TimestampMixin" 
+
+    - name: "TimestampMixin"
       description: "Created/updated timestamp fields"
       enabled: true
       import_path: "app.domain.mixins.timestamp_mixin"
       fields:
         - "created_at"
         - "updated_at"
-        
+
     - name: "SoftDeleteMixin"
       description: "Soft delete functionality"
       enabled: false  # Can be overridden in entities.yaml
@@ -54,7 +54,7 @@ primary_key:
   nullable: false
   description: "Unique identifier"
   default_factory: "uuid4"
-  
+
 # Timestamp Field Configuration
 timestamps:
   created_at:
@@ -63,14 +63,14 @@ timestamps:
     default_factory: "datetime.utcnow"
     description: "Creation timestamp"
     index: true
-    
+
   updated_at:
-    type: "datetime" 
+    type: "datetime"
     nullable: false
     default_factory: "datetime.utcnow"
     description: "Last update timestamp"
     auto_update: true
-    
+
   deleted_at:
     type: "Optional[datetime]"
     nullable: true
@@ -84,40 +84,40 @@ field_types:
     python_type: "str"
     sqlmodel_type: "str"
     validation: "strip_whitespace"
-    
+
   email:
     python_type: "EmailStr"
     sqlmodel_type: "str"
     validation: "email_validator"
     unique: true
     index: true
-    
+
   integer:
     python_type: "int"
     sqlmodel_type: "int"
     validation: "range_validator"
-    
+
   float:
     python_type: "float"
     sqlmodel_type: "float"
     validation: "range_validator"
-    
+
   boolean:
     python_type: "bool"
     sqlmodel_type: "bool"
     default: false
-    
+
   json:
     python_type: "Dict[str, Any]"
     sqlmodel_type: "JSON"
     default_factory: "dict"
-    
+
   # Optional types
   optional_string:
     python_type: "Optional[str]"
     sqlmodel_type: "str"
     nullable: true
-    
+
   # List types
   string_list:
     python_type: "List[str]"
@@ -131,18 +131,18 @@ validation:
     min_length: 1
     max_length: 255
     strip_whitespace: true
-    
+
   # Email validation
   email_rules:
     validate_email: true
     check_deliverability: false
-    
+
   # Business rule validation
   business_rules:
     enforce_unique_constraints: true
     validate_required_fields: true
     check_field_relationships: true
-    
+
   # Custom validation patterns
   custom_validators:
     - name: "domain_specific_validator"
@@ -156,18 +156,18 @@ relationships:
     cascade_delete: false
     lazy_loading: true
     back_populates: true
-    
+
   # Foreign key patterns
   foreign_key:
     naming_convention: "{{related_table}}_id"
     nullable: true
     index: true
-    
+
   # One-to-many patterns
   one_to_many:
     collection_class: "List"
     cascade: "save-update"
-    
+
   # Many-to-many patterns  
   many_to_many:
     association_table: "{{table1}}_{{table2}}"
@@ -180,13 +180,13 @@ database:
     convention: "snake_case"
     prefix: "{{domain}}_"
     pluralize: true
-    
+
   # Index configuration
   indexes:
     auto_create_primary: true
     auto_create_foreign_key: true
     auto_create_unique: true
-    
+
   # Constraint configuration
   constraints:
     check_constraints: true
@@ -200,20 +200,20 @@ generation:
     preserve_custom_code: true
     preservation_markers: "@pyhex"
     auto_format: true
-    
+
   # Import configuration
   imports:
     base_imports:
       - "from datetime import datetime"
-      - "from uuid import UUID, uuid4" 
+      - "from uuid import UUID, uuid4"
       - "from typing import Optional, List, Dict, Any"
       - "from sqlmodel import SQLModel, Field"
       - "from pydantic import EmailStr, validator"
-      
+
     conditional_imports:
       soft_delete: "from sqlalchemy import Boolean"
       json_fields: "from sqlalchemy.dialects.postgresql import JSON"
-      
+
   # Code style configuration
   style:
     line_length: 88
@@ -228,14 +228,14 @@ integration:
     auto_generate_schemas: true
     include_examples: true
     generate_openapi_tags: true
-    
+
   # Pydantic integration
   pydantic:
     config_class: "Config"
     validate_assignment: true
     use_enum_values: true
     allow_population_by_field_name: true
-    
+
   # SQLModel integration
   sqlmodel:
     table_mode: true
@@ -252,8 +252,8 @@ quality:
   # Testing requirements
   test_coverage:
     minimum: 90
-    exclude_patterns: ["__init__.py", "migrations/"]
-    
+    exclude_patterns: [ "__init__.py", "migrations/" ]
+
   # Code quality
   linting:
     max_complexity: 10

@@ -5,6 +5,7 @@
 ## Purpose
 
 After completing significant development phases (sprints, major features), perform comprehensive memory assimilation to:
+
 - Extract and preserve all insights from implementation logs
 - Update architectural patterns based on discovered solutions
 - Consolidate lessons learned across all memory files
@@ -13,6 +14,7 @@ After completing significant development phases (sprints, major features), perfo
 ## When to Use
 
 Execute Memory Assimilation after:
+
 - ✅ **Sprint completion** - All planned tasks in sprint completed
 - ✅ **Major feature delivery** - Significant architectural or functional changes
 - ✅ **Multiple agent coordination** - Parallel agents have completed work
@@ -23,14 +25,18 @@ Execute Memory Assimilation after:
 ### Phase 1: Data Collection & Analysis
 
 #### 1. Task Completion Review
+
 **Validate completed tasks against sprint planning:**
+
 - Cross-reference `.claude/activeContext.md` and sprint documentation
 - Verify all BDD scenarios were addressed and acceptance criteria met
 - Confirm all quality gates passed (tests, builds, functionality)
 - Document any incomplete or partially completed work
 
 #### 2. Tech Debt Reconciliation
+
 **Analyze `.claude/TechDebt.md` against implementation:**
+
 - Review tech debt items created during implementation period
 - Validate resolution of tech debt items marked as resolved
 - Update status of in-progress tech debt items
@@ -38,11 +44,14 @@ Execute Memory Assimilation after:
 - Extract new tech debt patterns discovered
 
 #### 3. Implementation Log Analysis
+
 ```bash
 # Read and analyze all recent implementation logs
 .claude/implementationLogs.md
 ```
+
 **Extract:**
+
 - Completed tasks and their outcomes
 - New patterns discovered during implementation
 - Files modified and architectural changes
@@ -51,7 +60,9 @@ Execute Memory Assimilation after:
 - Tech debt impact analysis
 
 #### 4. Quality Feedback Analysis
+
 **Review `.claude/qualityFeedback.md` for insights:**
+
 - BDD compliance assessment results
 - Testing reliability observations
 - Code quality insights and patterns
@@ -59,36 +70,46 @@ Execute Memory Assimilation after:
 - Risk assessment outcomes
 
 #### 5. Git History Analysis
+
 ```bash
 # Review recent commits for architectural changes (if git repo available)
 git log --oneline -10
 git diff HEAD~5..HEAD --name-only
 ```
+
 **Extract:**
+
 - File change patterns
 - Commit message patterns
 - Scope of architectural modifications
 - Development velocity insights
 
 #### 6. Current State Assessment
+
 **Read all memory files:**
+
 - `.claude/activeContext.md` - Current project state
 - `CLAUDE.md` - Implementation patterns (in project root)
 - `.claude/coordinationContext.md` - Agent coordination
 - `.claude/progress.md` - Development status
 - `.claude/qualityFeedback.md` - Quality insights
+- `.claude/uv_usage_note.md` - CRITICAL Python execution requirements
 
 ### Phase 2: Pattern Extraction & Consolidation
 
 #### 7. Tech Debt Pattern Analysis
+
 **Extract tech debt patterns from analysis:**
+
 - Common types of tech debt created during implementation
 - Effective tech debt resolution strategies
 - Tech debt prevention patterns
 - Priority assessment refinements
 
 #### 8. Architectural Pattern Updates
+
 **Update `CLAUDE.md` with:**
+
 - New implementation patterns discovered
 - Refined existing patterns with better examples
 - Quality enforcement patterns
@@ -96,7 +117,9 @@ git diff HEAD~5..HEAD --name-only
 - Tech debt management patterns
 
 #### 9. Context Consolidation
+
 **Update `.claude/activeContext.md` with:**
+
 - Completed sprint/phase status
 - New architectural decisions
 - Updated development priorities
@@ -104,7 +127,9 @@ git diff HEAD~5..HEAD --name-only
 - Tech debt status summary
 
 #### 10. Coordination Protocol Refinement
+
 **Update `.claude/coordinationContext.md` with:**
+
 - Improved agent coordination patterns
 - Lessons from parallel execution
 - Enhanced quality gates
@@ -114,14 +139,18 @@ git diff HEAD~5..HEAD --name-only
 ### Phase 3: Memory Optimization & Preparation
 
 #### 11. Tech Debt Status Updates
+
 **Update `.claude/TechDebt.md` with:**
+
 - Resolution status for completed tech debt items
 - New tech debt items discovered during implementation
 - Updated priority assessments based on current system state
 - Revised target resolution timelines
 
 #### 12. Quality Insights Integration
+
 **Update `.claude/qualityFeedback.md` with:**
+
 - Testing reliability improvements
 - Performance optimizations discovered
 - Code quality patterns
@@ -129,7 +158,9 @@ git diff HEAD~5..HEAD --name-only
 - Tech debt impact analysis
 
 #### 13. Progress Tracking Update
+
 **Update `.claude/progress.md` with:**
+
 - Completed sprint/phase status
 - Updated feature completion status
 - Revised development roadmap
@@ -137,7 +168,9 @@ git diff HEAD~5..HEAD --name-only
 - Tech debt resolution progress
 
 #### 14. Sprint Documentation Updates
+
 **Update sprint planning documents with current status:**
+
 - Update task completion status (PENDING → COMPLETED)
 - Add quality metrics and BDD compliance results
 - Update completion percentages and phase progress
@@ -146,7 +179,9 @@ git diff HEAD~5..HEAD --name-only
 - Update dependencies between tasks based on implementation learnings
 
 #### 15. Command Enhancement
+
 **Update agent command files based on insights:**
+
 - `.claude/commands/Quickfire.md` - Enhanced patterns
 - `.claude/commands/BDDImplementation.md` - Improved workflows
 - Tech debt management workflow improvements
@@ -155,28 +190,36 @@ git diff HEAD~5..HEAD --name-only
 ### Phase 4: Knowledge Validation & Documentation
 
 #### 16. Task Completion Validation
+
 **Verify task completion accuracy:**
+
 - Confirm all claimed completed tasks actually meet acceptance criteria
 - Validate BDD scenario fulfillment against implementation logs
 - Ensure all quality gates were properly met
 - Document any tasks requiring follow-up work
 
 #### 17. Tech Debt Validation
+
 **Verify tech debt accuracy:**
+
 - Confirm all resolved tech debt items are actually resolved
 - Validate new tech debt items are properly documented
 - Ensure priority assessments reflect current system reality
 - Check tech debt resolution timeline feasibility
 
 #### 18. Pattern Validation
+
 **Verify all updated patterns:**
+
 - Check for consistency across memory files
 - Validate new patterns against project requirements
 - Ensure coordination protocols are clear
 - Confirm tech debt patterns are actionable
 
 #### 19. Implementation Log Completion
+
 **Add assimilation entry to implementationLogs.md:**
+
 ```markdown
 ## [Date] - Memory Assimilation: [Sprint/Phase Name]
 
@@ -193,6 +236,7 @@ git diff HEAD~5..HEAD --name-only
 ## Memory Assimilation Success Criteria
 
 ### Completeness Checklist:
+
 - [ ] **Task Completion Review**: All completed tasks validated against acceptance criteria
 - [ ] **Tech Debt Reconciliation**: TechDebt.md status updated and validated
 - [ ] **Implementation Analysis**: All implementation logs analyzed and insights extracted
@@ -208,6 +252,7 @@ git diff HEAD~5..HEAD --name-only
 - [ ] **Assimilation Documentation**: Assimilation documented in implementationLogs.md
 
 ### Quality Gates:
+
 - [ ] **Task Validation** - All claimed completed tasks actually meet acceptance criteria
 - [ ] **Tech Debt Accuracy** - Tech debt status reflects implementation reality
 - [ ] **Pattern Consistency** - All patterns documented consistently across memory files
@@ -219,6 +264,7 @@ git diff HEAD~5..HEAD --name-only
 ## Example Memory Assimilation Execution
 
 ### Intelligence Interface Sprint 1 Example:
+
 ```markdown
 Input: "Sprint 1 Phase 1 Task 1 is complete. Please perform a memory assimilation."
 
@@ -251,10 +297,12 @@ Memory Coordinator Functions:
 ## Usage Instructions
 
 **To trigger Memory Assimilation:**
+
 1. Ensure all planned work is completed
 2. Call Memory Coordinator in Memory Coordinator mode
 3. Request: "Please perform a memory assimilation for [Sprint/Phase Name]"
 4. Memory Coordinator executes this protocol comprehensively
 5. Review updated memory files and confirm readiness for next phase
 
-**Memory Assimilation ensures the memory system evolves and improves with each development cycle, preserving all valuable insights and preparing for optimal future development.**
+**Memory Assimilation ensures the memory system evolves and improves with each development cycle, preserving all
+valuable insights and preparing for optimal future development.**

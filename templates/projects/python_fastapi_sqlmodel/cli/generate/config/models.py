@@ -9,7 +9,6 @@ proper structure before template processing begins.
 from typing import List, Optional, Dict, Any, Union
 from enum import Enum
 from pydantic import BaseModel, Field, field_validator, model_validator
-from pathlib import Path
 from datetime import datetime
 import logging
 
@@ -24,11 +23,13 @@ class FieldType(str, Enum):
     BOOL = "bool"
     DATETIME = "datetime"
     EMAIL = "EmailStr"
+    UUID = "UUID"
     OPTIONAL_STR = "Optional[str]"
     OPTIONAL_INT = "Optional[int]"
     OPTIONAL_FLOAT = "Optional[float]"
     OPTIONAL_BOOL = "Optional[bool]"
     OPTIONAL_DATETIME = "Optional[datetime]"
+    OPTIONAL_UUID = "Optional[UUID]"
     LIST_STR = "List[str]"
     LIST_INT = "List[int]"
 
@@ -240,6 +241,43 @@ class DomainConfig(BaseModel):
         return self
 
 
+class CoLocationConfig(BaseModel):
+    """Configuration for co-location metadata and tracking."""
+    
+    template_source: str = Field(..., description="Source of templates (global, co_located, custom)")
+    config_source: str = Field(..., description="Source of configuration (global, co_located, merged)")
+    generation_mode: str = Field(default="standard", description="Generation mode (standard, co_located, hybrid)")
+    co_located_directory: Optional[str] = Field(default=None, description="Path to co-located directory")
+    template_version: Optional[str] = Field(default=None, description="Version of templates used")
+    last_updated: Optional[datetime] = Field(default=None, description="Last update timestamp")
+    custom_templates: List[str] = Field(default_factory=list, description="List of custom template files")
+    override_count: int = Field(default=0, description="Number of configuration overrides applied")
+    
+    @field_validator('template_source')
+    def validate_template_source(cls, v):
+        """Validate template source type."""
+        allowed_sources = ['global', 'co_located', 'custom', 'hybrid']
+        if v not in allowed_sources:
+            raise ValueError(f"Template source '{v}' must be one of {allowed_sources}")
+        return v
+    
+    @field_validator('config_source')
+    def validate_config_source(cls, v):
+        """Validate configuration source type."""
+        allowed_sources = ['global', 'co_located', 'merged', 'custom']
+        if v not in allowed_sources:
+            raise ValueError(f"Config source '{v}' must be one of {allowed_sources}")
+        return v
+    
+    @field_validator('generation_mode')
+    def validate_generation_mode(cls, v):
+        """Validate generation mode."""
+        allowed_modes = ['standard', 'co_located', 'hybrid', 'custom']
+        if v not in allowed_modes:
+            raise ValueError(f"Generation mode '{v}' must be one of {allowed_modes}")
+        return v
+
+
 class Configuration(BaseModel):
     """Root configuration model for template generation."""
     
@@ -247,6 +285,7 @@ class Configuration(BaseModel):
     entities: List[EntityConfig] = Field(..., description="Entity configurations")
     endpoints: List[EndpointConfig] = Field(default_factory=list, description="API endpoint configurations")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    co_location: Optional[CoLocationConfig] = Field(default=None, description="Co-location metadata")
     
     @field_validator('entities')
     def validate_entities(cls, v):
@@ -359,6 +398,9 @@ class EntityDomainConfig(BaseModel):
     entities: List[EntityConfig] = Field(default_factory=list, description="Entity configurations")
     endpoints: List[EndpointConfig] = Field(default_factory=list, description="API endpoint configurations")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    
+    # Breakdown metadata (optional, added when config comes from external breakdown)
+    breakdown_metadata: Optional[Dict[str, Any]] = Field(default=None, description="Config breakdown tracking metadata")
     
     @field_validator('name')
     def validate_domain_name(cls, v):

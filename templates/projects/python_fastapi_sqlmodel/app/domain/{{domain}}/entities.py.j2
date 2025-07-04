@@ -1,439 +1,740 @@
-"""{{domain.name|title}} domain entities - Generated from Co-located Template.
+"""{{ entity_name }} domain entities - Generated from Enhanced Co-located Template.
 
-This module contains SQLModel entities for the {{domain.name}} domain following
+This module contains SQLModel entities for the {{ domain }} domain following
 hexagonal architecture principles with co-location pattern implementation.
 
 Generated from:
 - domain.yaml: Base entity configuration and mixins
 - entities.yaml: Entity-specific field definitions and relationships
-- entities.py.j2: This Jinja2 template
+- entities.py.j2: This enhanced Jinja2 template with best practices
 
 Co-location Architecture:
 - Templates, configurations, and generated files in same directory
 - Hierarchical configuration merging for complete context
 - @pyhex preservation markers for custom business logic
+
+SQLModel Patterns Applied:
+- Primary Keys: Optional[int] with default=None for auto-increment IDs
+- UUID Keys: Optional[UUID] with default_factory=uuid4 for UUID primary keys
+- Indexes: index=True for searchable fields (email, name, status, etc.)
+- Constraints: unique=True, min_length, max_length from field validation
+- Default Factories: datetime.utcnow for timestamps, uuid4 for UUIDs
+- Field Descriptions: Comprehensive descriptions for API documentation
+- Email Fields: Automatic unique=True and index=True for EmailStr fields
+- Soft Delete: Indexed is_deleted field for efficient soft delete queries
+
+Jinja2 Best Practices Applied:
+- Macros for repeated field pattern generation
+- Proper variable scoping with Jinja2 set tags
+- Filters for text transformation (|title, |upper, |lower)
+- Tests for conditional logic (is defined, is not none)
+- Template structure improvements with clear sections
 """
 
 # Standard library imports
 from datetime import datetime
 from uuid import UUID, uuid4
-from typing import Optional, List, Dict, Any{% if template_context.features.enable_audit_log %}, Union{% endif %}
-{% if template_context.features.enable_caching %}, TYPE_CHECKING{% endif %}
+{# Build typing imports list #}
+{% set typing_imports = ["Optional", "List", "Dict", "Any"] %}
+{% if template_context.features.enable_audit_log %}
+{%     set _ = typing_imports.append('Union') %}
+{% endif %}
+{% if template_context.features.enable_caching %}
+{%     set _ = typing_imports.append('TYPE_CHECKING') %}
+{% endif %}
+from typing import {{ typing_imports | join(", ") }}
 
 # Third-party imports
-from sqlmodel import SQLModel, Field, Relationship{% if template_context.features.enable_full_text_search %}, text{% endif %}
-from pydantic import EmailStr, validator, root_validator{% if template_context.features.enable_audit_log %}, Field as PydanticField{% endif %}
-{% if template_context.features.enable_soft_delete %}from sqlalchemy import Boolean, DateTime{% endif %}
+{# Build SQLModel imports list #}
+{% set sqlmodel_imports = ["SQLModel", "Field", "Relationship"] %}
+{% if template_context.features.enable_full_text_search %}
+{%     set _ = sqlmodel_imports.append('text') %}
+{% endif %}
+from sqlmodel import {{ sqlmodel_imports | join(", ") }}
+
+{# Build Pydantic imports list #}
+{% set pydantic_imports = ["EmailStr", "field_validator", "model_validator"] %}
+{% if template_context.features.enable_audit_log %}
+{%     set _ = pydantic_imports.append('Field as PydanticField') %}
+{% endif %}
+from pydantic import {{ pydantic_imports | join(", ") }}
+
+{# Check if JSON import is needed using proper variable scoping #}
 {% set json_import_needed = false %}
 {% for entity in entities %}
-{% if entity.fields %}
-{% for field in entity.fields %}
-{% if field.type == "json" %}{% set json_import_needed = true %}{% endif %}
+{%     if entity.fields is defined %}
+{%         for field in entity.fields %}
+{%             if field.type == "json" %}
+{%                 set json_import_needed = true %}
+{%             endif %}
+{%         endfor %}
+{%     endif %}
 {% endfor %}
+{% if json_import_needed %}
 {% endif %}
-{% endfor %}
-{% if json_import_needed %}from sqlalchemy.dialects.postgresql import JSON{% endif %}
 
 # @pyhex:begin:custom_imports
 # Add custom imports here - preserved during regeneration
 # @pyhex:end:custom_imports
 
-{% if entity.mixins %}
-# Base mixins from domain configuration
-{% for mixin in entity.mixins %}
-{% if mixin.enabled %}
-class {{mixin.name}}:
-    """{{mixin.description}}"""
-    {% if mixin.name == "UUIDMixin" %}
-    id: Optional[UUID] = Field(
-        default_factory={{primary_key.default_factory}},
-        primary_key=True,
-        description="{{primary_key.description}}"
-    )
-    {% elif mixin.name == "TimestampMixin" %}
-    {% for field in mixin.fields %}
-    {{field}}: datetime = Field(
-        default_factory={{timestamps[field].default_factory}},
-        description="{{timestamps[field].description}}"{% if timestamps[field].index %},
-        sa_column_kwargs={"index": True}{% endif %}
-    )
-    {% endfor %}
-    {% elif mixin.name == "SoftDeleteMixin" and template_context.features.enable_soft_delete %}
-    {% for field in mixin.fields %}
-    {% if field == "deleted_at" %}
-    {{field}}: Optional[datetime] = Field(
-        default={{timestamps.deleted_at.default}},
-        description="{{timestamps.deleted_at.description}}"
-    )
-    {% elif field == "is_deleted" %}
-    {{field}}: bool = Field(
-        default=False,
-        description="Soft delete flag"
-    )
-    {% endif %}
-    {% endfor %}
-    {% endif %}
+{# ============================================================================ #}
+{# TEMPLATE MACROS - All macro definitions at the top for proper Jinja2 parsing #}
+{# ============================================================================ #}
 
-{% endif %}
-{% endfor %}
-{% endif %}
+{# Helper macros for standardized variable handling #}
+{% macro entity_class_name() %}{{ entity_name }}{% endmacro %}
+{% macro domain_module_name() %}{{ domain }}{% endmacro %}
+{% macro domain_plural_name() %}{{ domain_name_plural }}{% endmacro %}
+
+{# Macro for consistent entity naming in comments and descriptions #}
+{% macro entity_description(action="") %}
+{%- if action -%}
+{{ action }} {{ entity_name }}
+{%- else -%}
+{{ entity_name }}
+{%- endif -%}
+{% endmacro %}
+
+{# Macro for rendering primary key fields with proper type handling #}
+{% macro render_primary_key_field(mixin) %}
+{%     if mixin.name == "UUIDMixin" %}
+# UUID Primary Key following SQLModel documentation pattern
+id: Optional[UUID] = Field(
+    default_factory=uuid4,
+    primary_key=True,
+    description="{{ primary_key.description if primary_key is defined else 'Primary key' }}"
+)
+{%     elif mixin.name == "IntegerMixin" %}
+# Integer Primary Key following SQLModel documentation pattern
+id: Optional[int] = Field(
+    default=None,
+    primary_key=True,
+    description="{{ primary_key.description if primary_key is defined else 'Primary key' }}"
+)
+{%     endif %}
+{% endmacro %}
+
+{# Macro for rendering timestamp fields with proper configuration #}
+{% macro render_timestamp_field(field_name) %}
+#
+{{ field_name | title }}   field with proper default factory
+{{ field_name }}: datetime = Field(
+    default_factory=datetime.utcnow,
+    description="{{ timestamps[field_name].description if timestamps is defined and field_name in timestamps else field_name | title + ' timestamp' }}"
+    {%     if timestamps is defined and field_name in timestamps and timestamps[field_name].index %},
+    index=True
+    {%     endif %}
+)
+{% endmacro %}
+
+{# Macro for rendering soft delete fields #}
+{% macro render_soft_delete_field(field_name) %}
+{%     if field_name == "deleted_at" %}
+# Soft delete timestamp field
+{{ field_name }}: Optional[datetime] = Field(
+    default=None,
+    description="{{ timestamps.deleted_at.description if timestamps is defined and timestamps.deleted_at is defined else 'Soft delete timestamp' }}"
+)
+{%     elif field_name == "is_deleted" %}
+# Soft delete flag field
+{{ field_name }}: bool = Field(
+    default=False,
+    description="Soft delete flag",
+    index=True  # Index for soft delete queries
+)
+{%     endif %}
+{% endmacro %}
+
+{# Macro for rendering complete field definition #}
+{% macro render_entity_field(field) %}
+{%     set python_type = get_python_type(field.type) %}
+#
+{{ field.description }}
+{{ field.name }}: {{ python_type }} = Field(
+    {%     if field.default is defined %}
+    {%         if field.default == "datetime.utcnow" %}
+    default_factory=datetime.utcnow,
+    {%         elif field.default == "uuid.uuid4" or field.default == "uuid4" %}
+    default_factory=uuid4,
+    {%         elif field.type == "str" and not field.default.startswith('"') and not field.default.startswith("'") %}
+    default="{{ field.default }}",
+    {%         else %}
+    default={{ field.default }},
+    {%         endif %}
+    {%     elif field.required is defined and not field.required %}
+    default=None,
+    {%     elif field.type == "UUID" %}
+    default_factory=uuid4,
+    {%     elif field.type == "datetime" %}
+    default_factory=datetime.utcnow,
+    {%     else %}
+    default=None,
+    {%     endif %}
+    description="{{ field.description }}"
+    {%     if field.example is defined %},
+    example={{ field.example }}
+    {%     endif %}
+    {%     if field.title is defined %},
+    title="{{ field.title }}"
+    {%     endif %}
+)
+{% endmacro %}
+
+{# Macro for mapping field types to Python types #}
+{% macro get_python_type(field_type) %}
+{%     if field_type == "UUID" or field_type == "FieldType.UUID" %}UUID
+{%     elif field_type == "datetime" or field_type == "FieldType.DATETIME" %}datetime
+{%     elif field_type == "str" or field_type == "FieldType.STR" %}str
+{%     elif field_type == "int" or field_type == "FieldType.INT" %}int
+{%     elif field_type == "float" or field_type == "FieldType.FLOAT" %}float
+{%     elif field_type == "bool" or field_type == "FieldType.BOOL" %}bool
+{%     else %}{{ field_type }}
+{%     endif %}
+{% endmacro %}
+
+{# Macro for rendering mixin fields based on mixin type #}
+{% macro render_mixin_fields(mixin) %}
+{%     if mixin.name in ["UUIDMixin", "IntegerMixin"] %}
+{{ render_primary_key_field(mixin) }}
+{%     elif mixin.name == "TimestampMixin" %}
+{%         for field in mixin.fields %}
+{{ render_timestamp_field(field) }}
+{%         endfor %}
+{%     elif mixin.name == "SoftDeleteMixin" and template_context is defined and template_context.features is defined and template_context.features.enable_soft_delete %}
+{%         for field in mixin.fields %}
+{{ render_soft_delete_field(field) }}
+{%         endfor %}
+{%     endif %}
+{% endmacro %}
+
+{# Macro for rendering entity mixins inheritance #}
+{% macro render_entity_inheritance(entity) %}
+{%- if entity.mixins is defined -%}
+{%- for mixin in entity.mixins -%}
+{%- if mixin.enabled -%}, {{ mixin.name }}{%- endif -%}
+{%- endfor -%}
+{%- endif -%}
+{% endmacro %}
+
+{# Macro for rendering Pydantic model configuration #}
+{% macro render_model_config(entity) %}
+model_config = {
+{%     if integration is defined and integration.pydantic is defined and integration.pydantic.validate_assignment %}
+    "validate_assignment": True,
+{%     endif %}
+{%     if integration is defined and integration.pydantic is defined and integration.pydantic.use_enum_values %}
+    "use_enum_values": True,
+{%     endif %}
+{%     if integration is defined and integration.pydantic is defined and integration.pydantic.allow_population_by_field_name %}
+    "populate_by_name": True,
+{%     endif %}
+{%     if generation is defined and generation.style is defined and generation.style.use_type_hints %}
+    "arbitrary_types_allowed": True,
+{%     endif %}
+    # @pyhex:begin:custom_config_{{ entity.name | lower }}
+    # Add custom Pydantic configuration here - preserved during regeneration
+    # @pyhex:end:custom_config_{{ entity.name | lower }}
+}
+{% endmacro %}
+
+{# Macro for rendering response schema fields #}
+{% macro render_response_fields(entity) %}
+    # Primary key field (type depends on mixin used)
+{%     if entity.mixins is defined %}
+{%         for mixin in entity.mixins %}
+{%             if mixin.name == "UUIDMixin" %}
+    id: UUID = Field(description="Primary key")
+{%             elif mixin.name == "IntegerMixin" %}
+    id: int = Field(description="Primary key")
+{%             endif %}
+{%         endfor %}
+{%     else %}
+    # Default to int if no mixin specified
+    id: int = Field(description="Primary key")
+{%     endif %}
+
+    # Timestamp fields from mixins
+{%     if entity.mixins is defined %}
+{%         for mixin in entity.mixins %}
+{%             if mixin.name == "TimestampMixin" %}
+{%                 for field in mixin.fields %}
+    {{ field }}: datetime = Field(description="{{ field | title }} timestamp")
+{%                 endfor %}
+{%             endif %}
+{%         endfor %}
+{%     endif %}
+
+{%     if template_context.features.enable_soft_delete %}
+{%         if entity.mixins is defined %}
+{%             for mixin in entity.mixins %}
+{%                 if mixin.name == "SoftDeleteMixin" %}
+    deleted_at: Optional[datetime] = Field(default=None, description="Soft delete timestamp")
+    is_deleted: bool = Field(default=False, description="Soft delete flag")
+{%                 endif %}
+{%             endfor %}
+{%         endif %}
+{%     endif %}
+{% endmacro %}
 
 # @pyhex:begin:custom_mixins
 # Add custom mixin classes here - preserved during regeneration
 # @pyhex:end:custom_mixins
 
 {% for entity in entities %}
-# {{entity.description}}
-class {{entity.name}}Base(SQLModel{% for mixin in entity.mixins %}, {{mixin}}{% endfor %}):
-    """Base model for {{entity.name}} with shared fields and validation.
+{%     if entity.mixins is defined %}
+# Base mixins for {{ entity.name }} entity
+{%         for mixin in entity.mixins %}
+{%             if mixin.enabled %}
+
+class {{ mixin.name }}:
+    """{{ mixin.description }}"""
+{{ render_mixin_fields(mixin) }}
+{%             endif %}
+{%         endfor %}
+{%     endif %}
+
+#
+{{ entity.description }}
+
+class {{ entity.name }}Base(SQLModel{{ render_entity_inheritance(entity) }}):
+    """Base model for {{ entity.name }} with shared fields and validation.
     
     This base class contains common fields and validation logic that will be
     inherited by both the table model and API schemas.
     
     Attributes:
-    {% for field in entity.fields %}
-        {{field.name}}: {{field.description}}
-    {% endfor %}
+     {%     for field in entity.fields %}{{ field.name }}: {{ field.description }}
+     {%     endfor %}
     """
-    
-    # Business fields from entities.yaml configuration
-    {% for field in entity.fields %}
-    {% set field_type = field_types[field.type] if field.type in field_types else {"python_type": field.type, "sqlmodel_type": field.type} %}
-    {{field.name}}: {% if field.required %}{{field_type.python_type}}{% else %}Optional[{{field_type.python_type}}]{% endif %} = Field(
-        {% if field.default is defined %}default={{field.default}},{% endif %}
-        {% if field.default_factory is defined %}default_factory={{field.default_factory}},{% endif %}
-        description="{{field.description}}"{% if field.example is defined %},
-        example={{field.example}}{% endif %}{% if field.unique %},
-        unique=True{% endif %}{% if field.index %},
-        sa_column_kwargs={"index": True}{% endif %}{% if field.validation and field.validation.min_length %},
-        min_length={{field.validation.min_length}}{% endif %}{% if field.validation and field.validation.max_length %},
-        max_length={{field.validation.max_length}}{% endif %}
-    )
-    {% endfor %}
 
-    # @pyhex:begin:custom_fields_{{entity.name|lower}}
-    # Add custom fields for {{entity.name}} here - preserved during regeneration
-    # @pyhex:end:custom_fields_{{entity.name|lower}}
+    # Base fields from domain configuration
+    {%     if base_fields is defined %}
+    {%         for field in base_fields %}
+    {{ render_entity_field(field) }}
+    {%         endfor %}
+    {%     endif %}
 
-    class Config:
-        """Pydantic configuration for {{entity.name}}."""
-        {% if integration.pydantic.validate_assignment %}validate_assignment = True{% endif %}
-        {% if integration.pydantic.use_enum_values %}use_enum_values = True{% endif %}
-        {% if integration.pydantic.allow_population_by_field_name %}allow_population_by_field_name = True{% endif %}
-        {% if generation.style.use_type_hints %}arbitrary_types_allowed = True{% endif %}
-        
-        # @pyhex:begin:custom_config_{{entity.name|lower}}
-        # Add custom Pydantic configuration here - preserved during regeneration
-        # @pyhex:end:custom_config_{{entity.name|lower}}
+    # Business fields from entities.yaml configuration following SQLModel patterns
+    {%     for field in entity.fields %}
+    {%         if not base_fields or field.name not in (base_fields | map(attribute='name') | list) %}
+    {{ render_entity_field(field) }}
+    {%         endif %}
+    {%     endfor %}
 
-    {% for field in entity.fields %}
-    {% if field.validation %}
-    @validator('{{field.name}}')
-    def validate_{{field.name}}(cls, v):
-        """Validate {{field.name}} field with business rules.
+    # @pyhex:begin:custom_fields_{{ entity.name | lower }}
+    # Add custom fields for {{ entity.name }} here - preserved during regeneration
+    # @pyhex:end:custom_fields_{{ entity.name | lower }}
+
+{{ render_model_config(entity) }}
+
+# Field validators
+{%     for field in entity.fields %}
+{%         if field.validation is defined %}
+
+@field_validator('{{ field.name }}')
+@classmethod
+def validate_{{ field.name }}(cls, v):
+    """Validate {{ field.name }} field with business rules.
         
         Args:
             v: The field value to validate
-            
+
         Returns:
             The validated value
-            
+
         Raises:
             ValueError: If validation fails
         """
-        {% if field.validation.min_length %}
-        if isinstance(v, str) and len(v) < {{field.validation.min_length}}:
-            raise ValueError('{{field.name}} must be at least {{field.validation.min_length}} characters')
-        {% endif %}
-        {% if field.validation.max_length %}
-        if isinstance(v, str) and len(v) > {{field.validation.max_length}}:
-            raise ValueError('{{field.name}} must be no more than {{field.validation.max_length}} characters')
-        {% endif %}
-        {% if field.validation.choices %}
-        if v not in {{field.validation.choices}}:
-            raise ValueError('{{field.name}} must be one of: {{field.validation.choices|join(", ")}}')
-        {% endif %}
-        {% if field.validation.pattern %}
-        import re
-        if v and not re.match(r'{{field.validation.pattern}}', v):
-            raise ValueError('{{field.name}} format is invalid')
-        {% endif %}
-        
-        # @pyhex:begin:custom_validation_{{field.name}}
-        # Add custom validation logic for {{field.name}} here - preserved during regeneration
-        # @pyhex:end:custom_validation_{{field.name}}
-        
-        return v
-    {% endif %}
-    {% endfor %}
+    {%             if field.validation.min_length is defined %}
+    if isinstance(v, str) and len(v) < {{ field.validation.min_length }}:
+        raise ValueError('{{ field.name }} must be at least {{ field.validation.min_length }} characters')
+    {%             endif %}
+    {%             if field.validation.max_length is defined %}
+    if isinstance(v, str) and len(v) > {{ field.validation.max_length }}:
+        raise ValueError('{{ field.name }} must be no more than {{ field.validation.max_length }} characters')
+    {%             endif %}
+    {%             if field.validation.choices is defined %}
+    if v not in {{ field.validation.choices }}:
+        raise ValueError('{{ field.name }} must be one of: {{ field.validation.choices | join(", ") }}')
+    {%             endif %}
+    {%             if field.validation.pattern is defined %}
+    import re
+    if v and not re.match(r'{{ field.validation.pattern }}', v):
+        raise ValueError('{{ field.name }} format is invalid')
+    {%             endif %}
 
-    {% if entity.validation and entity.validation.business_rules %}
-    @root_validator
-    def validate_business_rules(cls, values):
-        """Validate business rules for {{entity.name}}.
-        
-        Args:
-            values: Dictionary of all field values
-            
+    # @pyhex:begin:custom_validation_
+    {{ field.name }}
+    # Add custom validation logic for
+    {{ field.name }}   here - preserved during regeneration
+    # @pyhex:end:custom_validation_
+    {{ field.name }}
+    return v
+
+{%         endif %}
+{%     endfor %}
+
+{%     if entity.validation is defined and entity.validation.business_rules is defined %}
+
+@model_validator(mode='after')
+def validate_business_rules(self):
+    """Validate business rules for {{ entity.name }}.
+
         Returns:
-            Validated values dictionary
-            
+            Self: The validated model instance
+
         Raises:
             ValueError: If business rule validation fails
         """
-        # Generated business rule validations
-        {% for rule in entity.validation.business_rules %}
-        {% if rule.type == "custom_validator" %}
-        # {{rule.description}}
-        if hasattr(cls, '{{rule.method}}'):
-            cls.{{rule.method}}(values)
-        {% endif %}
-        {% endfor %}
-        
-        # @pyhex:begin:custom_business_rules_{{entity.name|lower}}
-        # Add custom business rule validation here - preserved during regeneration
-        # @pyhex:end:custom_business_rules_{{entity.name|lower}}
-        
-        return values
-    {% endif %}
+    # Generated business rule validations
+    {%         for rule in entity.validation.business_rules %}
+    {%             if rule.type is defined and rule.type == "custom_validator" %}
+    #
+    {{ rule.description }}
+    {%                 if rule.method is defined %}
+    if hasattr(self, '{{ rule.method }}'):
+        self.{{ rule.method }}()
+    {%                 endif %}
+    {%             endif %}
+    {%         endfor %}
 
-    {% if entity.generation and entity.generation.methods %}
-    # Generated utility methods
-    {% for method in entity.generation.methods %}
-    def {{method.name}}(self) -> {{method.return_type}}:
-        """{{method.description}}"""
-        {% if method.implementation %}
-        {{method.implementation}}
-        {% else %}
-        # @pyhex:begin:method_{{method.name}}_{{entity.name|lower}}
-        # Implement {{method.name}} method here - preserved during regeneration
-        pass
-        # @pyhex:end:method_{{method.name}}_{{entity.name|lower}}
-        {% endif %}
-    {% endfor %}
-    {% endif %}
+    # @pyhex:begin:custom_business_rules_
+    {{ entity.name | lower }}
+    # Add custom business rule validation here - preserved during regeneration
+    # @pyhex:end:custom_business_rules_
+    {{ entity.name | lower }}
+    return self
 
-    # @pyhex:begin:custom_methods_{{entity.name|lower}}
-    # Add custom methods for {{entity.name}} here - preserved during regeneration
-    # @pyhex:end:custom_methods_{{entity.name|lower}}
+{%     endif %}
 
+{%     if entity.generation is defined and entity.generation.methods is defined %}
+# Generated utility methods
+{%         for method in entity.generation.methods %}
 
-class {{entity.name}}({{entity.name}}Base, table=True):
-    """SQLModel table definition for {{entity.name}}.
-    
-    This class represents the database table for {{entity.name}} entities.
-    It inherits all fields and validation from {{entity.name}}Base and adds
+def{{ method.name }}(self) -> {{ method.return_type }}:
+    """{{ method.description }}"""
+    {%             if method.implementation is defined %}
+    {{ method.implementation }}
+    {%             else %}
+    # @pyhex:begin:method_
+    {{ method.name }}  _
+    {{ entity.name | lower }}
+    # Implement
+    {{ method.name }}   method here - preserved during regeneration
+    pass
+    # @pyhex:end:method_
+    {{ method.name }}  _
+
+    {{ entity.name | lower }}
+{%             endif %}
+{%         endfor %}
+{%     endif %}
+
+# @pyhex:begin:custom_methods_
+{{ entity.name | lower }}
+# Add custom methods for
+{{ entity.name }}   here - preserved during regeneration
+# @pyhex:end:custom_methods_
+{{ entity.name | lower }}
+
+class{{ entity.name }}({{ entity.name }}Base, table=True):
+    """SQLModel table definition for {{ entity.name }}.
+
+    This class represents the database table for {{ entity.name }} entities.
+    It inherits all fields and validation from {{ entity.name }}Base and adds
     table-specific configuration and relationships.
     """
-    
-    __tablename__ = "{{entity.table_name}}"
-    
-    {% if entity.database and entity.database.table_args %}
-    {% if entity.database.table_args.indexes or entity.database.table_args.constraints %}
+    __tablename__ = "{{ entity.table_name }}"
+
+    {%     if entity.database is defined and entity.database.table_args is defined %}
+    {%         if entity.database.table_args.indexes is defined or entity.database.table_args.constraints is defined %}
     __table_args__ = (
-        {% if entity.database.table_args.indexes %}
+        {%             if entity.database.table_args.indexes is defined %}
         # Indexes from entities.yaml configuration
-        {% for index in entity.database.table_args.indexes %}
-        {% if index.unique %}
-        {"postgresql_unique": True, "name": "{{index.name}}"},
-        {% else %}
-        {"name": "{{index.name}}"},
-        {% endif %}
-        {% endfor %}
-        {% endif %}
-        {% if entity.database.table_args.constraints %}
-        # Constraints from entities.yaml configuration  
-        {% for constraint in entity.database.table_args.constraints %}
-        {% if constraint.type == "check" %}
-        {"postgresql_check": "{{constraint.condition}}", "name": "{{constraint.name}}"},
-        {% endif %}
-        {% endfor %}
-        {% endif %}
+        {%                 for index in entity.database.table_args.indexes %}
+        {%                     if index.unique is defined and index.unique %}
+        {"postgresql_unique": True, "name": "{{ index.name }}"},
+        {%                     else %}
+        {"name": "{{ index.name }}"},
+        {%                     endif %}
+        {%                 endfor %}
+        {%             endif %}
+        {%             if entity.database.table_args.constraints is defined %}
+        # Constraints from entities.yaml configuration
+        {%                 for constraint in entity.database.table_args.constraints %}
+        {%                     if constraint.type is defined and constraint.type == "check" %}
+        {"postgresql_check": "{{ constraint.condition }}", "name": "{{ constraint.name }}"},
+        {%                     endif %}
+        {%                 endfor %}
+        {%             endif %}
     )
-    {% endif %}
-    {% endif %}
+    {%         endif %}
+    {%     endif %}
+
+    # Foreign key fields for relationships (following SQLModel patterns)
+    {%     if entity.relationships is defined %}
+    {%         for relationship in entity.relationships %}
+    {%             if relationship.type is defined and (relationship.type == "many_to_one" or relationship.type == "one_to_one") %}
+    # Foreign key field for
+    {{ relationship.entity }}   relationship
+    {{ relationship.entity | lower }}_id: Optional[
+    {%                 if relationship.foreign_key_type is defined %}
+    {{ relationship.foreign_key_type }}
+    {%                 else %}
+        int
+    {%                 endif %}
+    ] = Field(
+        default=None,
+        {%                 if relationship.foreign_key_table is defined and relationship.foreign_key_table != '' %}
+        foreign_key="{{ relationship.foreign_key_table }}.{{ relationship.foreign_key_column or 'id' }}",
+        {%                 elif relationship.foreign_key_reference is defined %}
+        foreign_key="{{ relationship.foreign_key_reference }}",
+        {%                 else %}
+        foreign_key="{{ relationship.entity | lower }}s.id",
+        {%                 endif %}
+        description="Foreign key to {{ relationship.entity }}",
+        index=True  # Foreign keys should be indexed for joins
+    )
+    {%             endif %}
+    {%         endfor %}
+    {%     endif %}
 
     # Relationships from entities.yaml configuration
-    {% if entity.relationships %}
-    {% for relationship in entity.relationships %}
-    {{relationship.name}}: {% if relationship.type == "one_to_many" %}List["{{relationship.target_entity}}"]{% elif relationship.type == "one_to_one" %}Optional["{{relationship.target_entity}}"]{% elif relationship.type == "many_to_many" %}List["{{relationship.target_entity}}"]{% elif relationship.type == "many_to_one" %}"{{relationship.target_entity}}"{% endif %} = Relationship(
-        {% if relationship.back_populates %}back_populates="{{relationship.back_populates}}"{% endif %}{% if relationship.cascade %},
-        sa_relationship_kwargs={"cascade": "{{relationship.cascade}}"}{% endif %}{% if relationship.lazy %},
-        sa_relationship_kwargs={"lazy": "{{relationship.lazy}}"}{% endif %}{% if relationship.uselist is defined %},
-        sa_relationship_kwargs={"uselist": {{relationship.uselist|lower}}}{% endif %}
+    {%     if entity.relationships is defined %}
+    {%         for relationship in entity.relationships %}
+    {%             if relationship.type is defined %}
+    {{ relationship.entity | lower }}
+    {%                 if relationship.type == "one_to_many" %}
+    s
+    {%                 elif relationship.type == "many_to_many" %}
+    s
+    {%                 endif %}
+    :
+    {%                 if relationship.type == "one_to_many" %}
+    List["
+    {{ relationship.entity }}
+         "]
+    {%                 elif relationship.type == "one_to_one" %}
+    Optional["
+    {{ relationship.entity }}
+             "]
+    {%                 elif relationship.type == "many_to_many" %}
+    List["
+    {{ relationship.entity }}
+         "]
+    {%                 elif relationship.type == "many_to_one" %}
+    Optional["
+    {{ relationship.entity }}
+             "]
+    {%                 endif %}
+    = Relationship(
+        back_populates="
+    {{ entity.name | lower }}
+    {%                 if relationship.type != "one_to_many" %}
+    s
+    {%                 endif %}
+    "
     )
-    {% endfor %}
-    {% endif %}
+    {%             endif %}
+    {%         endfor %}
+    {%     endif %}
 
-    # @pyhex:begin:custom_relationships_{{entity.name|lower}}
-    # Add custom relationships for {{entity.name}} here - preserved during regeneration
-    # @pyhex:end:custom_relationships_{{entity.name|lower}}
+    # @pyhex:begin:custom_relationships_
+    {{ entity.name | lower }}
+    # Add custom relationships for
+    {{ entity.name }}   here - preserved during regeneration
+    # @pyhex:end:custom_relationships_
+    {{ entity.name | lower }}
 
     def __repr__(self) -> str:
-        """String representation of {{entity.name}}."""
-        {% if entity.fields %}
-        {% set display_field = entity.fields[0] %}
-        return f"{{entity.name}}(id={self.id}, {{display_field.name}}={self.{{display_field.name}}})"
-        {% else %}
-        return f"{{entity.name}}(id={self.id})"
-        {% endif %}
+        """String representation of {{ entity.name }}."""
+        {%     if entity.fields %}
+        {%         set display_field = entity.fields[0] %}
+        return f"{{ entity.name }}(id={self.id}, {{ display_field.name }}={getattr(self, '{{ display_field.name }}')})"
+        {%     else %}
+        return f"{{ entity.name }}(id={self.id})"
 
-    # @pyhex:begin:custom_table_methods_{{entity.name|lower}}
+    {%     endif %}
+
+    # @pyhex:begin:custom_table_methods_
+    {{ entity.name | lower }}
     # Add custom table-specific methods here - preserved during regeneration
-    # @pyhex:end:custom_table_methods_{{entity.name|lower}}
+    # @pyhex:end:custom_table_methods_
 
+    {{ entity.name | lower }}
 
 # API Schema Models for FastAPI integration
-class {{entity.name}}Create({{entity.name}}Base):
-    """Request schema for creating {{entity.name}}.
-    
+class {{ entity.name }}Create({{ entity.name }}Base):
+    """Request schema for creating {{ entity.name }}.
+
     Excludes auto-generated fields like id, timestamps.
     Used for POST requests in FastAPI endpoints.
     """
     pass
 
 
-class {{entity.name}}Update(SQLModel):
-    """Request schema for updating {{entity.name}}.
-    
+class {{ entity.name }}Update(SQLModel):
+    """Request schema for updating {{ entity.name }}.
+
     All fields are optional to support partial updates.
     Used for PUT/PATCH requests in FastAPI endpoints.
     """
-    {% for field in entity.fields %}
-    {% if not field.name in ['id', 'created_at', 'updated_at'] %}
-    {% set field_type = field_types[field.type] if field.type in field_types else {"python_type": field.type} %}
-    {{field.name}}: Optional[{{field_type.python_type}}] = Field(
+    {%     if base_fields is defined %}
+    {%         for field in base_fields %}
+    {%             if field.name not in ['id', 'created_at', 'updated_at'] %}
+    {%                 set python_type = field.python_type if field.python_type is defined else get_python_type(field.type) %}
+    {%                 if not python_type.startswith('Optional[') %}
+    {%                     set python_type = 'Optional[' + python_type + ']' %}
+    {%                 endif %}
+    {{ field.name }}: {{ python_type }} = Field(
         default=None,
-        description="{{field.description}}"
+        description="{{ field.description }}"
     )
-    {% endif %}
-    {% endfor %}
+    {%             endif %}
+    {%         endfor %}
+    {%     endif %}
+    {%     for field in entity.fields %}
+    {%         if not base_fields or field.name not in (base_fields | map(attribute='name') | list) %}
+    {%             if field.name not in ['id', 'created_at', 'updated_at'] %}
+    {%                 set python_type = field.python_type if field.python_type is defined else get_python_type(field.type) %}
+    {%                 if not python_type.startswith('Optional[') %}
+    {%                     set python_type = 'Optional[' + python_type + ']' %}
+    {%                 endif %}
+    {{ field.name }}: {{ python_type }} = Field(
+        default=None,
+        description="{{ field.description }}"
+    )
+    {%             endif %}
+    {%         endif %}
+    {%     endfor %}
 
-    # @pyhex:begin:custom_update_fields_{{entity.name|lower}}
+    # @pyhex:begin:custom_update_fields_{{ entity.name | lower }}
     # Add custom update fields here - preserved during regeneration
-    # @pyhex:end:custom_update_fields_{{entity.name|lower}}
+    # @pyhex:end:custom_update_fields_{{ entity.name | lower }}
 
+class {{ entity.name }}Response({{ entity.name }}Base):
+    """Response schema for {{ entity.name }}.
 
-class {{entity.name}}Response({{entity.name}}Base):
-    """Response schema for {{entity.name}}.
-    
     Includes all fields including auto-generated ones.
     Used for API responses in FastAPI endpoints.
     """
-    id: UUID
-    created_at: datetime
-    updated_at: datetime
-    {% if template_context.features.enable_soft_delete %}
-    {% if entity.mixins and "SoftDeleteMixin" in entity.mixins %}
-    deleted_at: Optional[datetime] = None
-    is_deleted: bool = False
-    {% endif %}
-    {% endif %}
+{{ render_response_fields(entity) }}
 
-    class Config({{entity.name}}Base.Config):
-        """Response model configuration."""
-        {% if integration.fastapi.include_examples %}
-        schema_extra = {
-            "example": {
-                {% for field in entity.fields %}
-                {% if field.example is defined %}
-                "{{field.name}}": {{field.example}},
-                {% endif %}
-                {% endfor %}
-                "id": "{{primary_key.default_factory}}()",
-                "created_at": "2023-01-01T00:00:00Z",
-                "updated_at": "2023-01-01T00:00:00Z"
-            }
-        }
-        {% endif %}
+    model_config = {{ entity.name }}Base.model_config.copy()
+    {%     if integration is defined and integration.fastapi is defined and integration.fastapi.include_examples %}
+    model_config["json_schema_extra"] = {
+        "example": {
+            {%         for field in entity.fields %}
+            {%             if field.example is defined %}
+            "{{ field.name }}": {{ field.example }},
+        {%             endif %}
+        {%         endfor %}
+        "id":
+        {%         if primary_key is defined and primary_key.default_factory is defined %}
+        {{ primary_key.default_factory }}
+            ()
+        {%         else %}
+        1
+    {%         endif %}
+    ,
+    "created_at": "2023-01-01T00:00:00Z",
+    "updated_at": "2023-01-01T00:00:00Z"
+    }
+    }
+    {%     endif %}
 
-    # @pyhex:begin:custom_response_methods_{{entity.name|lower}}
+    # @pyhex:begin:custom_response_methods_
+    {{ entity.name | lower }}
     # Add custom response methods here - preserved during regeneration
-    # @pyhex:end:custom_response_methods_{{entity.name|lower}}
+    # @pyhex:end:custom_response_methods_
+    {{ entity.name | lower }}
 
+    {% endfor %}
 
-{% endfor %}
+    # @pyhex:begin:custom_entities
+    # Add custom entity classes here - preserved during regeneration
+    # @pyhex:end:custom_entities
 
-# @pyhex:begin:custom_entities
-# Add custom entity classes here - preserved during regeneration
-# @pyhex:end:custom_entities
+    # Domain service functions
+    {% for entity in entities %}
 
-
-# Domain service functions
-{% for entity in entities %}
-def create_{{entity.name|lower}}_from_dict(data: Dict[str, Any]) -> {{entity.name}}:
-    """Create {{entity.name}} instance from dictionary.
+    def create_{{ entity.name | lower }}_from_dict(data: Dict[str, Any]) -> {{ entity.name }}:
+        """Create {{ entity.name }} instance from dictionary.
     
     Args:
-        data: Dictionary containing {{entity.name}} field values
-        
+        data: Dictionary containing {{ entity.name }} field values
+
     Returns:
-        New {{entity.name}} instance
-        
+        New {{ entity.name }} instance
+
     Raises:
         ValueError: If required fields are missing or invalid
     """
-    # @pyhex:begin:custom_creation_logic_{{entity.name|lower}}
-    # Add custom creation logic here - preserved during regeneration
-    # @pyhex:end:custom_creation_logic_{{entity.name|lower}}
-    
-    return {{entity.name}}(**data)
+        # @pyhex:begin:custom_creation_logic_
+        {{ entity.name | lower }}
+        # Add custom creation logic here - preserved during regeneration
+        # @pyhex:end:custom_creation_logic_
+        {{ entity.name | lower }}
+        return {{ entity.name }}(** data)
 
+    def validate_{{ entity.name | lower }}_business_rules(entity: {{ entity.name }}) -> List[str]:
+        """Validate business rules for {{ entity.name }}.
 
-def validate_{{entity.name|lower}}_business_rules(entity: {{entity.name}}) -> List[str]:
-    """Validate business rules for {{entity.name}}.
-    
     Args:
-        entity: {{entity.name}} instance to validate
-        
+        entity: {{ entity.name }} instance to validate
+
     Returns:
         List of validation error messages (empty if valid)
     """
-    errors = []
-    
-    {% if entity.validation and entity.validation.business_rules %}
-    # Generated business rule validations
-    {% for rule in entity.validation.business_rules %}
-    {% if rule.type == "unique_constraint" %}
-    # {{rule.description}}
-    # Note: Actual uniqueness validation should be done at database/repository level
-    {% elif rule.type == "regex_validator" %}
-    # {{rule.description}}
-    import re
-    {% for field in rule.fields %}
-    if hasattr(entity, '{{field}}') and entity.{{field}}:
-        if not re.match(r'{{rule.pattern}}', entity.{{field}}):
-            errors.append("{{field}} format is invalid")
+        errors = []
+        {%     if entity.validation is defined and entity.validation.business_rules is defined %}
+        # Generated business rule validations
+        {%         for rule in entity.validation.business_rules %}
+        {%             if rule.type is defined and rule.type == "unique_constraint" %}
+        #
+        {{ rule.description }}
+        # Note: Actual uniqueness validation should be done at database/repository level
+        {%             elif rule.type is defined and rule.type == "regex_validator" %}
+        #
+        {{ rule.description }}
+        import re
+        {%                 if rule.fields is defined %}
+        {%                     for field in rule.fields %}
+        if hasattr(entity, '{{ field }}') and entity.{{ field }}:
+        {%                         if rule.pattern is defined %}
+            if not re.match(r'{{ rule.pattern }}', entity.{{ field }}):
+                errors.append("{{ field }} format is invalid")
+        {%                         endif %}
+        {%                     endfor %}
+        {%                 endif %}
+        {%             endif %}
+        {%         endfor %}
+        {%     endif %}
+
+        # @pyhex:begin:custom_business_validation_
+        {{ entity.name | lower }}
+        # Add custom business rule validation here - preserved during regeneration
+        # @pyhex:end:custom_business_validation_
+        {{ entity.name | lower }}
+        return errors
+
     {% endfor %}
-    {% endif %}
-    {% endfor %}
-    {% endif %}
-    
-    # @pyhex:begin:custom_business_validation_{{entity.name|lower}}
-    # Add custom business rule validation here - preserved during regeneration
-    # @pyhex:end:custom_business_validation_{{entity.name|lower}}
-    
-    return errors
 
+    # @pyhex:begin:custom_domain_functions
+    # Add custom domain service functions here - preserved during regeneration
+    # @pyhex:end:custom_domain_functions
 
-{% endfor %}
-
-# @pyhex:begin:custom_domain_functions
-# Add custom domain service functions here - preserved during regeneration
-# @pyhex:end:custom_domain_functions
-
-
-# Export all entity classes for easy importing
-__all__ = [
-    {% for entity in entities %}
-    "{{entity.name}}",
-    "{{entity.name}}Base", 
-    "{{entity.name}}Create",
-    "{{entity.name}}Update",
-    "{{entity.name}}Response",
-    {% endfor %}
-    # Custom exports
-    # @pyhex:begin:custom_exports
-    # Add custom exports here - preserved during regeneration
-    # @pyhex:end:custom_exports
-]
+    # Export all entity classes for easy importing
+    __all__ = [
+        {% for entity in entities %}
+        "{{ entity.name }}",
+        "{{ entity.name }}Base",
+        "{{ entity.name }}Create",
+        "{{ entity.name }}Update",
+        "{{ entity.name }}Response",
+        {% endfor %}
+        # Custom exports
+        # @pyhex:begin:custom_exports
+        # Add custom exports here - preserved during regeneration
+        # @pyhex:end:custom_exports
+    ]

@@ -5,7 +5,7 @@ entities:
   - name: "User"
     description: "System user entity for authentication"
     table_name: "users"
-    mixins: ["Timestamped"]
+    mixins: [ "Timestamped" ]
     fields:
       - name: "username"
         type: "str"
@@ -14,7 +14,7 @@ entities:
         index: true
         description: "Unique username for login"
         sqlmodel_field: "Field(index=True, unique=True)"
-      
+
       - name: "email"
         type: "EmailStr"
         required: true
@@ -22,51 +22,51 @@ entities:
         index: true
         description: "User email address"
         sqlmodel_field: "Field(index=True, unique=True)"
-      
+
       - name: "full_name"
         type: "str"
         required: true
         description: "User's full display name"
-      
+
       - name: "is_active"
         type: "bool"
         required: true
         default: "true"
         description: "Whether user account is active"
         sqlmodel_field: "Field(default=True)"
-      
+
       - name: "is_admin"
         type: "bool"
         required: true
         default: "false"
         description: "Whether user has admin privileges"
         sqlmodel_field: "Field(default=False)"
-  
+
   - name: "Profile"
     description: "User profile with additional details"
     table_name: "user_profiles"
-    mixins: ["Timestamped", "SoftDelete"]
+    mixins: [ "Timestamped", "SoftDelete" ]
     fields:
       - name: "bio"
         type: "Optional[str]"
         required: false
         description: "User biography"
-      
+
       - name: "avatar_url"
         type: "Optional[str]"
         required: false
         description: "URL to user avatar image"
-      
+
       - name: "location"
         type: "Optional[str]"
         required: false
         description: "User's location"
-      
+
       - name: "website"
         type: "Optional[str]"
         required: false
         description: "User's website URL"
-      
+
       - name: "user_id"
         type: "int"
         required: true
@@ -86,27 +86,27 @@ endpoints:
     path: "/users/"
     operation: "create_user"
     description: "Create new user account"
-  
+
   - method: "GET"
     path: "/users/{id}"
     operation: "get_user"
     description: "Get user by ID"
-  
+
   - method: "GET"
     path: "/users/"
     operation: "list_users"
     description: "List users with pagination"
-  
+
   - method: "PUT"
     path: "/users/{id}"
     operation: "update_user"
     description: "Update user information"
-  
+
   - method: "DELETE"
     path: "/users/{id}"
     operation: "delete_user"
     description: "Deactivate user account"
-  
+
   - method: "GET"
     path: "/users/search"
     operation: "search_users"
@@ -117,7 +117,7 @@ endpoints:
     path: "/users/{user_id}/profile"
     operation: "get_user_profile"
     description: "Get user profile"
-  
+
   - method: "PUT"
     path: "/users/{user_id}/profile"
     operation: "update_user_profile"

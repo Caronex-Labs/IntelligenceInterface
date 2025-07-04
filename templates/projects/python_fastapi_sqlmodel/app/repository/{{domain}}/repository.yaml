@@ -1,0 +1,375 @@
+# Repository Configuration - Co-location Architecture
+#
+# Co-location Architecture Pattern:
+# - This repository.yaml file provides repository-specific configuration
+# - Co-located with repository templates (.j2), protocols, and generated files (.py)
+# - Processed by ConfigurationMerger with inheritance from domain.yaml and entities.yaml
+#
+# Hierarchical Configuration Strategy:
+# - Inherits base configuration from domain.yaml and entities.yaml
+# - Provides repository-specific CRUD operations, query methods, and database settings
+# - ConfigurationMerger deep merges configurations for complete template context
+
+# Repository Metadata
+repository:
+  name: "{{domain|title}}Repository"
+  description: "Async repository for {{domain|title}} entity data access"
+  interface: "{{domain|title}}RepositoryProtocol"
+  implementation: "SQLModel{{domain|title}}Repository"
+  package: "app.repository.{{domain}}"
+  version: "1.0.0"
+
+# Async Operations Configuration
+async_operations:
+  enabled: true
+  session_management: "dependency_injection"  # dependency_injection | automatic | manual
+  connection_pooling: true
+  transaction_support: true
+  connection_timeout: 30
+  query_timeout: 60
+  max_retries: 3
+  retry_delay: 1.0
+
+# Database Configuration
+database:
+  provider: "postgresql"
+  dialect: "asyncpg"
+  migration_support: true
+  schema_validation: true
+  connection_pool:
+    min_size: 5
+    max_size: 20
+    overflow: 30
+    timeout: 30
+  session_config:
+    autocommit: false
+    autoflush: true
+    expire_on_commit: true
+
+# CRUD Operations Configuration
+crud_operations:
+  # Create operations
+  create:
+    enabled: true
+    validation: true
+    return_created: true
+    auto_refresh: true
+    business_rules_validation: true
+    duplicate_handling: "raise_error"  # raise_error | ignore | update
+
+  # Read operations  
+  read:
+    enabled: true
+    soft_delete_aware: true
+    eager_loading: false
+    relationship_loading: "lazy"  # lazy | eager | select_in
+    cache_results: false
+    include_deleted: false
+
+  # Update operations
+  update:
+    enabled: true
+    partial_updates: true
+    optimistic_locking: false
+    auto_refresh: true
+    business_rules_validation: true
+    track_changes: true
+
+  # Delete operations
+  delete:
+    enabled: true
+    soft_delete: true
+    hard_delete: false
+    cascade_handling: true
+    orphan_removal: false
+    business_rules_validation: true
+
+  # List operations
+  list:
+    enabled: true
+    pagination: true
+    filtering: true
+    sorting: true
+    search: true
+    max_page_size: 100
+    default_page_size: 20
+    max_total_results: 10000
+
+# Query Methods Configuration
+query_methods:
+  # Standard query patterns
+  - name: "find_by_id"
+    description: "Find {{domain}} by unique identifier"
+    parameters:
+      - name: "entity_id"
+        type: "UUID"
+        required: true
+    return_type: "Optional[{{domain|title}}]"
+    query_type: "single"
+    cache: false
+    eager_load: [ ]
+
+  - name: "find_by_email"
+    description: "Find {{domain}} by email address"
+    parameters:
+      - name: "email"
+        type: "str"
+        required: true
+    return_type: "Optional[{{domain|title}}]"
+    query_type: "single"
+    cache: true
+    cache_ttl: 300
+    unique_constraint: true
+
+  - name: "find_active_entities"
+    description: "Find all active {{domain}} entities"
+    parameters: [ ]
+    return_type: "List[{{domain|title}}]"
+    query_type: "list"
+    filters:
+      - field: "status"
+        operator: "eq"
+        value: "active"
+    soft_delete_aware: true
+
+  - name: "find_by_status"
+    description: "Find {{domain}} entities by status"
+    parameters:
+      - name: "status"
+        type: "str"
+        required: true
+        validation:
+          choices: [ "active", "inactive", "pending" ]
+    return_type: "List[{{domain|title}}]"
+    query_type: "list"
+    cache: false
+
+  - name: "count_by_status"
+    description: "Count {{domain}} entities by status"
+    parameters:
+      - name: "status"
+        type: "str"
+        required: true
+    return_type: "int"
+    query_type: "aggregate"
+    aggregate_function: "count"
+
+  - name: "find_created_in_range"
+    description: "Find {{domain}} entities created within date range"
+    parameters:
+      - name: "start_date"
+        type: "datetime"
+        required: true
+      - name: "end_date"
+        type: "datetime"
+        required: true
+    return_type: "List[{{domain|title}}]"
+    query_type: "list"
+    filters:
+      - field: "created_at"
+        operator: "between"
+        values: [ "start_date", "end_date" ]
+    ordering:
+      - field: "created_at"
+        direction: "desc"
+
+  - name: "search_by_name"
+    description: "Search {{domain}} entities by name using full-text search"
+    parameters:
+      - name: "search_term"
+        type: "str"
+        required: true
+        validation:
+          min_length: 2
+          max_length: 100
+    return_type: "List[{{domain|title}}]"
+    query_type: "search"
+    search_fields: [ "name" ]
+    search_type: "ilike"  # ilike | full_text | trigram
+
+  # Relationship queries
+  - name: "find_with_related_items"
+    description: "Find {{domain}} with related items"
+    parameters:
+      - name: "entity_id"
+        type: "UUID"
+        required: true
+    return_type: "Optional[{{domain|title}}]"
+    query_type: "single"
+    eager_load: [ "related_items" ]
+    join_strategy: "selectin"
+
+  - name: "find_by_category"
+    description: "Find {{domain}} entities by category"
+    parameters:
+      - name: "category_name"
+        type: "str"
+        required: true
+    return_type: "List[{{domain|title}}]"
+    query_type: "list"
+    joins:
+      - table: "categories"
+        type: "inner"
+        condition: "{{domain}}_categories.category_id = categories.id"
+    filters:
+      - field: "categories.name"
+        operator: "eq"
+        value: "category_name"
+
+# Custom Query Methods (with @pyhex markers)
+custom_queries:
+  enabled: true
+  preservation_markers: "@pyhex"
+  sections:
+    - name: "complex_business_queries"
+      description: "Complex business logic queries"
+      methods: [ ]
+    - name: "performance_optimized_queries"
+      description: "Performance-critical queries with custom SQL"
+      methods: [ ]
+    - name: "reporting_queries"
+      description: "Queries for reporting and analytics"
+      methods: [ ]
+
+# Transaction Configuration
+transactions:
+  auto_transaction: true
+  isolation_level: "READ_COMMITTED"  # READ_UNCOMMITTED | READ_COMMITTED | REPEATABLE_READ | SERIALIZABLE
+  timeout: 30
+  rollback_on_error: true
+  savepoint_support: true
+  nested_transactions: false
+
+# Error Handling Configuration
+error_handling:
+  retry_on_connection_error: true
+  retry_attempts: 3
+  retry_delay: 1.0
+  log_errors: true
+  raise_on_constraint_violation: true
+  raise_on_not_found: false  # Return None instead
+  custom_exceptions:
+    - name: "{{domain|title}}NotFoundError"
+      base: "ValueError"
+      message: "{{domain|title}} not found"
+    - name: "{{domain|title}}DuplicateError"
+      base: "ValueError"
+      message: "{{domain|title}} already exists"
+    - name: "{{domain|title}}ValidationError"
+      base: "ValueError"
+      message: "{{domain|title}} validation failed"
+
+# Performance Configuration
+performance:
+  query_logging: true
+  slow_query_threshold: 1.0  # seconds
+  explain_analyze: false
+  connection_pooling: true
+  prepared_statements: true
+  batch_operations: true
+  bulk_operations:
+    batch_size: 1000
+    use_bulk_insert: true
+    use_bulk_update: true
+
+# Caching Configuration
+caching:
+  enabled: false
+  backend: "redis"  # redis | memory | disabled
+  default_ttl: 300
+  cache_key_prefix: "{{domain}}_repo"
+  invalidation_patterns:
+    - "on_create"
+    - "on_update"
+    - "on_delete"
+
+# Testing Configuration
+testing:
+  test_database: "sqlite:///:memory:"
+  async_test_support: true
+  transaction_rollback: true
+  test_fixtures: true
+  mock_data_generation: true
+  performance_benchmarks: true
+  concurrent_test_support: true
+
+# Integration Configuration
+integration:
+  # FastAPI integration
+  fastapi:
+    dependency_injection: true
+    session_dependency: "get_db_session"
+    exception_handlers: true
+
+  # SQLModel integration
+  sqlmodel:
+    async_session: true
+    relationship_loading: "lazy"
+    query_optimization: true
+
+  # Alembic integration
+  alembic:
+    migration_support: true
+    auto_migration_detection: true
+    schema_versioning: true
+
+# Code Generation Configuration
+generation:
+  # Template configuration
+  templates:
+    preserve_custom_code: true
+    preservation_markers: "@pyhex"
+    auto_format: true
+
+  # Import configuration
+  imports:
+    base_imports:
+      - "from sqlmodel import SQLModel, Session, select, and_, or_"
+      - "from sqlalchemy.ext.asyncio import AsyncSession"
+      - "from sqlalchemy.orm import selectinload, joinedload"
+      - "from typing import Optional, List, Dict, Any, Union"
+      - "from uuid import UUID"
+      - "from datetime import datetime"
+      - "import logging"
+
+    conditional_imports:
+      caching: "from app.core.cache import CacheManager"
+      transactions: "from app.core.database import TransactionManager"
+
+  # Code style configuration
+  style:
+    line_length: 88
+    use_type_hints: true
+    docstring_style: "google"
+    async_method_prefix: "async def"
+
+# Quality Configuration
+quality:
+  # Validation requirements
+  type_hint_coverage: 100
+  docstring_coverage: 90
+  test_coverage_minimum: 95
+  
+  # Performance requirements
+  query_performance:
+    max_execution_time: 1.0
+    connection_pool_efficiency: 0.8
+    cache_hit_ratio: 0.7
+
+  # Code quality
+  complexity:
+    max_method_complexity: 8
+    max_class_complexity: 15
+    enforce_single_responsibility: true
+
+# Documentation Configuration
+documentation:
+  include_examples: true
+  include_performance_notes: true
+  include_transaction_guidelines: true
+  api_documentation: true
+  query_method_examples: true
+
+# @pyhex:begin:custom_repository_configuration
+# Add custom repository configuration here - preserved during regeneration
+# @pyhex:end:custom_repository_configuration

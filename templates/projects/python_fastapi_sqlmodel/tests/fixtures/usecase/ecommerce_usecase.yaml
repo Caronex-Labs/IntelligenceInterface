@@ -48,15 +48,15 @@ methods:
       - "send_confirmation_notifications"
       - "trigger_fulfillment_process"
     description: "Complete checkout process with comprehensive validation and orchestration"
-  
+
   - name: "calculate_order_total"
     input_schema: "OrderTotalRequest"
     output_schema: "OrderTotalResponse"
     transaction_boundary: false
     dependencies:
-      repositories: ["cart_repository", "product_repository"]
-      services: ["tax_service", "discount_service", "shipping_service"]
-    business_rules: ["cart_not_empty", "valid_shipping_method"]
+      repositories: [ "cart_repository", "product_repository" ]
+      services: [ "tax_service", "discount_service", "shipping_service" ]
+    business_rules: [ "cart_not_empty", "valid_shipping_method" ]
     orchestration_steps:
       - "calculate_subtotal"
       - "apply_discounts"
@@ -66,9 +66,9 @@ methods:
     description: "Calculate order total with taxes, discounts, and shipping"
 
 dependencies:
-  repositories: ["cart_repository", "order_repository", "customer_repository", "product_repository", "inventory_repository"]
-  services: ["payment_service", "inventory_service", "shipping_service", "tax_service", "discount_service", "notification_service"]
-  external_apis: ["fraud_detection_api", "address_validation_api", "payment_gateway_api"]
+  repositories: [ "cart_repository", "order_repository", "customer_repository", "product_repository", "inventory_repository" ]
+  services: [ "payment_service", "inventory_service", "shipping_service", "tax_service", "discount_service", "notification_service" ]
+  external_apis: [ "fraud_detection_api", "address_validation_api", "payment_gateway_api" ]
 
 error_handling:
   aggregation_strategy: "collect_all_errors"
@@ -120,6 +120,6 @@ dependency_injection:
     - "tax_service"
     - "discount_service"
 
-entity_dependencies: ["Order", "Cart", "Customer", "Product", "Inventory", "Payment", "ShippingAddress"]
-repository_dependencies: ["cart_repository", "order_repository", "customer_repository", "product_repository", "inventory_repository"]
-external_dependencies: ["payment_service", "shipping_service", "tax_service", "fraud_detection_api", "address_validation_api"]
+entity_dependencies: [ "Order", "Cart", "Customer", "Product", "Inventory", "Payment", "ShippingAddress" ]
+repository_dependencies: [ "cart_repository", "order_repository", "customer_repository", "product_repository", "inventory_repository" ]
+external_dependencies: [ "payment_service", "shipping_service", "tax_service", "fraud_detection_api", "address_validation_api" ]

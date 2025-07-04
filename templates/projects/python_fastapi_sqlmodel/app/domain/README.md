@@ -2,7 +2,8 @@
 
 ## Co-location Directory Structure
 
-This directory implements the **co-location architecture pattern** where templates, configurations, and generated files are organized together in the same directories for optimal developer experience.
+This directory implements the **co-location architecture pattern** where templates, configurations, and generated files
+are organized together in the same directories for optimal developer experience.
 
 ### Directory Pattern: `app/domain/{{domain}}/`
 
@@ -19,16 +20,19 @@ app/domain/{{domain}}/
 ## Co-location Architecture Benefits
 
 ### 1. **Immediate Context Visibility**
+
 - Developers see templates (.j2), configurations (.yaml), and generated files (.py) together
 - No navigation between separate template and config directories
 - Complete layer context visible at once
 
 ### 2. **Simplified Maintenance**
+
 - Changes to domain logic update templates and configs in same location
 - Related files are co-located for intuitive organization
 - Reduced cognitive load for developers
 
 ### 3. **Optimal Developer Experience**
+
 - Templates, configs, and outputs co-located in same directories
 - Configuration changes immediately visible with affected templates
 - Streamlined development workflow
@@ -55,14 +59,17 @@ Template Rendering (merged configuration)
 ## File Naming Conventions
 
 ### Template Files (`.j2` extension)
+
 - `entities.py.j2` - SQLModel entity template
 - `exceptions.py.j2` - Domain exception template
 
 ### Configuration Files (`.yaml` extension)
+
 - `domain.yaml` - Base domain configuration
 - `entities.yaml` - Entity-specific configuration
 
 ### Generated Files (`.py` extension)
+
 - `entities.py` - Generated SQLModel entities
 - `exceptions.py` - Generated domain exceptions
 
@@ -78,17 +85,20 @@ This domain layer follows **Go-style hexagonal architecture** with:
 ## Template System Integration
 
 ### Code Preservation
+
 - **@pyhex preservation markers** allow custom business logic extension
 - Custom code preserved during template regeneration
 - Business logic extensions without breaking template updates
 
 ### SQLModel Integration
+
 - Type-safe entities with Pydantic validation
 - UUID primary keys and timestamp mixins
 - FastAPI compatibility with automatic schema generation
 - Async/await patterns for database operations
 
 ### Quality Standards
+
 - Python best practices with type hints
 - Hexagonal architecture compliance
 - BDD-driven development with comprehensive scenarios
@@ -97,6 +107,7 @@ This domain layer follows **Go-style hexagonal architecture** with:
 ## Usage Patterns
 
 ### Development Workflow
+
 1. **Modify Configuration**: Update `domain.yaml` or `entities.yaml`
 2. **Template Processing**: ConfigurationMerger processes hierarchical configurations
 3. **Code Generation**: Templates generate updated entities and exceptions
@@ -104,9 +115,11 @@ This domain layer follows **Go-style hexagonal architecture** with:
 5. **Validation**: BDD scenarios ensure proper generation and integration
 
 ### Template Customization
+
 1. **Domain-level**: Modify `domain.yaml` for base entity patterns
 2. **Entity-level**: Customize `entities.yaml` for specific field definitions
 3. **Template-level**: Extend `.j2` templates for advanced patterns
 4. **Business Logic**: Use @pyhex markers for custom domain methods
 
-This co-location architecture provides the foundation for sophisticated Python FastAPI SQLModel applications with optimal developer experience and maintenance efficiency.
+This co-location architecture provides the foundation for sophisticated Python FastAPI SQLModel applications with
+optimal developer experience and maintenance efficiency.

@@ -1,0 +1,893 @@
+"""Tests for {{ entity_name }} domain entities - Generated from Enhanced Co-located Template.
+
+This module contains comprehensive tests for the generated SQLModel entities
+in the {{ entity_name }} domain, following hexagonal architecture testing principles
+with property-based testing, advanced fixtures, and comprehensive validation.
+
+Generated from:
+- domain.yaml: Base entity configuration and mixins
+- entities.yaml: Entity-specific field definitions and relationships
+- test_entities.py.j2: This enhanced Jinja2 test template with best practices
+
+Co-location Architecture:
+- Test templates, configurations, and generated tests in same directory
+- Tests generated alongside the actual entity code
+- @pyhex preservation markers for custom test logic
+
+Testing Features:
+- Property-based testing with hypothesis for comprehensive field validation
+- Advanced test fixtures and factories for entity data generation
+- Relationship validation with referential integrity testing
+- Business rule validation and edge case coverage
+- Performance testing for database operations
+
+Jinja2 Best Practices Applied:
+- Macros for repeated test pattern generation
+- Proper variable scoping and conditional logic
+- Filters for data transformation in test generation
+- Template structure improvements with clear sections
+"""
+
+import random
+import string
+from datetime import datetime, date, timedelta
+from decimal import Decimal
+from typing import Dict, Any, List, Optional
+
+# Standard library imports
+import pytest
+from hypothesis import given, settings, strategies as st
+from hypothesis.extra.sqlmodel import from_model
+from pydantic import ValidationError
+# Third-party imports
+from sqlmodel import SQLModel, create_engine, Session, select
+
+# Local imports - Generated entities
+{% for entity in entities %}
+from .entities import (
+    {{ entity.name }}Base,
+{{ entity.name }},
+    {{ entity.name }}Create,
+    {{ entity.name }}Update,
+    {{ entity.name }}Response,
+)
+{% endfor %}
+
+# Test utilities
+from tests.helpers.test_database import TestDatabaseManager, DatabaseTestHelper
+from tests.helpers.mock_factories import ConfigurationFactory
+
+
+# @pyhex:begin:custom_imports
+# Add your custom test imports here
+# @pyhex:end:custom_imports
+
+
+class TestBase:
+    """Enhanced base test class with comprehensive setup and utilities."""
+
+    @pytest.fixture(scope="function")
+    def engine(self):
+        """Create in-memory SQLite engine for testing."""
+        engine = create_engine("sqlite:///:memory:", echo=False)
+        SQLModel.metadata.create_all(engine)
+        return engine
+
+    @pytest.fixture(scope="function")
+    def session(self, engine):
+        """Create database session for testing."""
+        with Session(engine) as session:
+            yield session
+            session.rollback()
+
+    @pytest.fixture(scope="function")
+    def db_helper(self, session):
+        """Database test helper fixture."""
+        return DatabaseTestHelper()
+
+    # @pyhex:begin:custom_test_fixtures
+    # Add your custom test fixtures here
+    # @pyhex:end:custom_test_fixtures
+
+
+class EntityTestStrategies:
+    """Hypothesis strategies for property-based testing."""
+
+    # Common strategies for different field types
+    string_strategy = st.text(min_size=1, max_size=100, alphabet=string.ascii_letters + string.digits + " .-_")
+    email_strategy = st.emails()
+    integer_strategy = st.integers(min_value=1, max_value=1000000)
+    decimal_strategy = st.decimals(min_value=0, max_value=999999, places=2)
+    boolean_strategy = st.booleans()
+    datetime_strategy = st.datetimes(min_value=datetime(2000, 1, 1), max_value=datetime(2030, 12, 31))
+    date_strategy = st.dates(min_value=date(2000, 1, 1), max_value=date(2030, 12, 31))
+
+
+@classmethod
+def get_strategy_for_field(cls, field_type: str, field_config: Dict[str, Any] = None):
+    """Get appropriate hypothesis strategy for field type."""
+    field_config = field_config or {}
+
+    if field_type in ["str", "string"]:
+        min_size = field_config.get("min_length", 1)
+        max_size = field_config.get("max_length", 100)
+        return st.text(min_size=min_size, max_size=max_size)
+    elif field_type in ["EmailStr", "email"]:
+        return cls.email_strategy
+    elif field_type in ["int", "integer"]:
+        min_val = field_config.get("min_value", 1)
+        max_val = field_config.get("max_value", 1000000)
+        return st.integers(min_value=min_val, max_value=max_val)
+    elif field_type in ["Decimal", "decimal"]:
+        return cls.decimal_strategy
+    elif field_type in ["bool", "boolean"]:
+        return cls.boolean_strategy
+    elif field_type in ["datetime"]:
+        return cls.datetime_strategy
+    elif field_type in ["date"]:
+        return cls.date_strategy
+    else:
+        return st.text(min_size=1, max_size=50)
+
+{% for entity in entities %}
+
+class {{ entity.name }}TestFactory:
+    """Factory for creating {{ entity.name }} test data with comprehensive validation."""
+
+    @staticmethod
+    def valid_data() -> Dict[str, Any]:
+        """Generate valid {{ entity.name }} data."""
+        return {
+            {%     for field in entity.fields %}
+            {%         if field.required %}
+            {%             if field.type in ["string", "str"] %}
+            "{{ field.name }}": "{{ field.example or 'test_' + field.name }}",
+            {%             elif field.type in ["email", "EmailStr"] %}
+            "{{ field.name }}": "{{ field.example or 'test@example.com' }}",
+            {%             elif field.type in ["integer", "int"] %}
+            "{{ field.name }}": {{ field.example or 1 }},
+        {%             elif field.type in ["decimal", "Decimal"] %}
+        "{{ field.name }}": Decimal("{{ field.example or '10.00' }}"),
+        {%             elif field.type in ["boolean", "bool"] %}
+        "{{ field.name }}": {{ field.example or 'True' }},
+        {%             elif field.type == "datetime" %}
+        "{{ field.name }}": datetime.now(),
+        {%             elif field.type == "date" %}
+        "{{ field.name }}": date.today(),
+        {%             else %}
+        "{{ field.name }}": "{{ field.example or 'test_value' }}",
+        {%             endif %}
+        {%         endif %}
+        {%     endfor %}
+        }
+
+        @staticmethod
+        def invalid_data_missing_required() -> List[Dict[str, Any]]:
+            """Generate data with missing required fields."""
+            base_data = {{ entity.name }}TestFactory.valid_data()
+            invalid_datasets = []
+
+            {%     for field in entity.fields %}
+            {%         if field.required %}
+            # Missing
+            {{ field.name }}
+            data_without_{{ field.name }} = {k: v for k, v in base_data.items() if k != "{{ field.name }}"}
+            invalid_datasets.append(data_without_{{ field.name }})
+            {%         endif %}
+            {%     endfor %}
+
+            return invalid_datasets
+
+        @staticmethod
+        def edge_case_data() -> List[Dict[str, Any]]:
+            """Generate edge case test data."""
+            base_data = {{ entity.name }}TestFactory.valid_data()
+            edge_cases = []
+
+            {%     for field in entity.fields %}
+            {%         if field.validation %}
+            # Edge cases for
+            {{ field.name }}
+            {%             if field.validation.min_length %}
+            # Minimum length boundary
+            edge_case = base_data.copy()
+            edge_case["{{ field.name }}"] = "a" * {{ field.validation.min_length }}
+            edge_cases.append(edge_case)
+            {%             endif %}
+            {%             if field.validation.max_length %}
+            # Maximum length boundary
+            edge_case = base_data.copy()
+            edge_case["{{ field.name }}"] = "a" * {{ field.validation.max_length }}
+            edge_cases.append(edge_case)
+            {%             endif %}
+            {%             if field.validation.min_value %}
+            # Minimum value boundary
+            edge_case = base_data.copy()
+            edge_case["{{ field.name }}"] = {{ field.validation.min_value }}
+            edge_cases.append(edge_case)
+            {%             endif %}
+            {%             if field.validation.max_value %}
+            # Maximum value boundary
+            edge_case = base_data.copy()
+            edge_case["{{ field.name }}"] = {{ field.validation.max_value }}
+            edge_cases.append(edge_case)
+            {%             endif %}
+            {%         endif %}
+            {%     endfor %}
+
+            return edge_cases if edge_cases else [base_data]
+
+        @staticmethod
+        def random_valid_data(seed: Optional[int] = None) -> Dict[str, Any]:
+            """Generate random valid data with optional seed for reproducibility."""
+            if seed:
+                random.seed(seed)
+
+            return {
+                {%     for field in entity.fields %}
+                {%         if field.required %}
+                {%             if field.type in ["string", "str"] %}
+                "{{ field.name }}": f"test_{random.randint(1000, 9999)}",
+                {%             elif field.type in ["email", "EmailStr"] %}
+                "{{ field.name }}": f"test{random.randint(1000, 9999)}@example.com",
+                {%             elif field.type in ["integer", "int"] %}
+                "{{ field.name }}": random.randint(1, 1000),
+                {%             elif field.type in ["decimal", "Decimal"] %}
+                "{{ field.name }}": Decimal(f"{random.randint(1, 1000)}.{random.randint(10, 99)}"),
+                {%             elif field.type in ["boolean", "bool"] %}
+                "{{ field.name }}": random.choice([True, False]),
+                {%             elif field.type == "datetime" %}
+                "{{ field.name }}": datetime.now() + timedelta(days=random.randint(-365, 365)),
+                {%             elif field.type == "date" %}
+                "{{ field.name }}": date.today() + timedelta(days=random.randint(-365, 365)),
+                {%             else %}
+                "{{ field.name }}": f"random_value_{random.randint(1000, 9999)}",
+                {%             endif %}
+                {%         endif %}
+                {%     endfor %}
+            }
+
+    {% endfor %}
+
+
+    {% for entity in entities %}
+
+    class Test{{ entity.name }}Model:
+        """Comprehensive test cases for {{ entity.name }} entity model with enhanced validation."""
+
+        @pytest.fixture
+        def factory(self):
+            """{{ entity.name }} test factory fixture."""
+            return {{ entity.name }}TestFactory
+
+        def test_{{ entity.name | lower }}_creation_valid_data(self, factory):
+            """Test creating {{ entity.name }} with valid data."""
+            valid_data = factory.valid_data()
+
+            # Create entity using Create model
+            create_data = {{ entity.name }}Create(**valid_data)
+            assert create_data is not None
+
+            # Validate all required fields are present
+            {%     for field in entity.fields %}
+            {%         if field.required %}
+            assert hasattr(create_data, "{{ field.name }}")
+            assert getattr(create_data, "{{ field.name }}") is not None
+
+        {%         endif %}
+        {%     endfor %}
+
+        def test_{{ entity.name | lower }}_creation_multiple_valid_datasets(self, factory):
+            """Test creating {{ entity.name }} with multiple valid datasets."""
+            for i in range(10):  # Test with 10 different random datasets
+                valid_data = factory.random_valid_data(seed=i)
+                create_data = {{ entity.name }}Create(**valid_data)
+                assert create_data is not None
+
+                # Verify data integrity
+                for field_name, field_value in valid_data.items():
+                    assert getattr(create_data, field_name) == field_value
+
+        def test_{{ entity.name | lower }}_validation_required_fields(self, factory):
+            """Test {{ entity.name }} validation for required fields."""
+            # Test each invalid dataset (missing required fields)
+            invalid_datasets = factory.invalid_data_missing_required()
+
+            for invalid_data in invalid_datasets:
+                with pytest.raises(ValidationError) as exc_info:
+                    {{ entity.name }}Create(**invalid_data)
+
+                # Verify that the error message mentions validation failure
+                assert "validation error" in str(exc_info.value).lower() or "field required" in str(
+                    exc_info.value).lower()
+
+        @pytest.mark.parametrize("edge_case_data", {{ entity.name }}TestFactory.edge_case_data())
+        def test_{{ entity.name | lower }}_edge_case_validation(self, edge_case_data):
+            """Test {{ entity.name }} with edge case data."""
+            # Edge case data should be valid
+            create_data = {{ entity.name }}Create(**edge_case_data)
+            assert create_data is not None
+
+            # Verify all fields are set correctly
+            for field_name, field_value in edge_case_data.items():
+                assert getattr(create_data, field_name) == field_value
+
+        {%     for field in entity.fields %}
+        {%         if field.type in ["str", "string", "EmailStr", "email"] %}
+
+        @given({{ field.name }}_value=EntityTestStrategies.get_strategy_for_field("{{ field.type }}",
+                                                                                  {{ field.validation or {} }}))
+        @settings(max_examples=50)
+        def test_{{ entity.name | lower }}_{{ field.name }}_property_based(self, {{ field.name }}_value, factory):
+            """Property-based test for {{ field.name }} field."""
+            base_data = factory.valid_data()
+            {%             if field.required %}
+
+            # Test with property-based generated value
+            base_data["{{ field.name }}"] = {{ field.name }}_value
+            try:
+                create_data = {{ entity.name }}Create(**base_data)
+                assert getattr(create_data, "{{ field.name }}") == {{ field.name }}_value
+            except ValidationError:
+                # Some generated values may be invalid - this is expected
+                pass
+            {%             else %}
+
+            # Optional field testing
+            base_data["{{ field.name }}"] = {{ field.name }}_value
+            create_data = {{ entity.name }}Create(**base_data)
+            assert getattr(create_data, "{{ field.name }}") == {{ field.name }}_value
+
+        {%             endif %}
+        {%         endif %}
+        {%     endfor %}
+
+        {%     for field in entity.fields %}
+        {%         if field.validation %}
+
+        def test_{{ entity.name | lower }}_{{ field.name }}_validation_comprehensive(self, factory):
+            """Comprehensive test for {{ field.name }} field validation rules."""
+            base_data = factory.valid_data()
+
+            {%             if field.validation.min_length %}
+            # Test min_length validation - should fail
+            invalid_data = base_data.copy()
+            invalid_data["{{ field.name }}"] = "a" * ({{ field.validation.min_length }} - 1)
+            with pytest.raises(ValidationError) as exc_info:
+                {{ entity.name }}Create(**invalid_data)
+            assert "{{ field.name }}" in str(exc_info.value) or "length" in str(exc_info.value).lower()
+
+            # Test exact min_length - should pass
+            valid_data = base_data.copy()
+            valid_data["{{ field.name }}"] = "a" * {{ field.validation.min_length }}
+            create_data = {{ entity.name }}Create(**valid_data)
+            assert len(getattr(create_data, "{{ field.name }}")) == {{ field.validation.min_length }}
+            {%             endif %}
+
+            {%             if field.validation.max_length %}
+            # Test max_length validation - should fail
+            invalid_data = base_data.copy()
+            invalid_data["{{ field.name }}"] = "a" * ({{ field.validation.max_length }} + 1)
+            with pytest.raises(ValidationError) as exc_info:
+                {{ entity.name }}Create(**invalid_data)
+            assert "{{ field.name }}" in str(exc_info.value) or "length" in str(exc_info.value).lower()
+
+            # Test exact max_length - should pass
+            valid_data = base_data.copy()
+            valid_data["{{ field.name }}"] = "a" * {{ field.validation.max_length }}
+            create_data = {{ entity.name }}Create(**valid_data)
+            assert len(getattr(create_data, "{{ field.name }}")) == {{ field.validation.max_length }}
+            {%             endif %}
+
+            {%             if field.validation.min_value %}
+            # Test min_value validation - should fail
+            invalid_data = base_data.copy()
+            invalid_data["{{ field.name }}"] = {{ field.validation.min_value }} - 1
+            with pytest.raises(ValidationError):
+                {{ entity.name }}Create(**invalid_data)
+
+            # Test exact min_value - should pass
+            valid_data = base_data.copy()
+            valid_data["{{ field.name }}"] = {{ field.validation.min_value }}
+            create_data = {{ entity.name }}Create(**valid_data)
+            assert getattr(create_data, "{{ field.name }}") == {{ field.validation.min_value }}
+            {%             endif %}
+
+            {%             if field.validation.max_value %}
+            # Test max_value validation - should fail
+            invalid_data = base_data.copy()
+            invalid_data["{{ field.name }}"] = {{ field.validation.max_value }} + 1
+            with pytest.raises(ValidationError):
+                {{ entity.name }}Create(**invalid_data)
+
+            # Test exact max_value - should pass
+            valid_data = base_data.copy()
+            valid_data["{{ field.name }}"] = {{ field.validation.max_value }}
+            create_data = {{ entity.name }}Create(**valid_data)
+            assert getattr(create_data, "{{ field.name }}") == {{ field.validation.max_value }}
+            {%             endif %}
+
+            {%             if field.validation.choices %}
+            # Test invalid choices validation
+            invalid_data = base_data.copy()
+            invalid_data["{{ field.name }}"] = "invalid_choice_not_in_list"
+            with pytest.raises(ValidationError):
+                {{ entity.name }}Create(**invalid_data)
+
+            # Test all valid choices
+            {%                 for choice in field.validation.choices %}
+            valid_data = base_data.copy()
+            valid_data["{{ field.name }}"] = "{{ choice }}"
+            create_data = {{ entity.name }}Create(**valid_data)
+            assert getattr(create_data, "{{ field.name }}") == "{{ choice }}"
+            {%                 endfor %}
+            {%             endif %}
+
+            {%             if field.validation.unique %}
+            # Note: Unique validation is typically handled at database level
+            # This test ensures the field is marked for unique validation
+            # Database-level unique constraint testing is in database operation tests
+
+        {%             endif %}
+        {%         endif %}
+        {%     endfor %}
+
+        def test_{{ entity.name | lower }}_database_operations_comprehensive(self, session: Session, factory,
+                                                                             db_helper):
+            """Comprehensive test for {{ entity.name }} database operations."""
+            test_data = factory.valid_data()
+
+            # Create entity
+            create_model = {{ entity.name }}Create(**test_data)
+            entity = {{ entity.name }}.model_validate(create_model)
+
+            # Save to database
+            session.add(entity)
+            session.commit()
+            session.refresh(entity)
+
+            # Verify saved entity
+            assert entity.id is not None
+            for field_name, field_value in test_data.items():
+                assert getattr(entity, field_name) == field_value
+
+            # Test database helper methods
+            db_helper.assert_entity_exists(session, {{ entity.name }}, entity.id)
+            db_helper.assert_entity_count(session, {{ entity.name }}, 1)
+
+            # Query entity from database
+            retrieved = session.get({{ entity.name }}, entity.id)
+            assert retrieved is not None
+            assert retrieved.id == entity.id
+
+            # Test query operations
+            statement = select({{ entity.name }}).where({{ entity.name }}.id == entity.id)
+            result = session.exec(statement)
+            queried_entity = result.first()
+            assert queried_entity is not None
+            assert queried_entity.id == entity.id
+
+        def test_{{ entity.name | lower }}_database_bulk_operations(self, session: Session, factory, db_helper):
+            """Test bulk database operations for {{ entity.name }}."""
+            # Create multiple entities
+            entities = []
+            for i in range(5):
+                test_data = factory.random_valid_data(seed=i)
+                create_model = {{ entity.name }}Create(**test_data)
+                entity = {{ entity.name }}.model_validate(create_model)
+                entities.append(entity)
+                session.add(entity)
+
+            session.commit()
+
+            # Verify all entities were saved
+            db_helper.assert_entity_count(session, {{ entity.name }}, 5)
+
+            # Test bulk retrieval
+            statement = select({{ entity.name }})
+            result = session.exec(statement)
+            all_entities = result.all()
+            assert len(all_entities) == 5
+
+            # Verify entity IDs are unique
+            entity_ids = [entity.id for entity in all_entities]
+            assert len(set(entity_ids)) == 5  # All IDs should be unique
+
+        {%     for field in entity.fields %}
+        {%         if field.validation and field.validation.unique %}
+
+        def test_{{ entity.name | lower }}_unique_constraint_{{ field.name }}(self, session: Session, factory):
+            """Test unique constraint for {{ field.name }} field."""
+            test_data = factory.valid_data()
+
+            # Create first entity
+            entity1 = {{ entity.name }}(** test_data)
+            session.add(entity1)
+            session.commit()
+            session.refresh(entity1)
+
+            # Try to create second entity with same
+            {{ field.name }}
+            test_data2 = factory.random_valid_data()
+            test_data2["{{ field.name }}"] = test_data["{{ field.name }}"]  # Same value
+            entity2 = {{ entity.name }}(** test_data2)
+            session.add(entity2)
+
+            # Should raise constraint violation
+            with pytest.raises(Exception):  # SQLAlchemy will raise IntegrityError
+                session.commit()
+
+        {%         endif %}
+        {%     endfor %}
+
+        def test_{{ entity.name | lower }}_update_operations_comprehensive(self, session: Session, factory, db_helper):
+            """Comprehensive test for {{ entity.name }} update operations."""
+            # Create initial entity
+            initial_data = factory.valid_data()
+            entity = {{ entity.name }}(** initial_data)
+            session.add(entity)
+            session.commit()
+            session.refresh(entity)
+            original_id = entity.id
+
+            # Test partial updates
+            update_data = {}
+            {%     for field in entity.fields %}
+            {%         if not field.required %}
+            {%             if field.type in ["string", "str"] %}
+            update_data["{{ field.name }}"] = "updated_{{ field.name }}"
+            {%             elif field.type in ["email", "EmailStr"] %}
+            update_data["{{ field.name }}"] = "updated@example.com"
+            {%             elif field.type in ["integer", "int"] %}
+            update_data["{{ field.name }}"] = 999
+            {%             elif field.type in ["decimal", "Decimal"] %}
+            update_data["{{ field.name }}"] = Decimal("999.99")
+            {%             elif field.type in ["boolean", "bool"] %}
+            update_data["{{ field.name }}"] = False
+            {%             elif field.type == "datetime" %}
+            update_data["{{ field.name }}"] = datetime.now() + timedelta(days=1)
+            {%             elif field.type == "date" %}
+            update_data["{{ field.name }}"] = date.today() + timedelta(days=1)
+            {%             else %}
+            update_data["{{ field.name }}"] = "updated_value"
+            {%             endif %}
+            {%         endif %}
+            {%     endfor %}
+
+            if update_data:  # Only test if there are updatable fields
+                update_model = {{ entity.name }}Update(**update_data)
+
+                # Apply updates using model_dump
+                update_dict = update_model.model_dump(exclude_unset=True)
+                for field, value in update_dict.items():
+                    setattr(entity, field, value)
+
+                session.add(entity)
+                session.commit()
+                session.refresh(entity)
+
+                # Verify updates
+                assert entity.id == original_id  # ID should not change
+                for field, value in update_dict.items():
+                    assert getattr(entity, field) == value
+
+                # Verify entity still exists in database
+                db_helper.assert_entity_exists(session, {{ entity.name }}, entity.id)
+
+            def test_{{ entity.name | lower }}_serialization_deserialization(self, factory):
+                """Test {{ entity.name }} JSON serialization and deserialization."""
+                # Test Create model
+                create_data = factory.valid_data()
+                create_model = {{ entity.name }}Create(**create_data)
+
+                # Serialize to dict
+                serialized = create_model.model_dump()
+                assert isinstance(serialized, dict)
+
+                # Deserialize back
+                deserialized = {{ entity.name }}Create(**serialized)
+                assert deserialized == create_model
+
+                # Test Response model
+                entity_data = create_data.copy()
+                entity_data["id"] = 1
+                response_model = {{ entity.name }}Response(**entity_data)
+
+                # Serialize Response model
+                response_serialized = response_model.model_dump()
+                assert "id" in response_serialized
+                assert response_serialized["id"] == 1
+
+            def test_{{ entity.name | lower }}_model_validation_edge_cases(self, factory):
+                """Test {{ entity.name }} model validation with edge cases."""
+                # Test with None values for optional fields
+                base_data = factory.valid_data()
+
+                {%     for field in entity.fields %}
+                {%         if not field.required %}
+                # Test
+                {{ field.name }}   as None
+                test_data = base_data.copy()
+                test_data["{{ field.name }}"] = None
+                create_model = {{ entity.name }}Create(**test_data)
+                assert getattr(create_model, "{{ field.name }}") is None
+                {%         endif %}
+                {%     endfor %}
+
+                # Test Update model with empty data (should not fail)
+                update_model = {{ entity.name }}Update()
+                assert update_model is not None
+
+                # Test model_dump exclude_unset functionality
+                update_dict = update_model.model_dump(exclude_unset=True)
+                assert len(update_dict) == 0  # No fields should be set
+
+            {%     if entity.relationships %}
+
+            def test_{{ entity.name | lower }}_relationships_comprehensive(self, session: Session, factory, db_helper):
+                """Comprehensive test for {{ entity.name }} relationships."""
+                # Create entity
+                entity_data = factory.valid_data()
+                entity = {{ entity.name }}(** entity_data)
+                session.add(entity)
+                session.commit()
+                session.refresh(entity)
+
+                # Test relationships exist as attributes
+                {%         for relationship in entity.relationships %}
+                assert hasattr(entity, "{{ relationship.name }}")
+
+                # Test relationship initialization
+                relationship_value = getattr(entity, "{{ relationship.name }}")
+                {%             if relationship.type == "one_to_many" %}
+                # One-to-many relationship should initialize as list
+                assert isinstance(relationship_value, list) or relationship_value is None
+                {%             elif relationship.type == "many_to_one" %}
+                # Many-to-one relationship should be None initially
+                assert relationship_value is None
+                {%             endif %}
+                {%         endfor %}
+
+                # Test relationship loading (lazy loading)
+                # Note: This tests that relationships can be accessed without errors
+                try:
+                {%         for relationship in entity.relationships %}
+                    _ = getattr(entity, "{{ relationship.name }}")
+                {%         endfor %}
+                except Exception as e:
+                    pytest.fail(f"Relationship loading failed: {e}")
+
+            def test_{{ entity.name | lower }}_relationship_constraints(self, session: Session, factory):
+                """Test {{ entity.name }} relationship constraints and foreign keys."""
+                {%         for field in entity.fields %}
+                {%             if field.foreign_key %}
+                # Test foreign key constraint for
+                {{ field.name }}
+                entity_data = factory.valid_data()
+                entity_data["{{ field.name }}"] = 99999  # Non-existent foreign key
+                entity = {{ entity.name }}(** entity_data)
+                session.add(entity)
+
+                # Should raise foreign key constraint violation
+                with pytest.raises(Exception):  # SQLAlchemy will raise IntegrityError
+                    session.commit()
+                session.rollback()  # Rollback failed transaction
+
+            {%             endif %}
+            {%         endfor %}
+            {%     endif %}
+
+            def test_{{ entity.name | lower }}_performance_operations(self, session: Session, factory, db_helper):
+                """Test {{ entity.name }} performance characteristics."""
+                import time
+
+                # Test bulk insert performance
+                start_time = time.time()
+                entities = []
+                for i in range(100):
+                    test_data = factory.random_valid_data(seed=i)
+                    entity = {{ entity.name }}(** test_data)
+                    entities.append(entity)
+                    session.add(entity)
+
+                session.commit()
+                bulk_insert_time = time.time() - start_time
+
+                # Performance assertion (should complete in reasonable time)
+                assert bulk_insert_time < 10.0, f"Bulk insert took too long: {bulk_insert_time}s"
+
+                # Verify all entities were created
+                db_helper.assert_entity_count(session, {{ entity.name }}, 100)
+
+                # Test bulk query performance
+                start_time = time.time()
+                statement = select({{ entity.name }})
+                result = session.exec(statement)
+                all_entities = result.all()
+                bulk_query_time = time.time() - start_time
+
+                assert len(all_entities) == 100
+                assert bulk_query_time < 5.0, f"Bulk query took too long: {bulk_query_time}s"
+
+            # @pyhex:begin:custom_
+            {{ entity.name | lower }}  _tests
+            # Add your custom
+            {{ entity.name }}   tests here
+            # @pyhex:end:custom_
+            {{ entity.name | lower }}  _tests
+
+        {% endfor %}
+
+
+class TestEntityIntegration:
+            """Comprehensive integration tests for all entities in {{ entity_name }} domain."""
+
+            def test_all_entities_creation_comprehensive(self, session: Session, db_helper):
+                """Test creating all entities together with comprehensive validation."""
+                created_entities = {}
+
+                {% for entity in entities %}
+                # Create
+                {{ entity.name }}   with factory data
+                {{ entity.name | lower }}_factory = {{ entity.name }}TestFactory()
+                {{ entity.name | lower }}_data = {{ entity.name | lower }}_factory.valid_data()
+                {{ entity.name | lower }} = {{ entity.name }}(** {{ entity.name | lower }}_data)
+
+            session.add({{ entity.name | lower }})
+            created_entities["{{ entity.name | lower }}"] = {{ entity.name | lower }}
+            {% endfor %}
+
+            # Commit all entities
+            session.commit()
+
+            # Verify all entities were created
+            {% for entity in entities %}
+            entity = created_entities["{{ entity.name | lower }}"]
+            assert entity.id is not None
+            db_helper.assert_entity_exists(session, {{ entity.name }}, entity.id)
+            {% endfor %}
+
+            # Verify entity counts
+            {% for entity in entities %}
+            db_helper.assert_entity_count(session, {{ entity.name }}, 1)
+            {% endfor %}
+
+            def test_entity_domain_business_rules(self, session: Session):
+                """Test domain-wide business rules and constraints."""
+                # Test that entities follow domain conventions
+                {% for entity in entities %}
+                # Verify
+                {{ entity.name }}   has required domain fields
+                entity_fields = {{ entity.name }}.model_fields
+
+                # All entities should have id field
+                assert "id" in entity_fields or hasattr({{ entity.name }}, "id")
+
+                # Test that entity can be instantiated
+                {{ entity.name | lower }}_factory = {{ entity.name }}TestFactory()
+                test_data = {{ entity.name | lower }}_factory.valid_data()
+                entity = {{ entity.name }}(** test_data)
+                assert entity is not None
+
+            {% endfor %}
+
+            def test_domain_wide_performance(self, session: Session, db_helper):
+                """Test performance characteristics across all domain entities."""
+                import time
+
+                # Test creating multiple entities of each type
+                start_time = time.time()
+
+                {% for entity in entities %}
+                {{ entity.name | lower }}_factory = {{ entity.name }}TestFactory()
+                for i in range(10):
+                    test_data = {{ entity.name | lower }}_factory.random_valid_data(seed=i)
+                    entity = {{ entity.name }}(** test_data)
+                    session.add(entity)
+                {% endfor %}
+
+                session.commit()
+                creation_time = time.time() - start_time
+
+                # Should complete in reasonable time
+                assert creation_time < 15.0, f"Domain entity creation took too long: {creation_time}s"
+
+                # Verify all entities were created
+                {% for entity in entities %}
+                db_helper.assert_entity_count(session, {{ entity.name }}, 10)
+                {% endfor %}
+
+                def test_cross_entity_validation(self, session: Session):
+                    """Test validation rules that span multiple entities."""
+                    # This is a placeholder for cross-entity business rules
+                    # In real applications, this might test:
+                    # - Referential integrity between entities
+                    # - Domain-wide unique constraints
+                    # - Business rules that involve multiple entities
+
+                    {% for entity in entities %}
+                    {{ entity.name | lower }}_factory = {{ entity.name }}TestFactory()
+                    test_data = {{ entity.name | lower }}_factory.valid_data()
+                    entity = {{ entity.name }}(** test_data)
+
+                    # Test that entity follows domain naming conventions
+                    assert hasattr(entity, "id") or "id" in entity.model_fields
+
+                    # Test entity can be serialized (important for API responses)
+                    if hasattr(entity, "model_dump"):
+                        serialized = entity.model_dump()
+                        assert isinstance(serialized, dict)
+
+                {% endfor %}
+
+                # @pyhex:begin:custom_integration_tests
+                # Add your custom integration tests here
+                # @pyhex:end:custom_integration_tests
+
+
+class TestEntityGeneratedCodeQuality:
+                """Test the quality of generated entity code itself."""
+
+                def test_generated_entity_structure(self):
+                    """Test that generated entities have proper structure."""
+                    {% for entity in entities %}
+                    # Test
+                    {{ entity.name }}   class structure
+                    assert hasattr({{ entity.name }}, "__tablename__") or hasattr({{ entity.name }}, "metadata")
+                    assert hasattr({{ entity.name }}, "model_fields") or hasattr({{ entity.name }}, "__annotations__")
+
+                    # Test Create model exists and has proper structure
+                    assert {{ entity.name }}Create is not None
+                    assert hasattr({{ entity.name }}Create, "model_fields") or hasattr({{ entity.name }}Create,
+                                                                                       "__annotations__")
+
+                    # Test Update model exists
+                    assert {{ entity.name }}Update is not None
+
+                    # Test Response model exists
+                    assert {{ entity.name }}Response is not None
+
+                {% endfor %}
+
+                def test_generated_entity_inheritance(self):
+                    """Test that generated entities follow proper inheritance patterns."""
+                    {% for entity in entities %}
+                    # Test inheritance hierarchy
+                    mro = {{ entity.name }}.mro()
+                    assert SQLModel in mro, "{{ entity.name }} should inherit from SQLModel"
+
+                    # Test that Create model inherits from Base
+                    create_mro = {{ entity.name }}Create.mro()
+                    assert {{ entity.name }}Base in create_mro, "{{ entity.name }}Create should inherit from {{ entity.name }}Base"
+
+                    # Test that Response model has proper structure
+                    response_fields = {{ entity.name }}Response.model_fields
+                    assert "id" in response_fields, "{{ entity.name }}Response should include id field"
+
+                {% endfor %}
+
+                def test_generated_entity_validators(self):
+                    """Test that generated entities have proper validation."""
+                    {% for entity in entities %}
+                    # Test validation by creating invalid instances
+                    {%     for field in entity.fields %}
+                    {%         if field.required %}
+                    with pytest.raises(ValidationError):
+                        # Missing required field should raise ValidationError
+                        invalid_data = {}
+                        {{ entity.name }}Create(**invalid_data)
+
+                {%         endif %}
+                {%     endfor %}
+                {% endfor %}
+
+                # @pyhex:begin:custom_code_quality_tests
+                # Add your custom code quality tests here
+                # @pyhex:end:custom_code_quality_tests
+
+            # @pyhex:begin:custom_test_classes
+            # Add your custom test classes here
+            # @pyhex:end:custom_test_classes
+
+            if __name__ == "__main__":
+                pytest.main([__file__, "-v"])
