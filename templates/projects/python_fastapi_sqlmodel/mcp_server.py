@@ -103,7 +103,10 @@ def initialize_project(
     
     Args:
         project_name: Name of the project to create
-        output_dir: Directory where the project should be created
+        output_dir: Directory where the project should be created. Accepts both absolute 
+            paths (e.g., "/absolute/path/to/project") and relative paths (e.g., 
+            "./relative/path", "../parent/dir"). Relative paths are resolved from 
+            the current working directory.
         description: Optional project description
         author: Optional project author
         clean_existing: Whether to clean existing directory before initialization
@@ -174,7 +177,10 @@ def generate_domain_from_config(
     
     Args:
         domain_config: JSON string containing EntityDomainConfig data
-        output_dir: Output directory for generated code
+        output_dir: Output directory for generated code. Accepts both absolute 
+            paths (e.g., "/absolute/path/to/output") and relative paths (e.g., 
+            "./output", "../project/src"). Relative paths are resolved from 
+            the current working directory.
         clean_existing: Whether to clean existing output directory
         validate_syntax: Whether to validate generated Python syntax
         validate_imports: Whether to validate import statements
@@ -330,7 +336,10 @@ def generate_usecase_domain(
     
     Args:
         usecase_config: JSON string containing UseCaseDomainConfig data
-        output_dir: Output directory for generated code
+        output_dir: Output directory for generated code. Accepts both absolute 
+            paths (e.g., "/absolute/path/to/output") and relative paths (e.g., 
+            "./output", "../project/src"). Relative paths are resolved from 
+            the current working directory.
         clean_existing: Whether to clean existing output directory
         
     Returns:

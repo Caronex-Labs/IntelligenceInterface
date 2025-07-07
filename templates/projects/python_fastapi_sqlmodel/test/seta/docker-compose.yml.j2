@@ -1,0 +1,152 @@
+# {{ app_info.title or app_name or 'FastAPI Application' }} - Development Environment
+# Generated from: docker-compose.yml.j2
+version: '3.8'
+services:
+# Main application service
+app:
+build: .
+ports:
+  - "8000:8000"
+environment:
+  - {{ app_name.upper() or 'APP' }}_ENVIRONMENT=development
+  - {{ app_name.upper() or 'APP' }}_DATABASE_URL={{ database_url or 'postgresql://user:password@db:5432/appdb' }}
+  - {{ app_name.upper() or 'APP' }}_SECRET_KEY=dev-secret-key-change-in-production
+  - {{ app_name.upper() or 'APP' }}_DEBUG=true
+  {% if features.redis_enabled %}
+  -
+  {{ app_name.upper() or 'APP' }}
+  _CACHE_URL=redis://redis:6379
+  {% endif %}
+volumes:
+  - .:/app
+  - /app/.venv  # Exclude virtual environment from volume mount
+depends_on:
+{% if database_type in ['postgresql', 'mysql'] %}
+- db
+{% endif %}
+{% if features.redis_enabled %}
+- redis
+{% endif %}
+restart: unless-stopped
+healthcheck:
+test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+interval: 30s
+timeout: 10s
+retries: 3
+start_period: 30s
+{% if database_type == 'postgresql' %}
+  # PostgreSQL database service
+  db:
+  image: postgres:16-alpine
+  environment:
+  POSTGRES_USER: user
+  POSTGRES_PASSWORD: password
+  POSTGRES_DB: appdb
+  volumes:
+    - postgres_data:/var/lib/postgresql/data
+    - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+  ports:
+    - "5432:5432"
+  restart: unless-stopped
+  healthcheck:
+  test: [ "CMD-SHELL", "pg_isready -U user -d appdb" ]
+  interval: 10s
+  timeout: 5s
+  retries: 5
+{% elif database_type == 'mysql' %}
+  # MySQL database service
+  db:
+  image: mysql:8.0
+  environment:
+  MYSQL_ROOT_PASSWORD: rootpassword
+  MYSQL_USER: user
+  MYSQL_PASSWORD: password
+  MYSQL_DATABASE: appdb
+  volumes:
+    - mysql_data:/var/lib/mysql
+    - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+  ports:
+    - "3306:3306"
+  restart: unless-stopped
+  healthcheck:
+  test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "user", "-ppassword" ]
+  interval: 10s
+  timeout: 5s
+  retries: 5
+{% endif %}
+{% if features.redis_enabled %}
+  # Redis cache service
+  redis:
+  image: redis:7-alpine
+  ports:
+    - "6379:6379"
+  volumes:
+    - redis_data:/data
+  restart: unless-stopped
+  healthcheck:
+  test: [ "CMD", "redis-cli", "ping" ]
+  interval: 10s
+  timeout: 5s
+  retries: 3
+{% endif %}
+{% if features.monitoring_enabled %}
+  # Monitoring with Prometheus
+  prometheus:
+  image: prom/prometheus:latest
+  ports:
+    - "9090:9090"
+  volumes:
+    - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    - prometheus_data:/prometheus
+  command:
+    - '--config.file=/etc/prometheus/prometheus.yml'
+    - '--storage.tsdb.path=/prometheus'
+    - '--web.console.libraries=/etc/prometheus/console_libraries'
+    - '--web.console.templates=/etc/prometheus/consoles'
+  restart: unless-stopped
+  # Grafana for visualization
+  grafana:
+  image: grafana/grafana:latest
+  ports:
+    - "3000:3000"
+  environment:
+    - GF_SECURITY_ADMIN_PASSWORD=admin
+  volumes:
+    - grafana_data:/var/lib/grafana
+    - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+    - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+  restart: unless-stopped
+{% endif %}
+{% if features.documentation_enabled %}
+  # Documentation service
+  docs:
+  image: nginx:alpine
+  ports:
+    - "8080:80"
+  volumes:
+    - ./docs/build:/usr/share/nginx/html:ro
+    - ./docs/nginx.conf:/etc/nginx/nginx.conf:ro
+  restart: unless-stopped
+{% endif %}
+volumes:
+{% if database_type == 'postgresql' %}
+  postgres_data:
+  driver: local
+{% elif database_type == 'mysql' %}
+  mysql_data:
+  driver: local
+{% endif %}
+{% if features.redis_enabled %}
+  redis_data:
+  driver: local
+{% endif %}
+{% if features.monitoring_enabled %}
+  prometheus_data:
+  driver: local
+  grafana_data:
+  driver: local
+{% endif %}
+networks:
+default:
+name: {{ app_name or 'app' }}_network
+driver: bridge

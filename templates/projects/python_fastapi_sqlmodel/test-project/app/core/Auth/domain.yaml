@@ -1,0 +1,34 @@
+# Auth Domain Configuration
+domain:
+  name: "Auth"
+  description: "Authentication and authorization domain"
+  package: "app.core.Auth"
+  version: "1.0.0"
+
+# Base Entity Configuration
+entity:
+  base_class: "BaseEntity"
+  abstract_base: true
+  
+  mixins:
+    - name: "UUIDMixin"
+      description: "UUID primary key generation"
+      enabled: true
+      import_path: "app.core.mixins.uuid_mixin"
+    - name: "TimestampMixin"
+      description: "Created/updated timestamp fields"
+      enabled: true
+      import_path: "app.core.mixins.timestamp_mixin"
+
+# JWT Configuration
+jwt:
+  algorithm: "HS256"
+  secret_env_var: "JWT_SECRET"
+  access_token_expire_minutes: 30
+  refresh_token_expire_days: 7
+
+# Authentication Features
+features:
+  refresh_tokens: true
+  token_blacklist: true
+  session_management: true

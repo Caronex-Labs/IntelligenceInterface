@@ -32,7 +32,7 @@ from app.usecase.Health.schemas import (
 )
 
 # Custom exception handling
-from app.domain.Health.exceptions import (
+from app.core.Health.exceptions import (
     HealthValidationError,
     HealthNotFoundError,
     BusinessConstraintViolationError,

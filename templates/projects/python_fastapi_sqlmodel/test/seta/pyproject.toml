@@ -1,0 +1,111 @@
+[project]
+name = "python-fastapi-sqlmodel"
+version = "0.1.0"
+description = "FastAPI SQLModel template generator with clean architecture"
+requires-python = ">=3.12"
+dependencies = [
+    "click>=8.1.0",
+    "djlint>=1.36.4",
+    "fastmcp>=2.9.2",
+    "j2lint",
+    "jinja2>=3.1.6",
+    "jsonschema>=4.23.0",
+    "mypy>=1.16.1",
+    "pydantic>=2.11.7",
+    "pydantic-settings>=2.10.1",
+    "pyyaml>=6.0.2",
+]
+
+[project.scripts]
+fastapi-sqlmodel-generator = "cli.generate.cli_tool:main"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["cli*"]
+exclude = ["app*", "sprints*", "configs*", "milestone_tests*", "archived_outputs*", "milestone_test_outputs*", "tests*"]
+
+[tool.uv.sources]
+j2lint = { git = "https://github.com/aristanetworks/j2lint.git" }
+
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+    "coverage>=7.9.1",
+    "djlint>=1.36.4",
+    "fastapi>=0.115.13",
+    "hypothesis>=6.93.1",
+    "j2lint>=1.2.0",
+    "pre-commit>=4.2.0",
+    "psutil>=7.0.0",
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.0.0",
+    "pytest-bdd>=8.1.0",
+    "pytest-cov>=6.2.1",
+    "pytest-xdist>=3.7.0",
+    "ruff>=0.12.0",
+    "sqlmodel>=0.0.24",
+]
+
+testing = [
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.0.0",
+    "pytest-bdd>=8.1.0",
+    "pytest-cov>=6.2.1",
+    "hypothesis>=6.93.1",
+    "sqlmodel>=0.0.24",
+    "fastapi>=0.115.13",
+    "pydantic>=2.11.7",
+]
+
+validation = [
+    "sqlmodel>=0.0.24",
+    "pydantic>=2.11.7",
+    "fastapi>=0.115.13",
+    "hypothesis>=6.93.1",
+    "jinja2>=3.1.6",
+    "pyyaml>=6.0.2",
+]
+
+[tool.djlint]
+profile = "jinja"
+extension = "j2"
+indent = 2
+max_line_length = 120
+format_css = true
+format_js = true
+ignore = "H021,H030,H031,T027,T001,H025,T032"
+
+[tool.j2lint]
+rules = [
+    "S0", # Jinja2 syntax should be correct (most important)
+    "S1", # Single space between curly brackets and variable names
+    "S2", # Filters should be enclosed by spaces
+    "S3", # Jinja statements must be enclosed by 1 space
+    "VAR-1", # Variables should use lower case
+    "VAR-2"  # Multi-word variables should use underscore
+]
+# Temporarily ignore these problematic rules:
+# S7 - Jinja statements should be on separate lines (too many inline statements)
+# S8 - Avoid {%- or {%+ or -%} delimiters (whitespace control needed)
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = "generator.*"
+strict = true

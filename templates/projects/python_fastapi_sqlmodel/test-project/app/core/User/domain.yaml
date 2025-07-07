@@ -1,0 +1,29 @@
+# User Domain Configuration
+domain:
+  name: "User"
+  description: "User management domain with authentication"
+  package: "app.core.User"
+  version: "1.0.0"
+
+# Base Entity Configuration
+entity:
+  base_class: "BaseEntity"
+  abstract_base: true
+  
+  mixins:
+    - name: "UUIDMixin"
+      description: "UUID primary key generation"
+      enabled: true
+      import_path: "app.core.mixins.uuid_mixin"
+    - name: "TimestampMixin"
+      description: "Created/updated timestamp fields"
+      enabled: true
+      import_path: "app.core.mixins.timestamp_mixin"
+
+# Security Configuration
+security:
+  password_hashing: "bcrypt"
+  password_min_length: 8
+  email_verification: true
+  account_lockout: true
+  max_failed_attempts: 5

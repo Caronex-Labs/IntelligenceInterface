@@ -1,0 +1,7 @@
+pyproject.toml
+python_fastapi_sqlmodel.egg-info/PKG-INFO
+python_fastapi_sqlmodel.egg-info/SOURCES.txt
+python_fastapi_sqlmodel.egg-info/dependency_links.txt
+python_fastapi_sqlmodel.egg-info/entry_points.txt
+python_fastapi_sqlmodel.egg-info/requires.txt
+python_fastapi_sqlmodel.egg-info/top_level.txt

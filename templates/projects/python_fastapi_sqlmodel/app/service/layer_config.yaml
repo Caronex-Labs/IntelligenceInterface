@@ -1,0 +1,67 @@
+# Service Layer Configuration
+# Generic layer settings and service tracking for domain-agnostic services
+
+layer:
+  name: "service"
+  description: "Service layer configuration - Domain-agnostic services and utilities"
+  architecture: "hexagonal"
+  pattern: "service_layer"
+
+# Services instead of domains for this layer
+services:
+  - name: "EmailService"
+    status: "blank"
+    config_files: []
+    description: "Email notification service"
+  - name: "AuthenticationService"
+    status: "blank"
+    config_files: []
+    description: "Authentication and authorization service"
+  - name: "CacheService"
+    status: "blank"
+    config_files: []
+    description: "Caching service abstraction"
+
+generation:
+  default_service_template: "{{service_name}}"
+  auto_create_blank_configs: true
+  preserve_custom_code: true
+  preservation_markers: "@pyhex"
+  
+  # Default service patterns
+  service_patterns:
+    base_class: "BaseService"
+    async_methods: true
+    dependency_injection: true
+    scope: "scoped"
+    interface_based: true
+  
+  # Common service categories
+  service_categories:
+    - name: "notification"
+      description: "Notification and messaging services"
+      common_methods: ["send", "notify", "broadcast"]
+    - name: "integration"
+      description: "External system integration services"
+      common_methods: ["connect", "sync", "import", "export"]
+    - name: "utility"
+      description: "Utility and helper services"
+      common_methods: ["process", "transform", "validate"]
+
+metadata:
+  template_version: "1.0.0"
+  last_updated: "2024-01-01"
+  service_architecture: "microservice_ready"
+  
+  # Service standards
+  standards:
+    interface_segregation: true
+    dependency_inversion: true
+    single_responsibility: true
+    
+  # Integration requirements
+  integration:
+    circuit_breaker: false
+    retry_policies: true
+    health_checks: true
+    monitoring: true

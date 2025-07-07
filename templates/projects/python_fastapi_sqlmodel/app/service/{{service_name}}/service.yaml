@@ -1,0 +1,328 @@
+# {{service_name}} Service Configuration
+# Domain-agnostic service configuration showcasing all available features
+#
+# This template demonstrates comprehensive service configuration including:
+# - Service metadata and dependency injection scope
+# - Method definitions with parameters and return types
+# - Dependencies on other services and repositories
+# - Service patterns and best practices
+# - Integration configurations
+# - Testing and monitoring setup
+
+# Service Metadata
+name: "{{service_name}}"
+description: "{{service_description or 'Domain-agnostic service for ' + service_name}}"
+package: "{{service_package or 'app.service.' + service_name.lower().replace('service', '') + '_service'}}"
+
+# Dependency Injection Scope
+# Options: singleton, scoped, transient
+scope: "{{service_scope or 'scoped'}}"
+
+# Service Dependencies
+# List of other services, repositories, or external dependencies
+dependencies:
+  # Example service dependencies
+  - "logging_service"
+  - "cache_service"
+  - "notification_service"
+  # Example repository dependencies (if needed)
+  - "user_repository"
+  - "audit_repository"
+  # Example external service dependencies
+  - "email_provider"
+  - "metrics_collector"
+
+# Service Method Definitions
+methods:
+  # Example: Notification service methods
+  - name: "send_notification"
+    description: "Send notification to user with various delivery methods"
+    async_method: true
+    return_type: "NotificationResult"
+    parameters:
+      - name: "user_id"
+        type: "UUID"
+        description: "Target user identifier"
+        required: true
+        validation:
+          format: "uuid"
+      - name: "message"
+        type: "str"
+        description: "Notification message content"
+        required: true
+        validation:
+          min_length: 1
+          max_length: 1000
+      - name: "notification_type"
+        type: "str"
+        description: "Type of notification"
+        required: true
+        validation:
+          choices: ["email", "sms", "push", "in_app"]
+      - name: "priority"
+        type: "str"
+        description: "Notification priority level"
+        required: false
+        default: "normal"
+        validation:
+          choices: ["low", "normal", "high", "urgent"]
+      - name: "metadata"
+        type: "Optional[Dict[str, Any]]"
+        description: "Additional notification metadata"
+        required: false
+
+  - name: "send_bulk_notification"
+    description: "Send notification to multiple users efficiently"
+    async_method: true
+    return_type: "List[NotificationResult]"
+    parameters:
+      - name: "user_ids"
+        type: "List[UUID]"
+        description: "List of target user identifiers"
+        required: true
+        validation:
+          min_items: 1
+          max_items: 1000
+      - name: "message"
+        type: "str"
+        description: "Notification message content"
+        required: true
+      - name: "notification_type"
+        type: "str"
+        description: "Type of notification"
+        required: true
+
+  - name: "get_notification_status"
+    description: "Retrieve notification delivery status"
+    async_method: true
+    return_type: "NotificationStatus"
+    parameters:
+      - name: "notification_id"
+        type: "UUID"
+        description: "Notification identifier"
+        required: true
+
+  - name: "get_user_notification_preferences"
+    description: "Get user notification preferences and settings"
+    async_method: true
+    return_type: "UserNotificationPreferences"
+    parameters:
+      - name: "user_id"
+        type: "UUID"
+        description: "User identifier"
+        required: true
+
+  - name: "update_notification_preferences"
+    description: "Update user notification preferences"
+    async_method: true
+    return_type: "UserNotificationPreferences"
+    parameters:
+      - name: "user_id"
+        type: "UUID"
+        description: "User identifier"
+        required: true
+      - name: "preferences"
+        type: "NotificationPreferencesUpdate"
+        description: "Updated preference settings"
+        required: true
+
+  # Example: Cache/utility service methods
+  - name: "invalidate_cache"
+    description: "Invalidate cache entries with pattern matching"
+    async_method: true
+    return_type: "CacheInvalidationResult"
+    parameters:
+      - name: "pattern"
+        type: "str"
+        description: "Cache key pattern to invalidate"
+        required: true
+      - name: "namespace"
+        type: "Optional[str]"
+        description: "Cache namespace to target"
+        required: false
+
+  - name: "health_check"
+    description: "Perform service health check"
+    async_method: true
+    return_type: "HealthCheckResult"
+    parameters: []
+
+# Service Configuration
+configuration:
+  # Async operation settings
+  async_operations:
+    enabled: true
+    max_concurrent_operations: 100
+    timeout_seconds: 30
+    retry_attempts: 3
+    retry_delay_seconds: 1.0
+
+  # Connection pooling (if applicable)
+  connection_pool:
+    enabled: false  # Set to true for services that need connection pooling
+    min_connections: 5
+    max_connections: 20
+    connection_timeout: 30
+
+  # Caching configuration
+  caching:
+    enabled: true
+    default_ttl: 300
+    cache_prefix: "{{service_name.lower().replace('service', '')}}_service"
+    cache_backend: "redis"  # redis | memory | disabled
+
+  # Rate limiting
+  rate_limiting:
+    enabled: true
+    default_limit: 1000
+    window_seconds: 60
+    per_user_limit: 100
+
+  # Circuit breaker pattern
+  circuit_breaker:
+    enabled: false  # Enable for external service integrations
+    failure_threshold: 5
+    recovery_timeout: 30
+    half_open_max_calls: 3
+
+  # Monitoring and metrics
+  monitoring:
+    metrics_enabled: true
+    health_check_enabled: true
+    performance_logging: true
+    error_tracking: true
+    custom_metrics:
+      - "notifications_sent_total"
+      - "notification_delivery_time"
+      - "notification_failure_rate"
+      - "user_preferences_updated"
+
+# Integration Configuration
+integrations:
+  # FastAPI integration
+  fastapi:
+    dependency_injection: true
+    middleware_integration: true
+    exception_handlers: true
+    health_endpoint: "/health"
+    metrics_endpoint: "/metrics"
+
+  # External services
+  external_services:
+    email_provider:
+      enabled: true
+      provider: "sendgrid"  # Example: sendgrid, ses, mailgun
+      timeout: 30
+      retry_attempts: 3
+
+    sms_provider:
+      enabled: true
+      provider: "twilio"  # Example: twilio, nexmo
+      timeout: 15
+      retry_attempts: 2
+
+    push_notification:
+      enabled: true
+      provider: "firebase"  # Example: firebase, apns
+      timeout: 20
+      retry_attempts: 2
+
+  # Database integration (if service needs direct DB access)
+  database:
+    enabled: false  # Most services should use repositories instead
+    connection_string: null
+    pool_size: 5
+
+# Error Handling Configuration
+error_handling:
+  retry_on_failure: true
+  log_errors: true
+  raise_on_critical_errors: true
+  custom_exceptions:
+    - name: "{{service_name}}Error"
+      base: "Exception"
+      message: "{{service_name}} operation failed"
+    - name: "{{service_name}}ConfigurationError"
+      base: "ValueError"
+      message: "{{service_name}} configuration error"
+    - name: "{{service_name}}TimeoutError"
+      base: "TimeoutError"
+      message: "{{service_name}} operation timed out"
+
+# Security Configuration
+security:
+  authentication_required: true
+  authorization_enabled: true
+  api_key_required: false
+  rate_limiting_by_user: true
+  input_validation: true
+  output_sanitization: true
+
+# Testing Configuration
+testing:
+  mock_external_services: true
+  test_fixtures: true
+  performance_benchmarks: true
+  integration_tests: true
+  unit_test_coverage_minimum: 90
+
+# Performance Configuration
+performance:
+  async_operations: true
+  connection_pooling: false  # Enable if service manages connections
+  caching_strategy: "write_through"  # write_through | write_behind | read_through
+  batch_operations: true
+  lazy_loading: true
+  query_optimization: true
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "json"
+  include_request_id: true
+  include_user_id: true
+  sensitive_data_masking: true
+  log_rotation: true
+  log_retention_days: 30
+
+# Service Lifecycle Configuration
+lifecycle:
+  startup_tasks:
+    - "initialize_cache"
+    - "validate_configuration" 
+    - "setup_external_connections"
+    - "register_health_checks"
+
+  shutdown_tasks:
+    - "flush_pending_operations"
+    - "close_external_connections"
+    - "cleanup_resources"
+
+# Template Generation Configuration
+generation:
+  preserve_custom_code: true
+  preservation_markers: "@pyhex"
+  auto_format: true
+  include_type_hints: true
+  include_docstrings: true
+  include_examples: true
+
+# Quality Standards
+quality:
+  type_hint_coverage: 100
+  docstring_coverage: 90
+  test_coverage_minimum: 90
+  max_method_complexity: 8
+  max_class_complexity: 15
+
+# Documentation Configuration
+documentation:
+  include_examples: true
+  include_api_docs: true
+  include_integration_guide: true
+  include_troubleshooting: true
+
+# Custom Configuration Section
+# @pyhex:begin:custom:service_config
+# Add custom service configuration here - preserved during regeneration
+# @pyhex:end:custom:service_config

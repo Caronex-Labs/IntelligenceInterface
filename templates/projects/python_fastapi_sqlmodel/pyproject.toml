@@ -4,25 +4,28 @@ version = "0.1.0"
 description = "FastAPI SQLModel template generator with clean architecture"
 requires-python = ">=3.12"
 dependencies = [
+    "click>=8.1.0",
     "djlint>=1.36.4",
     "fastmcp>=2.9.2",
     "j2lint",
     "jinja2>=3.1.6",
+    "jsonschema>=4.23.0",
+    "mypy>=1.16.1",
     "pydantic>=2.11.7",
     "pydantic-settings>=2.10.1",
     "pyyaml>=6.0.2",
 ]
 
 [project.scripts]
-fastapi-sqlmodel-generator = "cli.generate.cli_tool:main"
+fastapi-sqlmodel-generator = "generator.interface.cli.main:main"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["cli*"]
-exclude = ["app*", "sprints*", "configs*", "milestone_tests*", "archived_outputs*", "milestone_test_outputs*", "tests*"]
+include = ["generator*"]
+exclude = ["app*", "sprints*", "configs*", "milestone_tests*", "archived_outputs*", "milestone_test_outputs*", "tests*", "cli*"]
 
 [tool.uv.sources]
 j2lint = { git = "https://github.com/aristanetworks/j2lint.git" }
@@ -87,3 +90,22 @@ rules = [
 # Temporarily ignore these problematic rules:
 # S7 - Jinja statements should be on separate lines (too many inline statements)
 # S8 - Avoid {%- or {%+ or -%} delimiters (whitespace control needed)
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = "generator.*"
+strict = true

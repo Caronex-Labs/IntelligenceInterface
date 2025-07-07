@@ -16,7 +16,7 @@ from uuid import UUID
 # Add custom imports here
 # @pyhex:end:custom:imports
 
-from app.domain.Health.entities import Health
+from app.core.Health.entities import Health
 from app.repository.Health.protocols import HealthRepositoryProtocol
 from .protocols import (
     HealthUseCaseProtocol,
@@ -35,7 +35,7 @@ from .schemas import (
 )
 
 # Business rule and validation exceptions
-from app.domain.Health.exceptions import (
+from app.core.Health.exceptions import (
     HealthValidationError,
     HealthNotFoundError,
     BusinessConstraintViolationError,

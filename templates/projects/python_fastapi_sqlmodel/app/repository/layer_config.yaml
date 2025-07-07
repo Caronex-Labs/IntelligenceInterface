@@ -1,0 +1,67 @@
+# Repository Layer Configuration
+# Generic layer settings and domain tracking for data access layer
+
+layer:
+  name: "repository"
+  description: "Repository layer configuration - Data access patterns and persistence"
+  architecture: "hexagonal"
+  pattern: "repository_pattern"
+
+domains:
+  - name: "Health"
+    status: "configured"
+    config_files: ["repository.yaml"]
+    description: "Health data access and persistence"
+
+generation:
+  default_domain_template: "{{domain}}"
+  auto_create_blank_configs: true
+  preserve_custom_code: true
+  preservation_markers: "@pyhex"
+  
+  # Default repository patterns
+  repository_patterns:
+    base_class: "BaseRepository"
+    async_methods: true
+    transaction_support: true
+    caching_enabled: true
+    connection_pooling: true
+  
+  # Default repository methods for all domains
+  default_methods:
+    - name: "create"
+      async_method: true
+      transaction_required: true
+    - name: "get_by_id"
+      async_method: true
+      caching_enabled: true
+    - name: "update"
+      async_method: true
+      transaction_required: true
+    - name: "delete"
+      async_method: true
+      transaction_required: true
+    - name: "list"
+      async_method: true
+      pagination_support: true
+    - name: "exists"
+      async_method: true
+      caching_enabled: true
+
+metadata:
+  template_version: "1.0.0"
+  last_updated: "2024-01-01"
+  persistence_strategy: "sqlmodel_orm"
+  
+  # Data access standards
+  standards:
+    orm_framework: "SQLModel"
+    database_type: "PostgreSQL"
+    migration_strategy: "alembic"
+    
+  # Performance requirements
+  performance:
+    connection_pooling: true
+    query_optimization: true
+    caching_strategy: "redis"
+    lazy_loading: true

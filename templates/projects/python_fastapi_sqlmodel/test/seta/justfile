@@ -1,0 +1,392 @@
+# Python FastAPI SQLModel Template System - Development Commands
+# Comprehensive command interface for testing, generation, and validation workflows
+
+# Show available commands
+default:
+    @just --list
+
+# Display detailed help for all commands
+help:
+    @echo "Python FastAPI SQLModel Template System - Development Commands"
+    @echo ""
+    @echo "Development Setup:"
+    @echo "  setup          - Setup development environment with UV"
+    @echo "  install        - Install dependencies and sync environment"
+    @echo "  check-tools    - Verify required development tools are installed"
+    @echo "  install-cli    - Install the actual CLI into your system"
+    @echo ""
+    @echo "Testing Commands:"
+    @echo "  test           - Run all tests with comprehensive coverage"
+    @echo "  test-unit      - Run unit tests only (template generator components)"
+    @echo "  test-integration - Run integration tests (complete workflows)"
+    @echo "  test-bdd       - Run BDD tests (Gherkin scenario validation)"
+    @echo "  test-e2e       - Run end-to-end tests (complete generation + validation)"
+    @echo "  test-performance - Run performance tests (generation speed benchmarks)"
+    @echo "  test-watch     - Run tests in watch mode for development"
+    @echo ""
+    @echo "Coverage Commands:"
+    @echo "  coverage       - Generate test coverage report"
+    @echo "  coverage-html  - Generate HTML coverage report"
+    @echo "  coverage-unit  - Coverage for unit tests only"
+    @echo "  coverage-integration - Coverage for integration tests only"
+    @echo ""
+    @echo "Code Generation:"
+    @echo "  generate DOMAIN - Generate domain code from configuration"
+    @echo "  demo DOMAIN    - Run complete demo (generate + validate + test)"
+    @echo "  scaffold DOMAIN - Create basic YAML configuration for domain"
+    @echo ""
+    @echo "Validation Commands:"
+    @echo "  validate-templates - Validate all Jinja2 templates"
+    @echo "  validate-configs - Validate all YAML configurations"
+    @echo "  validate-generated PATH - Validate generated code at path"
+    @echo "  validate-all   - Run all validation checks"
+    @echo ""
+    @echo "Linting and Formatting:"
+    @echo "  lint           - Run all linters (templates, configs, Python code)"
+    @echo "  lint-fix       - Run linters with auto-fix where possible"
+    @echo "  format         - Format Python code with Black"
+    @echo "  format-check   - Check if code is properly formatted"
+    @echo ""
+    @echo "Development Workflow:"
+    @echo "  dev-check      - Quick development checks (lint + unit tests)"
+    @echo "  full-check     - Complete validation (all tests + coverage + lint)"
+    @echo "  pre-commit     - Run pre-commit checks (format + lint + tests)"
+    @echo "  ci-check       - Run CI validation pipeline locally"
+    @echo ""
+    @echo "Benchmarking:"
+    @echo "  benchmark      - Run performance benchmarks"
+    @echo "  benchmark-generation - Benchmark code generation speed"
+    @echo "  benchmark-templates - Benchmark template rendering speed"
+    @echo ""
+    @echo "Cleanup:"
+    @echo "  clean          - Clean build artifacts and temporary files"
+    @echo "  clean-cache    - Clean Python and pytest cache files"
+    @echo "  clean-coverage - Clean coverage reports"
+    @echo ""
+    @echo "Examples:"
+    @echo "  just setup"
+    @echo "  just generate user"
+    @echo "  just demo blog"
+    @echo "  just test-unit"
+    @echo "  just coverage-html"
+
+# Development setup
+setup:
+    @echo "🚀 Setting up Python FastAPI SQLModel template development environment..."
+    @which uv > /dev/null || (echo "❌ UV is required. Install from: https://docs.astral.sh/uv/" && exit 1)
+    uv sync
+    @echo "✅ Development environment setup complete!"
+    @echo ""
+    @echo "Next steps:"
+    @echo "  just test              # Run all tests"
+    @echo "  just generate user     # Generate a sample domain"
+    @echo "  just coverage-html     # View test coverage"
+
+# Install dependencies
+install:
+    @echo "📦 Installing dependencies with UV..."
+    uv sync
+
+# Check required tools
+check-tools:
+    @echo "🔍 Checking required development tools..."
+    @which uv > /dev/null && echo "✅ UV is installed" || (echo "❌ UV is not installed" && exit 1)
+    @which python > /dev/null && echo "✅ Python is installed" || echo "❌ Python is not installed"
+    @echo "Tool check complete!"
+
+# Install the CLI tool in your system
+install-cli:
+    @echo "Installing CLI..."
+    uv tool install . -e
+
+# Testing commands
+test *args:
+    @echo "🧪 Running all tests..."
+    uv run python -m pytest {{args}} -v
+
+test-unit *args:
+    @echo "🔬 Running unit tests..."
+    uv run python -m pytest tests/unit/ {{args}} -v
+
+test-integration *args:
+    @echo "🔗 Running integration tests..."
+    uv run python -m pytest tests/integration/ {{args}} -v
+
+test-bdd *args:
+    @echo "📋 Running BDD tests..."
+    uv run python -m pytest tests/bdd/ {{args}} -v
+
+test-e2e *args:
+    @echo "🎯 Running end-to-end tests..."
+    uv run python -m pytest tests/e2e/ {{args}} -v
+
+test-performance:
+    @echo "⚡ Running performance tests..."
+    uv run python -m pytest tests/performance/ -v --tb=short
+
+test-watch:
+    @echo "👀 Running tests in watch mode..."
+    uv run python -m pytest --watch tests/
+
+# Coverage commands
+coverage:
+    @echo "📊 Running tests with coverage..."
+    uv run coverage run -m pytest
+    uv run coverage report
+    @echo ""
+    @echo "For detailed HTML report, run: just coverage-html"
+
+coverage-html:
+    @echo "📊 Generating HTML coverage report..."
+    uv run coverage run -m pytest
+    uv run coverage html
+    @echo "📄 Coverage report generated: htmlcov/index.html"
+    @echo "💡 Open in browser: open htmlcov/index.html"
+
+coverage-unit:
+    @echo "📊 Unit test coverage..."
+    uv run coverage run -m pytest tests/unit/
+    uv run coverage report
+
+coverage-integration:
+    @echo "📊 Integration test coverage..."
+    uv run coverage run -m pytest tests/integration/
+    uv run coverage report
+
+# Code generation commands
+generate domain *args:
+    @echo "⚙️ Generating domain: {{domain}}"
+    @if [ ! -f "app/domain/{{domain}}/domain.yaml" ]; then \
+        echo "❌ Configuration not found: app/domain/{{domain}}/domain.yaml"; \
+        echo "💡 Create configuration first with: just scaffold {{domain}}"; \
+        exit 1; \
+    fi
+    uv run python cli/generate/main.py --domain {{domain}} {{args}}
+    @echo "✅ Domain '{{domain}}' generated successfully"
+    @echo "💡 Validate with: just validate-generated output/{{domain}}"
+
+demo domain:
+    @echo "🎬 Running complete demo for domain: {{domain}}"
+    just scaffold {{domain}}
+    just generate {{domain}}
+    just validate-generated "output/{{domain}}"
+    @echo "🎉 Demo complete for '{{domain}}' domain!"
+
+scaffold domain:
+    @echo "📝 Creating basic configuration for domain: {{domain}}"
+    @mkdir -p "app/domain/{{domain}}"
+    @if [ ! -f "app/domain/{{domain}}/domain.yaml" ]; then \
+        echo "domain:" > "app/domain/{{domain}}/domain.yaml"; \
+        echo "  name: {{domain|title}}" >> "app/domain/{{domain}}/domain.yaml"; \
+        echo "  plural: {{domain|title}}s" >> "app/domain/{{domain}}/domain.yaml"; \
+        echo "entities:" >> "app/domain/{{domain}}/domain.yaml"; \
+        echo "  - name: {{domain|title}}" >> "app/domain/{{domain}}/domain.yaml"; \
+        echo "    fields:" >> "app/domain/{{domain}}/domain.yaml"; \
+        echo "      - name: name" >> "app/domain/{{domain}}/domain.yaml"; \
+        echo "        type: str" >> "app/domain/{{domain}}/domain.yaml"; \
+        echo "        required: true" >> "app/domain/{{domain}}/domain.yaml"; \
+        echo "      - name: description" >> "app/domain/{{domain}}/domain.yaml"; \
+        echo "        type: Optional[str]" >> "app/domain/{{domain}}/domain.yaml"; \
+        echo "        required: false" >> "app/domain/{{domain}}/domain.yaml"; \
+        echo "✅ Configuration created: app/domain/{{domain}}/domain.yaml"; \
+        echo "💡 Edit the configuration and run: just generate {{domain}}"; \
+    else \
+        echo "ℹ️ Configuration already exists: app/domain/{{domain}}/domain.yaml"; \
+    fi
+
+# Validation commands
+validate-templates:
+    @echo "🔍 Validating Jinja2 templates..."
+    uv run python cli/validate/template_linter.py --path app/ --check-syntax
+    @echo "✅ Template validation complete"
+
+validate-configs:
+    @echo "🔍 Validating YAML configurations..."
+    uv run python cli/validate/config_validator.py --path app/
+    @echo "✅ Configuration validation complete"
+
+validate-generated path:
+    @echo "🔍 Validating generated code at: {{path}}"
+    @if [ ! -d "{{path}}" ]; then \
+        echo "❌ Path not found: {{path}}"; \
+        exit 1; \
+    fi
+    @echo "Running generated tests..."
+    uv run python -m pytest "{{path}}/tests/" -v
+    @echo "Checking code quality..."
+    uv run ruff check "{{path}}/"
+    @echo "✅ Generated code validation complete"
+
+validate-all:
+    @echo "🔍 Running all validation checks..."
+    just validate-templates
+    just validate-configs
+    just lint
+    @echo "✅ All validation checks complete"
+
+# Linting and formatting
+lint:
+    @echo "🔍 Running all linters..."
+    just validate-templates
+    just validate-configs
+    @echo "Checking Python code with ruff..."
+    uv run ruff check .
+    @echo "Checking code formatting..."
+    just format-check
+    @echo "✅ Linting complete"
+
+lint-fix:
+    @echo "🔧 Running linters with auto-fix..."
+    @echo "Fixing Python code issues..."
+    uv run ruff check --fix .
+    @echo "Formatting code..."
+    just format
+    @echo "✅ Auto-fix complete"
+
+format:
+    @echo "🎨 Formatting Python code with Black..."
+    uv run black .
+    @echo "✅ Code formatting complete"
+
+format-check:
+    @echo "🎨 Checking code formatting..."
+    uv run black --check .
+
+# Development workflow commands
+dev-check:
+    @echo "🚀 Running quick development checks..."
+    just format-check
+    just lint
+    just test-unit --tb=short
+    @echo "✅ Development checks complete"
+
+full-check:
+    @echo "🚀 Running complete validation pipeline..."
+    just clean
+    just lint
+    just test
+    just coverage
+    @echo "✅ Full validation complete"
+
+pre-commit:
+    @echo "🚀 Running pre-commit checks..."
+    just format
+    just lint
+    just test-unit
+    @echo "✅ Pre-commit checks complete"
+
+ci-check:
+    @echo "🚀 Running CI validation pipeline locally..."
+    just check-tools
+    just install
+    just format-check
+    just validate-all
+    just test
+    just coverage
+    @echo "✅ CI validation complete"
+
+# Benchmarking commands
+benchmark:
+    @echo "⚡ Running all performance benchmarks..."
+    uv run python -m pytest tests/performance/ --benchmark-only -v
+
+benchmark-generation:
+    @echo "⚡ Benchmarking code generation speed..."
+    uv run python -m pytest tests/performance/test_generation_speed.py -v
+
+benchmark-templates:
+    @echo "⚡ Benchmarking template rendering speed..."
+    uv run python -m pytest tests/performance/test_template_rendering_speed.py -v
+
+# Cleanup commands
+clean:
+    @echo "🧹 Cleaning build artifacts and temporary files..."
+    find . -type d -name "__pycache__" -delete 2>/dev/null || true
+    find . -type d -name "*.egg-info" -delete 2>/dev/null || true
+    find . -name "*.pyc" -delete 2>/dev/null || true
+    find . -name "*.pyo" -delete 2>/dev/null || true
+    rm -rf .pytest_cache/ 2>/dev/null || true
+    rm -rf build/ dist/ 2>/dev/null || true
+    @echo "✅ Cleanup complete"
+
+clean-cache:
+    @echo "🧹 Cleaning Python and pytest cache files..."
+    find . -type d -name "__pycache__" -delete 2>/dev/null || true
+    rm -rf .pytest_cache/ 2>/dev/null || true
+    @echo "✅ Cache cleanup complete"
+
+clean-coverage:
+    @echo "🧹 Cleaning coverage reports..."
+    rm -rf htmlcov/ .coverage coverage.xml 2>/dev/null || true
+    @echo "✅ Coverage cleanup complete"
+
+# Advanced testing scenarios
+test-smoke:
+    @echo "💨 Running smoke tests (critical functionality only)..."
+    uv run python -m pytest -m "not slow" tests/unit/ tests/integration/ --tb=short
+
+test-slow:
+    @echo "🐌 Running slow tests (performance and complex scenarios)..."
+    uv run python -m pytest -m "slow" tests/
+
+test-parallel:
+    @echo "⚡ Running tests in parallel..."
+    uv run python -m pytest -n auto
+
+test-verbose:
+    @echo "📢 Running tests with maximum verbosity..."
+    uv run python -m pytest -vvv --tb=long
+
+# Documentation and examples
+docs:
+    @echo "📚 Displaying testing strategy documentation..."
+    @echo "Key files:"
+    @echo "  📄 TESTING_STRATEGY.md - Complete testing strategy"
+    @echo "  📄 tests/README.md - Test organization guide"
+    @echo "  📄 TESTING_ARCHITECTURE.md - Architecture overview"
+    @echo ""
+    @echo "Quick start:"
+    @echo "  just setup           # Setup environment"
+    @echo "  just scaffold user   # Create sample configuration"
+    @echo "  just generate user   # Generate domain code"
+    @echo "  just test           # Run all tests"
+
+examples:
+    @echo "💡 Example workflows:"
+    @echo ""
+    @echo "1. First-time setup:"
+    @echo "   just setup"
+    @echo "   just check-tools"
+    @echo ""
+    @echo "2. Create new domain:"
+    @echo "   just scaffold product"
+    @echo "   # Edit app/domain/product/domain.yaml"
+    @echo "   just generate product"
+    @echo "   just validate-generated output/product"
+    @echo ""
+    @echo "3. Development workflow:"
+    @echo "   just dev-check        # Quick checks during development"
+    @echo "   just test-watch       # Continuous testing"
+    @echo "   just coverage-html    # View test coverage"
+    @echo ""
+    @echo "4. Release preparation:"
+    @echo "   just full-check       # Complete validation"
+    @echo "   just benchmark        # Performance validation"
+
+# Health check
+health:
+    @echo "🏥 System health check..."
+    just check-tools
+    @echo "Testing basic functionality..."
+    uv run python -c "import yaml, jinja2, pydantic; print('✅ Core dependencies working')"
+    @echo "Checking test infrastructure..."
+    uv run python -m pytest --collect-only tests/ > /dev/null && echo "✅ Tests discoverable"
+    @echo "💚 System healthy!"
+
+# Version information
+version:
+    @echo "📋 Version information:"
+    @echo "Python: $(python --version 2>&1)"
+    @echo "UV: $(uv --version 2>&1)"
+    @echo "Pytest: $(uv run python -c 'import pytest; print(pytest.__version__)' 2>/dev/null || echo 'Not installed')"
+    @echo "Template system: Python FastAPI SQLModel v0.1.0"

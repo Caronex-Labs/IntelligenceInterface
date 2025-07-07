@@ -1,0 +1,350 @@
+"""{{ entity_name }} Use Case Protocol Definitions - Hexagonal Architecture
+This module defines the use case protocols (interfaces) for {{ entity_name }} business logic,
+enabling dependency injection, testing, and loose coupling in hexagonal architecture.
+
+Protocol Benefits:
+- Enables dependency injection and inversion of control
+- Facilitates unit testing with mock implementations
+- Supports multiple use case implementations
+- Provides clear contracts for business operations
+- Enables easy swapping of business logic implementations
+
+Usage:
+- Import {{ entity_name }}UseCaseProtocol for type hints
+- Use in dependency injection containers
+- Create mock implementations for testing
+- Define alternative implementations if needed
+
+Generated from: app/usecase/{{ domain }}/protocols.py.j2
+Configuration: app/usecase/{{ domain }}/usecase.yaml
+"""
+
+# Standard library imports
+from typing import Protocol, Optional, List, Dict, Any, Union
+from uuid import UUID
+from datetime import datetime
+
+# Domain imports
+from app.core.{{domain}}.entities import {{ entity_name }}
+
+# Schema imports for type hints
+from .schemas import (
+    Create{{ entity_name }}Request,
+    Update{{ entity_name }}Request,
+    Delete{{ entity_name }}Request,
+    Get{{ entity_name }}Request,
+    List{{ domain_name_plural | title }}Request,
+    {{ entity_name }}Response,
+    List{{ domain_name_plural | title }}Response,
+    DeleteResponse,
+)
+
+# @pyhex:begin:custom_protocol_imports
+# Add custom protocol imports here - preserved during regeneration
+# @pyhex:end:custom_protocol_imports
+
+
+class {{ entity_name }}UseCaseProtocol(Protocol):
+    """
+    Protocol definition for {{ entity_name }} use case operations.
+    
+    This protocol defines the contract that any {{ entity_name }} use case implementation
+    must follow, enabling dependency injection and testing flexibility.
+    
+    Business Operations:
+    - create: Create new {{ entity_name }} with business rules validation
+    - get: Retrieve {{ entity_name }} with authorization checks
+    - list: Query and paginate {{ entity_name }} with filtering
+    - update: Modify {{ entity_name }} with business constraints
+    - delete: Remove {{ entity_name }} with dependency checks
+    
+    Advanced Operations:
+    - Complex business workflows
+    - Cross-domain orchestration
+    - Event-driven operations
+    """
+    
+    async def create(self, request: Create{{ entity_name }}Request) -> {{ entity_name }}Response:
+        """
+        Create a new {{ entity_name }} entity with business logic validation.
+        
+        Args:
+            request: Create request with {{ entity_name }} data
+            
+        Returns:
+            {{ entity_name }}Response: Created entity response
+            
+        Raises:
+            {{ entity_name }}ValidationError: If business validation fails
+            BusinessConstraintViolationError: If business rules are violated
+            UnauthorizedOperationError: If user lacks permissions
+        """
+        ...
+    
+    async def get(self, request: Get{{ entity_name }}Request) -> {{ entity_name }}Response:
+        """
+        Retrieve {{ entity_name }} entity with authorization checks.
+        
+        Args:
+            request: Get request with entity ID and context
+            
+        Returns:
+            {{ entity_name }}Response: Entity response
+            
+        Raises:
+            {{ entity_name }}NotFoundError: If entity not found
+            UnauthorizedOperationError: If user lacks access permissions
+        """
+        ...
+    
+    async def list(self, request: List{{ domain_name_plural | title }}Request) -> List{{ domain_name_plural | title }}Response:
+        """
+        List {{ entity_name }} entities with filtering and pagination.
+        
+        Args:
+            request: List request with filters and pagination
+            
+        Returns:
+            List{{ domain_name_plural | title }}Response: Paginated entity list response
+            
+        Raises:
+            UnauthorizedOperationError: If user lacks list permissions
+        """
+        ...
+    
+    async def update(self, request: Update{{ entity_name }}Request) -> {{ entity_name }}Response:
+        """
+        Update {{ entity_name }} entity with business logic validation.
+        
+        Args:
+            request: Update request with entity ID and changes
+            
+        Returns:
+            {{ entity_name }}Response: Updated entity response
+            
+        Raises:
+            {{ entity_name }}NotFoundError: If entity not found
+            {{ entity_name }}ValidationError: If business validation fails
+            BusinessConstraintViolationError: If business rules are violated
+            UnauthorizedOperationError: If user lacks update permissions
+        """
+        ...
+    
+    async def delete(self, request: Delete{{ entity_name }}Request) -> DeleteResponse:
+        """
+        Delete {{ entity_name }} entity with dependency checks.
+        
+        Args:
+            request: Delete request with entity ID and context
+            
+        Returns:
+            DeleteResponse: Deletion confirmation response
+            
+        Raises:
+            {{ entity_name }}NotFoundError: If entity not found
+            BusinessConstraintViolationError: If deletion violates business rules
+            UnauthorizedOperationError: If user lacks delete permissions
+        """
+        ...
+
+
+class {{ entity_name }}BusinessRulesProtocol(Protocol):
+    """
+    Protocol for {{ entity_name }} business rules validation.
+    
+    Provides business logic validation and constraint checking
+    for complex business requirements.
+    """
+    
+    async def validate_create(self, entity: {{ entity_name }}) -> bool:
+        """
+        Validate {{ entity_name }} entity for creation.
+        
+        Args:
+            entity: Entity to validate
+            
+        Returns:
+            bool: True if validation passes
+            
+        Raises:
+            {{ entity_name }}ValidationError: If validation fails
+            BusinessConstraintViolationError: If business rules are violated
+        """
+        ...
+    
+    async def validate_update(self, entity_id: UUID, updates: Dict[str, Any]) -> bool:
+        """
+        Validate {{ entity_name }} entity updates.
+        
+        Args:
+            entity_id: ID of entity being updated
+            updates: Dictionary of field updates
+            
+        Returns:
+            bool: True if validation passes
+            
+        Raises:
+            {{ entity_name }}ValidationError: If validation fails
+            BusinessConstraintViolationError: If business rules are violated
+        """
+        ...
+    
+    async def validate_delete(self, entity_id: UUID) -> bool:
+        """
+        Validate {{ entity_name }} entity deletion.
+        
+        Args:
+            entity_id: ID of entity being deleted
+            
+        Returns:
+            bool: True if deletion is allowed
+            
+        Raises:
+            BusinessConstraintViolationError: If deletion violates business rules
+        """
+        ...
+    
+    async def check_business_constraints(self, entity: {{ entity_name }}) -> List[str]:
+        """
+        Check all business constraints for {{ entity_name }}.
+        
+        Args:
+            entity: Entity to check
+            
+        Returns:
+            List[str]: List of constraint violations (empty if valid)
+        """
+        ...
+
+
+class {{ entity_name }}EventProtocol(Protocol):
+    """
+    Protocol for {{ entity_name }} domain events.
+    
+    Provides event publishing capabilities for domain-driven design
+    and event sourcing patterns.
+    """
+    
+    async def publish_created(self, entity: {{ entity_name }}) -> None:
+        """
+        Publish {{ entity_name }} created event.
+        
+        Args:
+            entity: Created entity
+        """
+        ...
+    
+    async def publish_updated(self, entity: {{ entity_name }}, changes: Dict[str, Any]) -> None:
+        """
+        Publish {{ entity_name }} updated event.
+        
+        Args:
+            entity: Updated entity
+            changes: Dictionary of changes made
+        """
+        ...
+    
+    async def publish_deleted(self, entity_id: UUID) -> None:
+        """
+        Publish {{ entity_name }} deleted event.
+        
+        Args:
+            entity_id: ID of deleted entity
+        """
+        ...
+
+
+{% if usecase.workflow_management.enabled -%}
+class {{ entity_name }}WorkflowProtocol(Protocol):
+    """
+    Protocol for {{ entity_name }} workflow management.
+    
+    Provides workflow orchestration capabilities for complex
+    multi-step business processes.
+    """
+    
+    async def start_workflow(self, workflow_type: str, entity_id: UUID, context: Dict[str, Any]) -> str:
+        """
+        Start a workflow for {{ entity_name }}.
+        
+        Args:
+            workflow_type: Type of workflow to start
+            entity_id: ID of entity for workflow
+            context: Workflow context data
+            
+        Returns:
+            str: Workflow instance ID
+        """
+        ...
+    
+    async def get_workflow_status(self, workflow_id: str) -> Dict[str, Any]:
+        """
+        Get workflow execution status.
+        
+        Args:
+            workflow_id: Workflow instance ID
+            
+        Returns:
+            Dict[str, Any]: Workflow status information
+        """
+        ...
+    
+    async def complete_workflow_step(self, workflow_id: str, step_id: str, result: Any) -> None:
+        """
+        Complete a workflow step.
+        
+        Args:
+            workflow_id: Workflow instance ID
+            step_id: Step identifier
+            result: Step execution result
+        """
+        ...
+
+
+{% endif -%}
+{% if usecase.integration.external_services -%}
+class {{ entity_name }}IntegrationProtocol(Protocol):
+    """
+    Protocol for {{ entity_name }} external integrations.
+    
+    Provides integration capabilities with external systems
+    and third-party services.
+    """
+    
+    async def sync_with_external_system(self, entity: {{ entity_name }}, system_id: str) -> bool:
+        """
+        Synchronize {{ entity_name }} with external system.
+        
+        Args:
+            entity: Entity to synchronize
+            system_id: External system identifier
+            
+        Returns:
+            bool: True if synchronization successful
+        """
+        ...
+    
+    async def import_from_external(self, external_id: str, system_id: str) -> {{ entity_name }}:
+        """
+        Import {{ entity_name }} from external system.
+        
+        Args:
+            external_id: External entity identifier
+            system_id: External system identifier
+            
+        Returns:
+            {{ entity_name }}: Imported entity
+        """
+        ...
+
+
+{% endif -%}
+# @pyhex:preserve_start:{{ usecase.package }}_custom_protocols
+# Add any additional protocol definitions or type aliases here
+# Examples:
+# - Custom workflow protocols for complex business processes
+# - Integration protocols for external systems
+# - Event sourcing protocols for audit trails
+# - Notification protocols for user communications
+# - Analytics protocols for business intelligence
+# @pyhex:preserve_end:{{ usecase.package }}_custom_protocols

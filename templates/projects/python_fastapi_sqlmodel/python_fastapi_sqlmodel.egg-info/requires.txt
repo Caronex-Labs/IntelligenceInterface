@@ -1,0 +1,10 @@
+click>=8.1.0
+djlint>=1.36.4
+fastmcp>=2.9.2
+j2lint
+jinja2>=3.1.6
+jsonschema>=4.23.0
+mypy>=1.16.1
+pydantic>=2.11.7
+pydantic-settings>=2.10.1
+pyyaml>=6.0.2

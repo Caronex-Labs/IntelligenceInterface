@@ -1,0 +1,46 @@
+# Health Entities Configuration
+# This file defines entities for the Health domain
+
+entities:
+  - name: Health
+    description: "Primary Health entity"
+    table_name: healths
+    fields:
+      - name: name
+        type: str
+        required: true
+        description: "Health name"
+        sqlmodel_field: "Field(index=True)"
+      - name: description
+        type: Optional[str]
+        required: false
+        description: "Health description"
+      - name: status
+        type: str
+        required: true
+        default: "active"
+        description: "Health status"
+        sqlmodel_field: "Field(default='active')"
+    relationships: []
+
+endpoints:
+  - method: POST
+    path: "/"
+    operation: create
+    description: "Create a new health"
+  - method: GET
+    path: "/{id}"
+    operation: get_by_id
+    description: "Get health by ID"
+  - method: GET
+    path: "/"
+    operation: list
+    description: "List all healths"
+  - method: PUT
+    path: "/{id}"
+    operation: update
+    description: "Update health"
+  - method: DELETE
+    path: "/{id}"
+    operation: delete
+    description: "Delete health"

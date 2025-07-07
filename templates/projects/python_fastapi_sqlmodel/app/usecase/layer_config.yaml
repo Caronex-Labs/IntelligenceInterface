@@ -1,0 +1,62 @@
+# UseCase Layer Configuration
+# Generic layer settings and domain tracking for business logic orchestration
+
+layer:
+  name: "usecase"
+  description: "UseCase layer configuration - Business logic orchestration and workflows"
+  architecture: "hexagonal"
+  pattern: "use_case_driven"
+
+domains:
+  - name: "Health"
+    status: "configured"
+    config_files: ["usecase.yaml", "business-rules.yaml"]
+    description: "Health business logic and use cases"
+
+generation:
+  default_domain_template: "{{domain}}"
+  auto_create_blank_configs: true
+  preserve_custom_code: true
+  preservation_markers: "@pyhex"
+  
+  # Default use case patterns
+  usecase_patterns:
+    transaction_boundary: true
+    error_aggregation: "collect_all_errors"
+    dependency_injection: true
+    event_publishing: true
+  
+  # Default use case methods for all domains
+  default_methods:
+    - name: "create_{domain}"
+      transaction_boundary: true
+      business_rules: ["validation", "constraints"]
+    - name: "get_{domain}_by_id"
+      transaction_boundary: false
+      business_rules: ["exists_check"]
+    - name: "update_{domain}"
+      transaction_boundary: true
+      business_rules: ["validation", "constraints", "exists_check"]
+    - name: "delete_{domain}"
+      transaction_boundary: true
+      business_rules: ["exists_check", "delete_constraints"]
+    - name: "list_{domain_plural}"
+      transaction_boundary: false
+      business_rules: ["access_control"]
+
+metadata:
+  template_version: "1.0.0"
+  last_updated: "2024-01-01"
+  orchestration_style: "saga_pattern"
+  
+  # Business logic standards
+  standards:
+    business_rule_validation: true
+    transaction_management: "automated"
+    error_handling: "comprehensive"
+    
+  # Integration requirements
+  integration:
+    event_sourcing: false
+    cqrs_pattern: false
+    distributed_transactions: false

@@ -1,0 +1,209 @@
+# {{domain|title}} Interface Layer Configuration
+# 
+# This file defines the configuration for the {{domain|title}} interface layer,
+# including endpoints, authentication, middleware, and API documentation settings.
+#
+# Generated from: app/interface/{{domain}}/interface.yaml
+
+interface:
+  name: "{{domain|title}}API"
+  version: "1.0.0"
+  description: "REST API for {{domain|title}} operations"
+  
+  # API Configuration
+  api:
+    prefix: "/api/v1/{{domain_name_plural}}"
+    tags: [ "{{domain_name_plural}}" ]
+    include_in_schema: true
+
+  # Endpoints Configuration
+  endpoints:
+    - method: "POST"
+      path: "/"
+      operation_id: "create_{{domain}}"
+      summary: "Create a new {{domain}}"
+      description: "Create a new {{domain}} with the provided data"
+      request_model: "Create{{domain|title}}Request"
+      response_model: "{{domain|title}}Response"
+      status_code: 201
+      authentication_required: true
+      permissions: [ "create" ]
+      rate_limit:
+        requests: 10
+        window: 60
+
+    - method: "GET"
+      path: "/{{{domain}}_id}"
+      operation_id: "get_{{domain}}_by_id"
+      summary: "Get {{domain}} by ID"
+      description: "Retrieve a specific {{domain}} by its unique identifier"
+      response_model: "{{domain|title}}Response"
+      status_code: 200
+      authentication_required: true
+      permissions: [ "read" ]
+      cache:
+        enabled: true
+        ttl: 300
+
+    - method: "PUT"
+      path: "/{{{domain}}_id}"
+      operation_id: "update_{{domain}}"
+      summary: "Update {{domain}}"
+      description: "Update an existing {{domain}} with new data"
+      request_model: "Update{{domain|title}}Request"
+      response_model: "{{domain|title}}Response"
+      status_code: 200
+      authentication_required: true
+      permissions: [ "update" ]
+
+    - method: "DELETE"
+      path: "/{{{domain}}_id}"
+      operation_id: "delete_{{domain}}"
+      summary: "Delete {{domain}}"
+      description: "Delete an existing {{domain}}"
+      response_model: "DeleteResponse"
+      status_code: 200
+      authentication_required: true
+      permissions: [ "delete" ]
+
+    - method: "GET"
+      path: "/"
+      operation_id: "list_{{domain_name_plural}}"
+      summary: "List {{domain_name_plural}}"
+      description: "Retrieve a list of {{domain_name_plural}} with optional filtering and pagination"
+      response_model: "List{{domain_name_plural|title}}Response"
+      status_code: 200
+      authentication_required: true
+      permissions: [ "list" ]
+      parameters:
+        - name: "skip"
+          type: "query"
+          description: "Number of items to skip"
+          default: 0
+          minimum: 0
+        - name: "limit"
+          type: "query"
+          description: "Maximum number of items to return"
+          default: 100
+          minimum: 1
+          maximum: 1000
+        - name: "search"
+          type: "query"
+          description: "Search term for filtering"
+          required: false
+        - name: "status"
+          type: "query"
+          description: "Filter by status"
+          required: false
+
+  # Authentication Configuration
+  authentication:
+    enabled: true
+    scheme: "Bearer"
+    auto_error: false
+    description: "JWT Bearer token authentication"
+
+  # Authorization Configuration
+  authorization:
+    enabled: true
+    default_permissions: [ "read" ]
+    admin_roles: [ "admin", "{{domain}}_admin", "super_admin" ]
+
+  # Rate Limiting Configuration
+  rate_limiting:
+    enabled: true
+    default_limit: 100
+    default_window: 60
+    identifier: "ip_address"
+
+  # Caching Configuration
+  caching:
+    enabled: true
+    default_ttl: 300
+    cache_key_prefix: "{{domain}}_api"
+
+  # Middleware Configuration
+  middleware:
+    cors:
+      enabled: true
+      allow_origins: [ "*" ]
+      allow_methods: [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ]
+      allow_headers: [ "*" ]
+      allow_credentials: true
+
+    compression:
+      enabled: true
+      minimum_size: 1000
+
+    request_logging:
+      enabled: true
+      include_headers: false
+      include_body: false
+
+    response_time:
+      enabled: true
+      header_name: "X-Response-Time"
+
+  # Error Handling Configuration
+  error_handling:
+    include_stack_trace: false
+    log_errors: true
+    custom_error_handlers:
+      - exception: "{{domain|title}}ValidationError"
+        status_code: 400
+        message: "Validation failed"
+      - exception: "{{domain|title}}NotFoundError"
+        status_code: 404
+        message: "Resource not found"
+      - exception: "BusinessConstraintViolationError"
+        status_code: 422
+        message: "Business rule violation"
+      - exception: "UnauthorizedOperationError"
+        status_code: 403
+        message: "Access denied"
+
+  # OpenAPI Documentation Configuration
+  openapi:
+    title: "{{domain|title}} API"
+    description: "REST API for managing {{domain|title}} resources"
+    version: "1.0.0"
+    contact:
+      name: "API Support"
+      email: "api-support@example.com"
+    license:
+      name: "MIT"
+      url: "https://opensource.org/licenses/MIT"
+    tags:
+      - name: "{{domain_name_plural}}"
+        description: "{{domain|title}} operations"
+    servers:
+      - url: "http://localhost:8000"
+        description: "Development server"
+      - url: "https://api.example.com"
+        description: "Production server"
+
+  # Health Check Configuration
+  health_check:
+    enabled: true
+    path: "/health"
+    include_in_schema: false
+
+  # Metrics Configuration
+  metrics:
+    enabled: true
+    path: "/metrics"
+    include_in_schema: false
+    collect_request_metrics: true
+    collect_error_metrics: true
+
+  # Security Configuration
+  security:
+    include_security_headers: true
+    content_security_policy: "default-src 'self'"
+    x_frame_options: "DENY"
+    x_content_type_options: "nosniff"
+
+# Custom Configuration Section
+# @pyhex:begin:custom:interface_config
+# Add custom interface configuration here
+# @pyhex:end:custom:interface_config

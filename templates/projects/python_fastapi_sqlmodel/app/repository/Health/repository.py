@@ -25,7 +25,7 @@ from sqlalchemy import text
 # @pyhex:end:custom_repository_imports
 
 # Domain imports
-from app.domain.Health.entities import Health
+from app.core.Health.entities import Health
 from .protocols import HealthCheckRepositoryProtocol, HealthCheckQueryBuilderProtocol
 # Repository exceptions
 class HealthCheckRepositoryError(Exception):
@@ -103,7 +103,7 @@ async def create(
         duplicate detection, and proper error handling.
         """
         try:
-self.logger.info(f"Creating new Health entity")
+            self.logger.info(f"Creating new Health entity")
             
             # Business validation
             if validate:
@@ -126,7 +126,7 @@ self.logger.info(f"Creating new Health entity")
             await self.session.commit()
             
             
-self.logger.info(f"Successfully created Health with ID: {entity.id}")
+            self.logger.info(f"Successfully created Health with ID: {entity.id}")
             
             return entity
             

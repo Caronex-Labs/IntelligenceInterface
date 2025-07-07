@@ -24,7 +24,7 @@ from sqlalchemy.pool import StaticPool
 # @pyhex:end:custom_test_imports
 
 # Domain and repository imports
-from app.domain.Health.entities import Health
+from app.core.Health.entities import Health
 from app.repository.Health.repository import (
     SQLModelHealthRepository,
     HealthNotFoundError,

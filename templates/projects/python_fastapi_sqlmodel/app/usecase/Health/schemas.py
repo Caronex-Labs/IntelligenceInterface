@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 # Add custom imports here
 # @pyhex:end:custom:imports
 
-from app.domain.Health.entities import Health
+from app.core.Health.entities import Health
 
 
 # Base Schemas for Common Patterns

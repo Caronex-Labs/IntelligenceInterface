@@ -1,0 +1,113 @@
+# Business Rules Configuration - Co-location Architecture
+# Domain-specific business logic rules and constraints
+# These rules are referenced by use case methods for validation and business logic enforcement
+
+# Business Rules Definitions
+rules:
+  - name: "{{domain.name}}_validation"
+    type: "validation"
+    condition: "{{domain.name}}.is_valid() and {{domain.name}}.data_integrity_check()"
+    error_message: "{{domain.name|title}} validation failed"
+    severity: "error"
+    context: "{{domain.name}}_operations"
+    description: "Validates {{domain.name}} data integrity and format requirements"
+
+  - name: "business_constraints"
+    type: "constraint"
+    condition: "{{domain.name}}.meets_business_constraints()"
+    error_message: "{{domain.name|title}} violates business constraints"
+    severity: "error"
+    context: "{{domain.name}}_operations"
+    description: "Ensures {{domain.name}} operations comply with business constraints"
+
+  - name: "{{domain.name}}_exists"
+    type: "constraint"
+    condition: "{{domain.name}}_repository.exists({{domain.name}}.id)"
+    error_message: "{{domain.name|title}} not found"
+    severity: "error"
+    context: "{{domain.name}}_retrieval"
+    description: "Verifies that {{domain.name}} exists in the system"
+
+  - name: "update_permissions"
+    type: "security"
+    condition: "user_context.has_permission('update_{{domain.name}}') and {{domain.name}}.can_be_updated_by(user_context.user)"
+    error_message: "Insufficient permissions to update {{domain.name}}"
+    severity: "error"
+    context: "{{domain.name}}_security"
+    description: "Validates user permissions for {{domain.name}} update operations"
+
+  - name: "delete_permissions"
+    type: "security"
+    condition: "user_context.has_permission('delete_{{domain.name}}') and {{domain.name}}.can_be_deleted_by(user_context.user)"
+    error_message: "Insufficient permissions to delete {{domain.name}}"
+    severity: "error"
+    context: "{{domain.name}}_security"
+    description: "Validates user permissions for {{domain.name}} delete operations"
+
+  - name: "cascading_constraints"
+    type: "constraint"
+    condition: "{{domain.name}}.check_cascading_dependencies() == []"
+    error_message: "{{domain.name|title}} has dependent records and cannot be deleted"
+    severity: "error"
+    context: "{{domain.name}}_deletion"
+    description: "Ensures {{domain.name}} can be safely deleted without violating referential integrity"
+
+  - name: "access_permissions"
+    type: "security"
+    condition: "user_context.has_permission('read_{{domain.name}}') and user_context.can_access_{{domain.name}}_list()"
+    error_message: "Insufficient permissions to access {{domain.name}} list"
+    severity: "error"
+    context: "{{domain.name}}_security"
+    description: "Validates user permissions for {{domain.name}} list operations"
+
+# Validation Groups for organized rule execution
+validation_groups:
+  - name: "{{domain.name}}_creation_validation"
+    description: "Validation rules for {{domain.name}} creation"
+    rules: [ "{{domain.name}}_validation", "business_constraints" ]
+    execution_order: [ "{{domain.name}}_validation", "business_constraints" ]
+
+  - name: "{{domain.name}}_update_validation"
+    description: "Validation rules for {{domain.name}} update"
+    rules: [ "{{domain.name}}_exists", "update_permissions", "{{domain.name}}_validation" ]
+    execution_order: [ "{{domain.name}}_exists", "update_permissions", "{{domain.name}}_validation" ]
+
+  - name: "{{domain.name}}_deletion_validation"
+    description: "Validation rules for {{domain.name}} deletion"
+    rules: [ "{{domain.name}}_exists", "delete_permissions", "cascading_constraints" ]
+    execution_order: [ "{{domain.name}}_exists", "delete_permissions", "cascading_constraints" ]
+
+  - name: "{{domain.name}}_access_validation"
+    description: "Validation rules for {{domain.name}} access"
+    rules: [ "access_permissions" ]
+    execution_order: [ "access_permissions" ]
+
+  - name: "{{domain.name}}_retrieval_validation"
+    description: "Validation rules for {{domain.name}} retrieval"
+    rules: [ "{{domain.name}}_exists", "access_permissions" ]
+    execution_order: [ "{{domain.name}}_exists", "access_permissions" ]
+
+# Error Handling Configuration
+error_handling:
+  aggregation_strategy: "collect_all_errors"
+  early_termination: false
+  custom_exceptions:
+    - rule: "{{domain.name}}_validation"
+      exception: "{{domain.name|title}}ValidationError"
+    - rule: "{{domain.name}}_exists"
+      exception: "{{domain.name|title}}NotFoundError"
+    - rule: "update_permissions"
+      exception: "UnauthorizedUpdateError"
+    - rule: "delete_permissions"
+      exception: "UnauthorizedDeleteError"
+    - rule: "access_permissions"
+      exception: "UnauthorizedAccessError"
+    - rule: "cascading_constraints"
+      exception: "CascadingConstraintViolationError"
+    - rule: "business_constraints"
+      exception: "BusinessConstraintViolationError"
+
+# @pyhex:begin:custom:business_rules
+# Custom business rules and validation logic
+# Add domain-specific business rules here
+# @pyhex:end:custom:business_rules

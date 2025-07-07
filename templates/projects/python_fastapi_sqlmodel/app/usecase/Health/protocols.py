@@ -17,7 +17,7 @@ from uuid import UUID
 # Add custom imports here
 # @pyhex:end:custom:imports
 
-from app.domain.Health.entities import Health
+from app.core.Health.entities import Health
 from .schemas import (
     CreateHealthRequest,
     UpdateHealthRequest,

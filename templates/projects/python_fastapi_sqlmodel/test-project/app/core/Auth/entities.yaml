@@ -1,0 +1,100 @@
+# Auth Entities Configuration
+entities:
+  - name: "AccessToken"
+    description: "JWT access token tracking"
+    table_name: "auth_access_tokens"
+    
+    fields:
+      - name: "token_id"
+        type: "string"
+        description: "Unique token identifier (jti claim)"
+        required: true
+        unique: true
+        index: true
+        
+      - name: "user_id"
+        type: "UUID"
+        description: "User this token belongs to"
+        required: true
+        foreign_key: "users.id"
+        index: true
+        
+      - name: "expires_at"
+        type: "datetime"
+        description: "Token expiration time"
+        required: true
+        index: true
+        
+      - name: "is_revoked"
+        type: "boolean"
+        description: "Whether token has been revoked"
+        default: false
+        
+      - name: "device_info"
+        type: "json"
+        description: "Device information for security"
+        required: false
+        default_factory: "dict"
+
+  - name: "RefreshToken"
+    description: "JWT refresh token tracking"
+    table_name: "auth_refresh_tokens"
+    
+    fields:
+      - name: "token_id"
+        type: "string"
+        description: "Unique token identifier"
+        required: true
+        unique: true
+        index: true
+        
+      - name: "user_id"
+        type: "UUID"
+        description: "User this token belongs to"
+        required: true
+        foreign_key: "users.id"
+        index: true
+        
+      - name: "access_token_id"
+        type: "string"
+        description: "Associated access token"
+        required: true
+        index: true
+        
+      - name: "expires_at"
+        type: "datetime"
+        description: "Token expiration time"
+        required: true
+        index: true
+        
+      - name: "is_revoked"
+        type: "boolean"
+        description: "Whether token has been revoked"
+        default: false
+        
+      - name: "last_used_at"
+        type: "Optional[datetime]"
+        description: "When token was last used"
+        required: false
+
+# Endpoints for Auth domain
+endpoints:
+  - path: "/auth/login"
+    method: "POST"
+    operation: "login"
+    description: "Authenticate user with email/password"
+    
+  - path: "/auth/refresh"
+    method: "POST"
+    operation: "refresh_token"
+    description: "Refresh access token using refresh token"
+    
+  - path: "/auth/logout"
+    method: "POST"
+    operation: "logout"
+    description: "Revoke user tokens"
+    
+  - path: "/auth/verify"
+    method: "GET"
+    operation: "verify_token"
+    description: "Verify token validity"

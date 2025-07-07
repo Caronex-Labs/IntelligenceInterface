@@ -1,0 +1,122 @@
+# User Entities Configuration
+entities:
+  - name: "User"
+    description: "User entity with authentication capabilities"
+    table_name: "users"
+    
+    fields:
+      - name: "email"
+        type: "email"
+        description: "User email address (login identifier)"
+        required: true
+        unique: true
+        validation:
+          email_format: true
+        example: "user@example.com"
+        
+      - name: "password_hash"
+        type: "string"
+        description: "Hashed password (never store plain text)"
+        required: true
+        validation:
+          min_length: 60  # bcrypt hash length
+        
+      - name: "first_name"
+        type: "string"
+        description: "User first name"
+        required: true
+        validation:
+          min_length: 1
+          max_length: 50
+        example: "John"
+        
+      - name: "last_name"
+        type: "string"
+        description: "User last name"
+        required: true
+        validation:
+          min_length: 1
+          max_length: 50
+        example: "Doe"
+        
+      - name: "is_active"
+        type: "boolean"
+        description: "Whether user account is active"
+        default: true
+        
+      - name: "is_verified"
+        type: "boolean"
+        description: "Whether user email is verified"
+        default: false
+        
+      - name: "failed_login_attempts"
+        type: "integer"
+        description: "Number of consecutive failed login attempts"
+        default: 0
+        validation:
+          minimum: 0
+          
+      - name: "locked_until"
+        type: "Optional[datetime]"
+        description: "Account locked until this time"
+        required: false
+        
+      - name: "last_login_at"
+        type: "Optional[datetime]"
+        description: "When user last logged in"
+        required: false
+        
+      - name: "password_changed_at"
+        type: "datetime"
+        description: "When password was last changed"
+        required: true
+        default_factory: "datetime.utcnow"
+
+    # Database indexes for performance
+    database:
+      table_args:
+        indexes:
+          - fields: ["email"]
+            unique: true
+            name: "users_email_idx"
+          - fields: ["is_active"]
+            name: "users_active_idx"
+          - fields: ["is_verified"]
+            name: "users_verified_idx"
+          - fields: ["locked_until"]
+            name: "users_locked_idx"
+
+    # Business validation rules
+    validation:
+      business_rules:
+        - name: "unique_email_validation"
+          description: "Email must be unique across all users"
+          type: "unique_constraint"
+          fields: ["email"]
+          
+        - name: "password_strength_validation"
+          description: "Password must meet security requirements"
+          type: "custom_validator"
+          method: "validate_password_strength"
+
+# Endpoints for User domain
+endpoints:
+  - path: "/users/register"
+    method: "POST"
+    operation: "register"
+    description: "Register new user account"
+    
+  - path: "/users/profile"
+    method: "GET"
+    operation: "get_profile"
+    description: "Get current user profile"
+    
+  - path: "/users/profile"
+    method: "PUT"
+    operation: "update_profile"
+    description: "Update user profile"
+    
+  - path: "/users/change-password"
+    method: "POST"
+    operation: "change_password"
+    description: "Change user password"

@@ -1,0 +1,50 @@
+# Core Layer Configuration
+# Generic layer settings and domain tracking for DDD domains
+
+layer:
+  name: "core"
+  description: "Core layer configuration - Core business entities and logic"
+  architecture: "hexagonal"
+  pattern: "domain_driven_design"
+
+domains:
+  - name: "Health"
+    status: "configured"
+    config_files: ["domain.yaml", "entities.yaml"]
+    description: "Health domain with core business entities"
+
+generation:
+  default_domain_template: "{{domain}}"
+  auto_create_blank_configs: true
+  preserve_custom_code: true
+  preservation_markers: "@pyhex"
+  
+  # Default entity patterns
+  entity_patterns:
+    base_class: "BaseEntity"
+    primary_key_type: "UUID"
+    timestamp_fields: ["created_at", "updated_at"]
+    soft_delete: false
+  
+  # Default mixins available to all domains
+  default_mixins:
+    - "UUIDMixin"
+    - "TimestampMixin"
+    - "SoftDeleteMixin"
+
+metadata:
+  template_version: "1.0.0"
+  last_updated: "2024-01-01"
+  architecture_style: "hexagonal"
+  
+  # Quality standards for domain layer
+  quality:
+    validation_coverage: 100
+    type_hint_coverage: 100
+    docstring_coverage: 80
+    
+  # Testing requirements
+  testing:
+    unit_test_coverage: 90
+    integration_test_coverage: 80
+    bdd_scenarios_required: true

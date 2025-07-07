@@ -1,0 +1,173 @@
+"""{{ service.name }} - Domain-agnostic service implementation.
+
+This module contains the implementation for {{ service.name }} following
+hexagonal architecture principles with clean service patterns.
+
+Generated from:
+- service.yaml: Service configuration and method definitions
+- service.py.j2: This Jinja2 template for service scaffolding
+
+Service Architecture Patterns:
+- Domain-agnostic logic encapsulation
+- Dependency injection through constructor
+- Protocol-based interfaces for testing and abstraction
+- @pyhex preservation markers for custom business logic
+- Async-first method design for scalability
+
+Business Logic Guidelines:
+- Keep services focused on single responsibility
+- Use dependency injection for external resources
+- Implement proper error handling and logging
+- Follow async/await patterns for I/O operations
+- Add comprehensive type hints for maintainability
+"""
+
+# Standard library imports
+import logging
+from typing import Optional, List, Dict, Any
+{%- if service.dependencies %}
+from typing import Protocol
+{%- endif %}
+
+# Third-party imports
+{%- if service.scope.value == 'singleton' %}
+from functools import lru_cache
+{%- endif %}
+
+# Application imports
+from .protocols import {{ service.name }}Protocol
+{%- for dep in service.dependencies %}
+from ..{{ dep | lower }}.protocols import {{ dep }}Protocol
+{%- endfor %}
+
+logger = logging.getLogger(__name__)
+
+
+class {{ service.name }}({{ service.name }}Protocol):
+    """
+    {{ service.description or service.name + " implementation." }}
+    
+    This service provides domain-agnostic functionality that can be used
+    across multiple domains and use cases in the application.
+    
+    Dependency Injection:
+    {%- if service.dependencies %}
+    {%- for dep in service.dependencies %}
+    - {{ dep }}: {{ dep }}Protocol - {{ dep | lower }} service dependency
+    {%- endfor %}
+    {%- else %}
+    - No external dependencies required
+    {%- endif %}
+    
+    Scope: {{ service.scope.value | title }}
+    """
+    
+    def __init__(
+        self{% if service.dependencies %},{% endif %}
+        {%- for dep in service.dependencies %}
+        {{ dep | lower }}_service: {{ dep }}Protocol{% if not loop.last %},{% endif %}
+        {%- endfor %}
+    ):
+        """
+        Initialize {{ service.name }}.
+        
+        Args:
+        {%- for dep in service.dependencies %}
+            {{ dep | lower }}_service: {{ dep }} service for {{ dep | lower }} operations
+        {%- endfor %}
+        """
+        {%- for dep in service.dependencies %}
+        self._{{ dep | lower }}_service = {{ dep | lower }}_service
+        {%- endfor %}
+        logger.info(f"Initialized {{ service.name }}")
+    
+    {%- for method in service.methods %}
+    
+    {% if method.async_method %}async {% endif %}def {{ method.name }}(
+        self{% if method.parameters %},{% endif %}
+        {%- for param in method.parameters %}
+        {{ param.name }}: {{ param.type.value if param.type.__class__.__name__ == 'FieldType' else param.type }}{% if not param.required %} = None{% endif %}{% if not loop.last %},{% endif %}
+        {%- endfor %}
+    ) -> {{ method.return_type or 'None' }}:
+        """
+        {{ method.description or 'Implement ' + method.name + ' business logic.' }}
+        
+        Args:
+        {%- for param in method.parameters %}
+            {{ param.name }}: {{ param.description or param.type + ' parameter' }}
+        {%- endfor %}
+        
+        Returns:
+            {{ method.return_type or 'None' }}: {{ method.description or 'Method result' }}
+            
+        Raises:
+            NotImplementedError: When method implementation is not yet complete
+            ValueError: When invalid parameters are provided
+        """
+        logger.debug(f"{{ service.name }}.{{ method.name }} called with: {{ '{' }}{% for param in method.parameters %}{{ param.name }}={{ '{' }}{{ param.name }}{{ '}' }}{% if not loop.last %}, {% endif %}{% endfor %}{{ '}' }}")
+        
+        # @pyhex:preserve_start:{{ method.name }}_implementation
+        # TODO: Implement {{ method.name }} business logic
+        # 
+        # Implementation guidelines:
+        # 1. Validate input parameters
+        # 2. Perform business logic operations
+        # 3. Handle errors appropriately
+        # 4. Log important operations
+        # 5. Return appropriate result
+        # 
+        # Example implementation structure:
+        # try:
+        #     # Validate inputs
+        {%- for param in method.parameters %}
+        {%- if param.required %}
+        #     if not {{ param.name }}:
+        #         raise ValueError("{{ param.name }} is required")
+        {%- endif %}
+        {%- endfor %}
+        #     
+        #     # Perform business logic
+        #     result = None  # Your logic here
+        #     
+        #     logger.info(f"{{ method.name }} completed successfully")
+        #     return result
+        # 
+        # except Exception as e:
+        #     logger.error(f"{{ method.name }} failed: {e}")
+        #     raise
+        
+        raise NotImplementedError("{{ method.name }} implementation not yet complete")
+        # @pyhex:preserve_end:{{ method.name }}_implementation
+    {%- endfor %}
+
+
+{%- if service.scope.value == 'singleton' %}
+
+@lru_cache(maxsize=1)
+def get_{{ service.package }}_instance(
+    {%- for dep in service.dependencies %}
+    {{ dep | lower }}_service: {{ dep }}Protocol{% if not loop.last %},{% endif %}
+    {%- endfor %}
+) -> {{ service.name }}:
+    """
+    Get singleton instance of {{ service.name }}.
+    
+    Args:
+    {%- for dep in service.dependencies %}
+        {{ dep | lower }}_service: {{ dep }} service dependency
+    {%- endfor %}
+    
+    Returns:
+        {{ service.name }}: Singleton service instance
+    """
+    return {{ service.name }}(
+        {%- for dep in service.dependencies %}
+        {{ dep | lower }}_service={{ dep | lower }}_service{% if not loop.last %},{% endif %}
+        {%- endfor %}
+    )
+{%- endif %}
+
+
+# @pyhex:preserve_start:{{ service.package }}_custom_exports
+# Add any custom service exports or factory functions here
+# @pyhex:preserve_end:{{ service.package }}_custom_exports

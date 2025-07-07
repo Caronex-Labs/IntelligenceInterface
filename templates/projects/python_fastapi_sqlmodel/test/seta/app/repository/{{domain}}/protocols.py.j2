@@ -1,0 +1,296 @@
+"""{{ entity_name }} Repository Protocol Definitions - Hexagonal Architecture
+This module defines the repository protocols (interfaces) for {{ entity_name }} data access,
+enabling dependency injection, testing, and loose coupling in hexagonal architecture.
+
+Protocol Benefits:
+- Enables dependency injection and inversion of control
+- Facilitates unit testing with mock implementations
+- Supports multiple repository implementations (SQLModel, MongoDB, etc.)
+- Provides clear contracts for data access operations
+- Enables easy swapping of database technologies
+
+Usage:
+- Import {{ entity_name }}RepositoryProtocol for type hints
+- Use in dependency injection containers
+- Create mock implementations for testing
+- Define alternative implementations if needed
+
+Generated from: app/repository/{{ domain }}/protocols.py.j2
+Configuration: app/repository/{{ domain }}/repository.yaml
+"""
+
+# Standard library imports
+from typing import Protocol, Optional, List, Dict, Any, Union
+from uuid import UUID
+from datetime import datetime
+
+# Domain imports
+from app.core.{{domain}}.entities import {{ entity_name }}
+
+# @pyhex:begin:custom_protocol_imports
+# Add custom protocol imports here - preserved during regeneration
+# @pyhex:end:custom_protocol_imports
+
+
+class {{ entity_name }}RepositoryProtocol(Protocol):
+    """
+    Protocol definition for {{ entity_name }} repository operations.
+    
+    This protocol defines the contract that any {{ entity_name }} repository implementation
+    must follow, enabling dependency injection and testing flexibility.
+    
+    CRUD Operations:
+    - create: Create new {{ entity_name }} entities
+    - get_by_id: Retrieve {{ entity_name }} by unique identifier
+    - get_by_*: Retrieve {{ entity_name }} by various attributes
+    - list: Query and paginate {{ entity_name }} entities
+    - update: Modify existing {{ entity_name }} entities
+    - delete: Remove {{ entity_name }} entities (soft or hard delete)
+    
+    Advanced Operations:
+    - count: Count entities matching criteria
+    - exists: Check if entity exists
+    - bulk operations for performance
+    """
+    
+    async def create(self, entity: {{ entity_name }}) -> {{ entity_name }}:
+        """
+        Create a new {{ entity_name }} entity.
+        
+        Args:
+            entity: {{ entity_name }} entity to create
+            
+        Returns:
+            {{ entity_name }}: Created entity with generated ID and timestamps
+            
+        Raises:
+            {{ entity_name }}DuplicateError: If entity violates unique constraints
+            {{ entity_name }}ValidationError: If entity validation fails
+        """
+        ...
+    
+    async def get_by_id(self, entity_id: UUID) -> Optional[{{ entity_name }}]:
+        """
+        Retrieve {{ entity_name }} entity by ID.
+        
+        Args:
+            entity_id: Unique identifier of the entity
+            
+        Returns:
+            {{ entity_name }} | None: Entity if found, None otherwise
+        """
+        ...
+    
+    async def get_by_id_or_raise(self, entity_id: UUID) -> {{ entity_name }}:
+        """
+        Retrieve {{ entity_name }} entity by ID or raise exception.
+        
+        Args:
+            entity_id: Unique identifier of the entity
+            
+        Returns:
+            {{ entity_name }}: Entity if found
+            
+        Raises:
+            {{ entity_name }}NotFoundError: If entity not found
+        """
+        ...
+    
+    async def list(
+        self,
+        limit: int = 20,
+        offset: int = 0,
+        order_by: Optional[str] = None,
+        order_desc: bool = False,
+        filters: Optional[Dict[str, Any]] = None
+    ) -> List[{{ entity_name }}]:
+        """
+        List {{ entity_name }} entities with pagination and filtering.
+        
+        Args:
+            limit: Maximum number of entities to return
+            offset: Number of entities to skip
+            order_by: Field name to order by
+            order_desc: Whether to order in descending order
+            filters: Dictionary of field filters
+            
+        Returns:
+            List[{{ entity_name }}]: List of entities matching criteria
+        """
+        ...
+    
+    async def count(self, filters: Optional[Dict[str, Any]] = None) -> int:
+        """
+        Count {{ entity_name }} entities matching criteria.
+        
+        Args:
+            filters: Dictionary of field filters
+            
+        Returns:
+            int: Number of entities matching criteria
+        """
+        ...
+    
+    async def update(self, entity_id: UUID, updates: Dict[str, Any]) -> Optional[{{ entity_name }}]:
+        """
+        Update {{ entity_name }} entity with partial data.
+        
+        Args:
+            entity_id: Unique identifier of the entity
+            updates: Dictionary of fields to update
+            
+        Returns:
+            {{ entity_name }} | None: Updated entity if found, None otherwise
+            
+        Raises:
+            {{ entity_name }}ValidationError: If update validation fails
+        """
+        ...
+    
+    async def update_or_raise(self, entity_id: UUID, updates: Dict[str, Any]) -> {{ entity_name }}:
+        """
+        Update {{ entity_name }} entity or raise exception.
+        
+        Args:
+            entity_id: Unique identifier of the entity
+            updates: Dictionary of fields to update
+            
+        Returns:
+            {{ entity_name }}: Updated entity
+            
+        Raises:
+            {{ entity_name }}NotFoundError: If entity not found
+            {{ entity_name }}ValidationError: If update validation fails
+        """
+        ...
+    
+    async def delete(self, entity_id: UUID) -> bool:
+        """
+        Delete {{ entity_name }} entity (soft delete if configured).
+        
+        Args:
+            entity_id: Unique identifier of the entity
+            
+        Returns:
+            bool: True if entity was deleted, False if not found
+        """
+        ...
+    
+    async def delete_or_raise(self, entity_id: UUID) -> None:
+        """
+        Delete {{ entity_name }} entity or raise exception.
+        
+        Args:
+            entity_id: Unique identifier of the entity
+            
+        Raises:
+            {{ entity_name }}NotFoundError: If entity not found
+        """
+        ...
+    
+    async def exists(self, entity_id: UUID) -> bool:
+        """
+        Check if {{ entity_name }} entity exists.
+        
+        Args:
+            entity_id: Unique identifier of the entity
+            
+        Returns:
+            bool: True if entity exists, False otherwise
+        """
+        ...
+
+
+{% if repository.query_methods -%}
+class {{ entity_name }}QueryBuilderProtocol(Protocol):
+    """
+    Protocol for advanced query building operations.
+    
+    Provides sophisticated querying capabilities for complex business requirements.
+    """
+    
+    async def search(
+        self,
+        query: str,
+        fields: Optional[List[str]] = None,
+        limit: int = 20,
+        offset: int = 0
+    ) -> List[{{ entity_name }}]:
+        """
+        Full-text search across {{ entity_name }} entities.
+        
+        Args:
+            query: Search query string
+            fields: List of fields to search in
+            limit: Maximum number of results
+            offset: Number of results to skip
+            
+        Returns:
+            List[{{ entity_name }}]: Entities matching search criteria
+        """
+        ...
+    
+    async def filter_by(self, **filters) -> List[{{ entity_name }}]:
+        """
+        Filter {{ entity_name }} entities by arbitrary criteria.
+        
+        Args:
+            **filters: Keyword arguments for filtering
+            
+        Returns:
+            List[{{ entity_name }}]: Filtered entities
+        """
+        ...
+
+
+{% endif -%}
+{% if repository.caching.enabled -%}
+class {{ entity_name }}CacheProtocol(Protocol):
+    """
+    Protocol for caching operations.
+    
+    Provides caching capabilities for improved performance.
+    """
+    
+    async def cache_get(self, key: str) -> Optional[{{ entity_name }}]:
+        """
+        Get {{ entity_name }} from cache.
+        
+        Args:
+            key: Cache key
+            
+        Returns:
+            {{ entity_name }} | None: Cached entity if found
+        """
+        ...
+    
+    async def cache_set(self, key: str, entity: {{ entity_name }}, ttl: Optional[int] = None) -> None:
+        """
+        Store {{ entity_name }} in cache.
+        
+        Args:
+            key: Cache key
+            entity: Entity to cache
+            ttl: Time to live in seconds
+        """
+        ...
+    
+    async def cache_delete(self, key: str) -> None:
+        """
+        Remove {{ entity_name }} from cache.
+        
+        Args:
+            key: Cache key
+        """
+        ...
+
+
+{% endif -%}
+# @pyhex:preserve_start:{{ repository.package }}_custom_protocols
+# Add any additional protocol definitions or type aliases here
+# Examples:
+# - Custom query protocols for specific business requirements  
+# - Bulk operation protocols for performance-critical operations
+# - Event-driven protocols for domain events
+# - Transaction protocols for complex operations
+# @pyhex:preserve_end:{{ repository.package }}_custom_protocols

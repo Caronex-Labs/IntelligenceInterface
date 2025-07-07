@@ -1,0 +1,130 @@
+# Use Case Configuration - Co-location Architecture  
+# Business Logic Orchestration and Workflow Configuration
+# This configuration inherits from domain and repository layers and adds use case-specific settings
+
+# Basic Use Case Information
+name: "{{domain.name|title}}UseCase"
+description: "{{domain.description}} use case orchestration"
+package: "app.usecase.{{domain.name}}"
+
+# Use Case Method Definitions
+methods:
+  - name: "create_{{domain.name}}"
+    description: "Create a new {{domain.name}} with business validation"
+    input_schema: "Create{{domain.name|title}}Request"
+    output_schema: "{{domain.name|title}}Response"
+    transaction_boundary: true
+    dependencies:
+      repositories: [ "{{domain.name}}_repository" ]
+      services: [ "validation_service" ]
+    business_rules: [ "{{domain.name}}_validation", "business_constraints" ]
+    orchestration_steps:
+      - "validate_{{domain.name}}_data"
+      - "check_business_rules"
+      - "create_{{domain.name}}_record"
+      - "publish_{{domain.name}}_created_event"
+
+  - name: "get_{{domain.name}}_by_id"
+    description: "Retrieve {{domain.name}} by ID with business logic"
+    input_schema: "Get{{domain.name|title}}Request"
+    output_schema: "{{domain.name|title}}Response"
+    transaction_boundary: false
+    dependencies:
+      repositories: [ "{{domain.name}}_repository" ]
+    business_rules: [ "{{domain.name}}_exists" ]
+
+  - name: "update_{{domain.name}}"
+    description: "Update existing {{domain.name}} with business validation"
+    input_schema: "Update{{domain.name|title}}Request"
+    output_schema: "{{domain.name|title}}Response"
+    transaction_boundary: true
+    dependencies:
+      repositories: [ "{{domain.name}}_repository" ]
+      services: [ "validation_service" ]
+    business_rules: [ "{{domain.name}}_exists", "update_permissions", "{{domain.name}}_validation" ]
+    orchestration_steps:
+      - "validate_update_data"
+      - "check_{{domain.name}}_exists"
+      - "verify_update_permissions"
+      - "update_{{domain.name}}_record"
+      - "publish_{{domain.name}}_updated_event"
+
+  - name: "delete_{{domain.name}}"
+    description: "Delete {{domain.name}} with business constraints"
+    input_schema: "Delete{{domain.name|title}}Request"
+    output_schema: "DeleteResponse"
+    transaction_boundary: true
+    dependencies:
+      repositories: [ "{{domain.name}}_repository" ]
+    business_rules: [ "{{domain.name}}_exists", "delete_permissions", "cascading_constraints" ]
+    orchestration_steps:
+      - "check_{{domain.name}}_exists"
+      - "verify_delete_permissions"
+      - "check_cascading_constraints"
+      - "soft_delete_{{domain.name}}_record"
+      - "publish_{{domain.name}}_deleted_event"
+
+  - name: "list_{{domain.name_plural}}"
+    description: "List {{domain.name_plural}} with filtering and pagination"
+    input_schema: "List{{domain.name_plural|title}}Request"
+    output_schema: "List{{domain.name_plural|title}}Response"
+    transaction_boundary: false
+    dependencies:
+      repositories: [ "{{domain.name}}_repository" ]
+      services: [ "filtering_service" ]
+    business_rules: [ "access_permissions" ]
+    orchestration_steps:
+      - "validate_filter_parameters"
+      - "apply_access_controls"
+      - "execute_filtered_query"
+      - "apply_pagination"
+
+# Global Use Case Dependencies
+dependencies:
+  repositories: [ "{{domain.name}}_repository" ]
+  services: [ "validation_service", "event_publisher", "logger" ]
+  external_services: [ ]
+
+# Error Handling Configuration
+error_handling:
+  aggregation_strategy: "collect_all_errors"
+  early_termination: false
+  default_error_response: "StandardErrorResponse"
+  custom_exceptions:
+    - rule: "{{domain.name}}_validation"
+      exception: "{{domain.name|title}}ValidationError"
+    - rule: "{{domain.name}}_exists"
+      exception: "{{domain.name|title}}NotFoundError"
+
+# Service Composition Configuration  
+service_composition:
+  transaction_manager: "database_transaction_manager"
+  event_publisher: "domain_event_publisher"
+  cache_manager: "redis_cache_manager"
+  logger: "structured_logger"
+
+# Dependency Injection Configuration
+dependency_injection:
+  interface_mappings:
+    "{{domain.name|title}}Repository": "sqlmodel_{{domain.name}}_repository"
+    "ValidationService": "pydantic_validation_service"
+    "EventPublisher": "async_event_publisher"
+  scoped_dependencies:
+    - "database_session"
+    - "user_context"
+  singleton_dependencies:
+    - "cache_manager"
+    - "logger"
+    - "event_publisher"
+  transient_dependencies:
+    - "validation_service"
+
+# Integration with other layers
+entity_dependencies: [ "{{domain.name|title}}", "{{domain.name|title}}Profile" ]
+repository_dependencies: [ "{{domain.name}}_repository" ]
+external_dependencies: [ "validation_service", "event_publisher" ]
+
+# @pyhex:begin:custom:use_case_configuration
+# Custom use case configuration extensions
+# Add domain-specific use case patterns here
+# @pyhex:end:custom:use_case_configuration

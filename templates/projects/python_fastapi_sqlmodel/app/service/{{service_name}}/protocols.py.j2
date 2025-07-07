@@ -1,0 +1,64 @@
+"""{{ service.name }} protocol definitions - Domain-agnostic service interfaces.
+
+This module defines the protocol (interface) for {{ service.name }} enabling
+dependency injection, testing, and loose coupling in hexagonal architecture.
+
+Protocol Benefits:
+- Enables dependency injection and inversion of control
+- Facilitates unit testing with mock implementations
+- Supports multiple implementations of the same interface
+- Provides clear contracts for service interactions
+- Enables easy swapping of implementations
+
+Usage:
+- Import {{ service.name }}Protocol for type hints
+- Use in dependency injection containers
+- Create mock implementations for testing
+- Define alternative implementations if needed
+"""
+
+# Standard library imports
+from typing import Protocol, Optional, List, Dict, Any
+
+
+class {{ service.name }}Protocol(Protocol):
+    """
+    Protocol definition for {{ service.name }}.
+    
+    {{ service.description or 'Domain-agnostic service interface for ' + service.name + '.' }}
+    
+    This protocol defines the contract that any {{ service.name }} implementation
+    must follow, enabling dependency injection and testing flexibility.
+    
+    Methods:
+    {%- for method in service.methods %}
+    - {{ method.name }}: {{ method.description or 'Service method' }}
+    {%- endfor %}
+    """
+    
+    {%- for method in service.methods %}
+    
+    {% if method.async_method %}async {% endif %}def {{ method.name }}(
+        self{% if method.parameters %},{% endif %}
+        {%- for param in method.parameters %}
+        {{ param.name }}: {{ param.type.value if param.type.__class__.__name__ == 'FieldType' else param.type }}{% if not param.required %} = None{% endif %}{% if not loop.last %},{% endif %}
+        {%- endfor %}
+    ) -> {{ method.return_type or 'None' }}:
+        """
+        {{ method.description or 'Protocol method for ' + method.name + '.' }}
+        
+        Args:
+        {%- for param in method.parameters %}
+            {{ param.name }}: {{ param.description or param.type + ' parameter' }}
+        {%- endfor %}
+        
+        Returns:
+            {{ method.return_type or 'None' }}: {{ method.description or 'Method result' }}
+        """
+        ...
+    {%- endfor %}
+
+
+# @pyhex:preserve_start:{{ service.package }}_custom_protocols
+# Add any additional protocol definitions or type aliases here
+# @pyhex:preserve_end:{{ service.package }}_custom_protocols

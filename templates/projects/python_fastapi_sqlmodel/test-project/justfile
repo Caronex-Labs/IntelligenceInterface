@@ -1,0 +1,79 @@
+# TestAuthProject - Project Commands
+
+# Install dependencies
+install:
+    uv sync
+
+# Run development server
+dev:
+    uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# Run production server
+serve:
+    uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+# Run tests
+test:
+    uv run pytest
+
+# Run tests with coverage
+test-cov:
+    uv run pytest --cov=app --cov-report=html --cov-report=term
+
+# Format code
+format:
+    uv run black .
+    uv run ruff check --fix .
+
+# Lint code
+lint:
+    uv run ruff check .
+    uv run black --check .
+
+# Type check
+typecheck:
+    uv run mypy app
+
+# Generate domain from config
+generate-domain config:
+    fastapi-sqlmodel-generator generate --config {{config}} --output ./app
+
+# Initialize new project
+init-project name:
+    fastapi-sqlmodel-generator init --project-name {{name}} --output .
+
+# Database migrations
+migrate:
+    uv run alembic upgrade head
+
+# Create new migration
+migration name:
+    uv run alembic revision --autogenerate -m "{{name}}"
+
+# Clean generated files
+clean:
+    rm -rf __pycache__ .pytest_cache .coverage htmlcov
+    find . -name "*.pyc" -delete
+    find . -name "__pycache__" -type d -exec rm -rf {} +
+
+# Run full CI pipeline
+ci: format lint test
+
+# Build Docker image
+docker-build:
+    docker build -t testauthproject .
+
+# Run with Docker Compose
+docker-up:
+    docker-compose up -d
+
+# Stop Docker Compose
+docker-down:
+    docker-compose down
+
+# Show project info
+info:
+    @echo "Project: TestAuthProject"
+    @echo "Version: 0.1.0"
+    @echo "Description: FastAPI SQLModel application: TestAuthProject"
+    @echo "Python: >=3.12"

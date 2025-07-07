@@ -1,0 +1,15 @@
+Metadata-Version: 2.4
+Name: python-fastapi-sqlmodel
+Version: 0.1.0
+Summary: FastAPI SQLModel template generator with clean architecture
+Requires-Python: >=3.12
+Requires-Dist: click>=8.1.0
+Requires-Dist: djlint>=1.36.4
+Requires-Dist: fastmcp>=2.9.2
+Requires-Dist: j2lint
+Requires-Dist: jinja2>=3.1.6
+Requires-Dist: jsonschema>=4.23.0
+Requires-Dist: mypy>=1.16.1
+Requires-Dist: pydantic>=2.11.7
+Requires-Dist: pydantic-settings>=2.10.1
+Requires-Dist: pyyaml>=6.0.2

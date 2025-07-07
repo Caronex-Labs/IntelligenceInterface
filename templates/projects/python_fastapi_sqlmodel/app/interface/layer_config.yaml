@@ -1,0 +1,68 @@
+# Interface Layer Configuration
+# Generic layer settings and domain tracking for API interface layer
+
+layer:
+  name: "interface"
+  description: "Interface layer configuration - FastAPI routers and HTTP endpoints"
+  architecture: "hexagonal"
+  pattern: "api_gateway"
+
+domains:
+  - name: "Health"
+    status: "configured"
+    config_files: ["interface.yaml"]
+    description: "Health API interface endpoints"
+
+generation:
+  default_domain_template: "{{domain}}"
+  auto_create_blank_configs: true
+  preserve_custom_code: true
+  preservation_markers: "@pyhex"
+  
+  # Default API patterns
+  api_patterns:
+    base_path: "/api/v1"
+    authentication_required: true
+    rate_limiting_enabled: true
+    cors_enabled: true
+    openapi_documentation: true
+  
+  # Default endpoints for all domains
+  default_endpoints:
+    - method: "POST"
+      path: "/"
+      operation: "create"
+      permissions: ["create"]
+    - method: "GET"
+      path: "/{id}"
+      operation: "get_by_id"
+      permissions: ["read"]
+    - method: "PUT"
+      path: "/{id}"
+      operation: "update"
+      permissions: ["update"]
+    - method: "DELETE"
+      path: "/{id}"
+      operation: "delete"
+      permissions: ["delete"]
+    - method: "GET"
+      path: "/"
+      operation: "list"
+      permissions: ["list"]
+
+metadata:
+  template_version: "1.0.0"
+  last_updated: "2024-01-01"
+  api_version: "v1"
+  
+  # API standards
+  standards:
+    rest_compliance: true
+    openapi_version: "3.0.0"
+    status_codes_standard: "RFC7231"
+    
+  # Security requirements
+  security:
+    authentication_schemes: ["Bearer"]
+    cors_configuration: "strict"
+    rate_limiting: "ip_based"

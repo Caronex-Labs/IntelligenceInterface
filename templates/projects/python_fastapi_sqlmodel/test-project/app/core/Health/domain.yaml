@@ -1,0 +1,36 @@
+# Health Domain Configuration
+# This file configures domain-level settings for Health
+
+name: Health
+description: "Health domain configuration for co-located architecture"
+package: health
+
+# Base fields that all entities in this domain inherit
+base_fields:
+  - name: id
+    type: UUID
+    required: true
+    primary_key: true
+    sqlmodel_field: "Field(primary_key=True, default_factory=uuid4)"
+  - name: created_at
+    type: datetime
+    required: true
+    sqlmodel_field: "Field(default_factory=datetime.utcnow)"
+  - name: updated_at
+    type: datetime
+    required: true
+    sqlmodel_field: "Field(default_factory=datetime.utcnow)"
+
+# SQLModel configuration
+sqlmodel_config:
+  table_naming: snake_case
+  field_naming: snake_case
+  generate_id_fields: true
+  timestamp_fields: ["created_at", "updated_at"]
+
+# Co-location metadata
+co_location:
+  template_source: co_located
+  config_source: co_located
+  generation_mode: co_located
+  template_version: "1.0.0"

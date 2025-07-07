@@ -1,4 +1,0 @@
-name: "Health"
-description: "Health monitoring domain for readiness, liveness and health check endpoints"
-package: "health"
-plural: "HealthChecks"

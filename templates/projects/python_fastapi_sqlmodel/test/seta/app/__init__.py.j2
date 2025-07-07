@@ -1,0 +1,39 @@
+"""
+{{ app_info.title or app_name or 'FastAPI Application' }} - Application Package
+This package contains the complete FastAPI application with all layers:
+- Domain: Business entities and domain logic
+- Repository: Data access and persistence
+- UseCase: Business logic and orchestration
+- Interface: HTTP API endpoints and routing
+Generated from: app/__init__.py.j2
+"""
+__version__ = "{{ app_info.version or '1.0.0' }}"
+__title__ = "{{ app_info.title or app_name or 'FastAPI Application' }}"
+__description__ = "{{ app_info.description or 'Generated FastAPI application with clean architecture' }}"
+
+# Import configuration
+from .config import get_settings, Settings
+# Import database utilities
+from .database import (
+    get_database_session,
+    get_async_database_session,
+    create_database_tables,
+    initialize_database,
+)
+# Import main application factory
+from .main import create_application, app
+
+# Export key components for easy access
+__all__ = [
+    "create_application",
+    "app",
+    "get_settings",
+    "Settings",
+    "get_database_session",
+    "get_async_database_session",
+    "create_database_tables",
+    "initialize_database",
+    "__version__",
+    "__title__",
+    "__description__",
+]

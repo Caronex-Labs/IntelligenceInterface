@@ -1,0 +1,179 @@
+"""
+Global Exception Handlers - {{ app_name or 'Application' }}
+This module provides centralized exception handling for the FastAPI application,
+ensuring consistent error responses across all endpoints.
+Generated from: app/interface/exceptions.py.j2
+"""
+import logging
+from typing import Union
+
+from fastapi import Request, status, HTTPException
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+logger = logging.getLogger(__name__)
+
+
+async def validation_exception_handler(
+        request: Request,
+        exc: Union[RequestValidationError, ValueError]
+) -> JSONResponse:
+    """
+    Handle validation errors.
+    Args:
+        request: The FastAPI request object
+        exc: The validation exception
+    Returns:
+        JSON response with validation error details
+    """
+    logger.warning(f"Validation error on {request.method} {request.url}: {exc}")
+    if isinstance(exc, RequestValidationError):
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={
+                "error": "Validation Error",
+                "message": "The request data is invalid",
+                "details": exc.errors(),
+                "path": str(request.url.path)
+            }
+        )
+    else:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={
+                "error": "Bad Request",
+                "message": str(exc),
+                "path": str(request.url.path)
+            }
+        )
+
+
+async def not_found_exception_handler(
+        request: Request,
+        exc: Union[HTTPException, StarletteHTTPException]
+) -> JSONResponse:
+    """
+    Handle not found errors.
+    Args:
+        request: The FastAPI request object
+        exc: The HTTP exception
+    Returns:
+        JSON response for not found errors
+    """
+    if exc.status_code == 404:
+        logger.info(f"Resource not found: {request.method} {request.url}")
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={
+                "error": "Not Found",
+                "message": "The requested resource was not found",
+                "path": str(request.url.path)
+            }
+        )
+    # For other HTTP exceptions, use the original detail
+    logger.warning(f"HTTP {exc.status_code} on {request.method} {request.url}: {exc.detail}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": "HTTP Error",
+            "message": exc.detail,
+            "path": str(request.url.path)
+        }
+    )
+
+
+async def internal_error_exception_handler(
+        request: Request,
+        exc: Exception
+) -> JSONResponse:
+    """
+    Handle internal server errors.
+    Args:
+        request: The FastAPI request object
+        exc: The exception
+    Returns:
+        JSON response for internal errors
+    """
+    logger.error(
+        f"Internal server error on {request.method} {request.url}: {exc}",
+        exc_info=True
+    )
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "error": "Internal Server Error",
+            "message": "An unexpected error occurred. Please try again later.",
+            "path": str(request.url.path)
+        }
+    )
+
+
+async def authentication_exception_handler(
+        request: Request,
+        exc: Exception
+) -> JSONResponse:
+    """
+    Handle authentication errors.
+    Args:
+        request: The FastAPI request object
+        exc: The authentication exception
+    Returns:
+        JSON response for authentication errors
+    """
+    logger.warning(f"Authentication error on {request.method} {request.url}: {exc}")
+    return JSONResponse(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        content={
+            "error": "Authentication Required",
+            "message": "Valid authentication credentials are required",
+            "path": str(request.url.path)
+        },
+        headers={"WWW-Authenticate": "Bearer"}
+    )
+
+
+async def authorization_exception_handler(
+        request: Request,
+        exc: Exception
+) -> JSONResponse:
+    """
+    Handle authorization errors.
+    Args:
+        request: The FastAPI request object
+        exc: The authorization exception
+    Returns:
+        JSON response for authorization errors
+    """
+    logger.warning(f"Authorization error on {request.method} {request.url}: {exc}")
+    return JSONResponse(
+        status_code=status.HTTP_403_FORBIDDEN,
+        content={
+            "error": "Access Forbidden",
+            "message": "You do not have permission to access this resource",
+            "path": str(request.url.path)
+        }
+    )
+
+
+async def business_rule_exception_handler(
+        request: Request,
+        exc: Exception
+) -> JSONResponse:
+    """
+    Handle business rule violations.
+    Args:
+        request: The FastAPI request object
+        exc: The business rule exception
+    Returns:
+        JSON response for business rule violations
+    """
+    logger.warning(f"Business rule violation on {request.method} {request.url}: {exc}")
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "error": "Business Rule Violation",
+            "message": str(exc),
+            "path": str(request.url.path)
+        }
+    )

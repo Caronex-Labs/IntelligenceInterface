@@ -17,7 +17,7 @@ from datetime import datetime
 # Add custom protocol imports here - preserved during regeneration
 # @pyhex:end:custom_protocol_imports
 
-from app.domain.Health.entities import HealthCheck
+from app.core.Health.entities import HealthCheck
 
 
 class HealthCheckRepositoryProtocol(ABC):

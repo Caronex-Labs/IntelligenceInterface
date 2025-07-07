@@ -1,0 +1,491 @@
+"""Tests for {{ entity_name }} use cases - Generated from Co-located Template.
+This module contains comprehensive tests for the generated use case classes
+in the {{ entity_name }} domain, following hexagonal architecture testing principles.
+Generated from:
+- usecase.yaml: Use case configuration and business logic
+- business-rules.yaml: Business rules and validation requirements
+- test_usecase.py.j2: This Jinja2 test template
+Co-location Architecture:
+- Test templates, configurations, and generated tests in same directory
+- Tests generated alongside the actual use case code
+- @pyhex preservation markers for custom test logic
+"""
+from unittest.mock import AsyncMock
+from unittest.mock import Mock
+from uuid import uuid4
+
+# Standard library imports
+import pytest
+# Third-party imports
+from sqlmodel import Session
+# Local imports - Generated use cases and dependencies
+{% if usecases %}
+from .usecase import (
+{%     for usecase in usecases %}
+{{ usecase.name }}
+    UseCase,
+{%     endfor %}
+)
+{% else %}
+# No specific use cases defined, importing the main domain use case
+from .usecase import {{ domain }}UseCase
+{% endif %}
+# Domain imports
+from ...domain.{{ domain }} import (
+{% for entity in entities %}
+{{ entity.name }},
+    {{ entity.name }}Create,
+    {{ entity.name }}Update,
+    {{ entity.name }}Response,
+    {{ entity.name }}NotFoundError,
+    {{ entity.name }}ValidationError,
+    {{ entity.name }}BusinessRuleError,
+{% endfor %}
+)
+
+
+# @pyhex:begin:custom_imports
+# Add your custom test imports here
+# @pyhex:end:custom_imports
+class TestBase:
+    """Base test class with common setup and utilities."""
+
+    @pytest.fixture
+
+
+def mock_session(self):
+    """Mock database session."""
+
+    """Mock database session."""
+    return Mock(spec=Session)
+
+    @pytest.fixture
+
+
+def mock_repository(self):
+    """Mock repository for testing."""
+
+    """Mock repository for testing."""
+    repository = Mock()
+    # Set up common repository methods
+    repository.get_by_id = AsyncMock()
+    repository.create = AsyncMock()
+    repository.update = AsyncMock()
+    repository.delete = AsyncMock()
+    repository.list = AsyncMock()
+    return repository
+
+    @pytest.fixture
+
+
+def mock_logger(self):
+    """Mock logger for testing."""
+
+    """Mock logger for testing."""
+    return Mock()
+
+# @pyhex:begin:custom_test_fixtures
+# Add your custom test fixtures here
+# @pyhex:end:custom_test_fixtures
+{% for usecase in usecases %}
+
+class Test{{ usecase.name }}UseCase:
+    """Test cases for {{ usecase.name }}UseCase."""
+
+    @pytest.fixture
+
+
+def usecase(self, mock_repository, mock_logger):
+    """Create {{ usecase.name }}UseCase instance for testing."""
+
+    """Create {{ usecase.name }}UseCase instance for testing."""
+    return {{ usecase.name }}UseCase(
+        repository=mock_repository,
+        logger=mock_logger
+    )
+    {% for method in usecase.methods %}
+
+    @pytest.mark.asyncio
+
+
+async def test_{{ method.name }}_success(self, usecase, mock_repository):
+    """Test {{ method.name }} method successful execution."""
+
+    """Test {{ method.name }} method successful execution."""
+    # Arrange
+    {% if method.orchestration_steps %}
+    # Mock data based on method configuration
+    {% if 'create' in method.name.lower() %}
+    test_data = {
+        {%                 for field in entities[0].fields if entities %}
+        {%                     if field.required %}
+        "{{ field.name }}":
+        {%                         if field.type == "string" %}
+            "test_{{ field.name }}"
+            {%                         elif field.type == "email" %}
+            "test@example.com"
+        {%                         elif field.type == "integer" %}
+        1
+        {%                         elif field.type == "boolean" %}
+            True
+        {%                         else %}
+        "test_value"
+    {%                         endif %}
+    ,
+    {%                     endif %}
+    {%                 endfor %}
+    }
+    create_model = {{ entities[0].name }}Create(**test_data)
+    expected_entity = {{ entities[0].name }}(id=uuid4(), ** test_data)
+    mock_repository.create.return_value = expected_entity
+    # Act
+    result = await usecase.{{ method.name }}(create_model)
+    # Assert
+    assert result is not None
+    mock_repository.create.assert_called_once_with(create_model)
+    {%             elif 'get' in method.name.lower() or 'find' in method.name.lower() %}
+    entity_id = uuid4()
+    expected_entity = {{ entities[0].name }}(
+                      id=entity_id,
+                      {%                 for field in entities[0].fields if entities %}
+                      {%                     if field.required %}
+                      {{ field.name }}=
+                      {%                         if field.type == "string" %}
+                      "test_{{ field.name }}"
+                      {%                         elif field.type == "email" %}
+                      "test@example.com"
+                      {%                         elif field.type == "integer" %}
+                      1
+                      {%                         elif field.type == "boolean" %}
+                      True
+                      {%                         else %}
+                      "test_value"
+                      {%                         endif %}
+                      ,
+                      {%                     endif %}
+                      {%                 endfor %}
+                      )
+    mock_repository.get_by_id.return_value = expected_entity
+    # Act
+    result = await usecase.{{ method.name }}(entity_id)
+    # Assert
+    assert result == expected_entity
+    mock_repository.get_by_id.assert_called_once_with(entity_id)
+    {%             elif 'update' in method.name.lower() %}
+    entity_id = uuid4()
+    update_data = {
+        {%                 for field in entities[0].fields if entities %}
+        {%                     if not field.required and field.type in ["string", "integer", "boolean"] %}
+        "{{ field.name }}":
+        {%                         if field.type == "string" %}
+            "updated_{{ field.name }}"
+        {%                         elif field.type == "integer" %}
+        2
+        {%                         elif field.type == "boolean" %}
+            False
+        {%                         else %}
+        "updated_value"
+    {%                         endif %}
+    ,
+    {%                     endif %}
+    {%                 endfor %}
+    }
+    update_model = {{ entities[0].name }}Update(**update_data)
+    updated_entity = {{ entities[0].name }}(id=entity_id, ** update_data)
+    mock_repository.update.return_value = updated_entity
+    # Act
+    result = await usecase.{{ method.name }}(entity_id, update_model)
+    # Assert
+    assert result == updated_entity
+    mock_repository.update.assert_called_once_with(entity_id, update_model)
+    {%             elif 'delete' in method.name.lower() %}
+    entity_id = uuid4()
+    mock_repository.delete.return_value = True
+    # Act
+    result = await usecase.{{ method.name }}(entity_id)
+    # Assert
+    assert result is True
+    mock_repository.delete.assert_called_once_with(entity_id)
+    {%             else %}
+    # Generic test for custom method
+    test_input = "test_input"
+    expected_result = "test_result"
+    # Mock the orchestration steps
+    {% for step in method.orchestration_steps %}  # Step:
+    {{ step.name }}{% endfor %}
+    # Act
+    result = await usecase.{{ method.name }}(test_input)
+    # Assert
+    assert result is not None
+    {%             endif %}
+    {% else %}
+    # Simple method without orchestration steps
+    test_input = "test_input"
+    # Act
+    result = await usecase.{{ method.name }}(test_input)
+    # Assert
+    assert result is not None
+    {% endif %}
+
+    @pytest.mark.asyncio
+
+
+async def test_{{ method.name }}_validation_error(self, usecase, mock_repository):
+    """Test {{ method.name }} method with validation errors."""
+
+    """Test {{ method.name }} method with validation errors."""
+    {% if 'create' in method.name.lower() %}
+    # Test with invalid data
+    invalid_data = {}  # Missing required fields
+    with pytest.raises(ValidationError):
+        {{ entities[0].name }}Create(**invalid_data)
+    {% elif 'get' in method.name.lower() or 'find' in method.name.lower() %}
+    # Test with non-existent entity
+    invalid_id = uuid4()
+    mock_repository.get_by_id.return_value = None
+    with pytest.raises({{ entities[0].name }}NotFoundError):
+        await usecase.{{ method.name }}(invalid_id)
+    {% elif 'update' in method.name.lower() %}
+    # Test with non-existent entity
+    invalid_id = uuid4()
+    update_data = {"name": "test"}
+    update_model = {{ entities[0].name }}Update(**update_data)
+    mock_repository.update.side_effect = {{ entities[0].name }}NotFoundError(str(invalid_id))
+    with pytest.raises({{ entities[0].name }}NotFoundError):
+        await usecase.{{ method.name }}(invalid_id, update_model)
+    {% elif 'delete' in method.name.lower() %}
+    # Test with non-existent entity
+    invalid_id = uuid4()
+    mock_repository.delete.side_effect = {{ entities[0].name }}NotFoundError(str(invalid_id))
+    with pytest.raises({{ entities[0].name }}NotFoundError):
+        await usecase.{{ method.name }}(invalid_id)
+    {% endif %}
+    {% if method.business_rules %}
+
+    @pytest.mark.asyncio
+
+
+async def test_{{ method.name }}_business_rules(self, usecase, mock_repository):
+    """Test {{ method.name }} method business rule validation."""
+
+    """Test {{ method.name }} method business rule validation."""
+    {% for rule in method.business_rules %}
+    # Test business rule:
+    {{ rule.name }}
+    #
+    {{ rule.description }}
+    # Set up test scenario that violates the rule
+    # Note: This is a template - implement specific rule testing logic
+    {% endfor %}
+    pass  # Remove this when implementing specific rule tests
+    {% endif %}
+    {% if method.transaction_boundary %}
+
+    @pytest.mark.asyncio
+
+
+async def test_{{ method.name }}_transaction_handling(self, usecase, mock_repository):
+    """Test {{ method.name }} method transaction boundary handling."""
+
+    """Test {{ method.name }} method transaction boundary handling."""
+    # Test successful transaction
+    {% if 'create' in method.name.lower() %}
+    test_data = {
+        {% for field in entities[0].fields if entities %}
+        {% if field.required %}
+        "{{ field.name }}":
+        {% if field.type == "string" %}
+            "test_{{ field.name }}"
+            {% elif field.type == "email" %}
+            "test@example.com"
+        {% elif field.type == "integer" %}
+        1
+        {% elif field.type == "boolean" %}
+            True
+        {% else %}
+        "test_value"
+    {% endif %}
+    ,
+    {% endif %}
+    {% endfor %}
+    }
+    create_model = {{ entities[0].name }}Create(**test_data)
+    expected_entity = {{ entities[0].name }}(id=uuid4(), ** test_data)
+    mock_repository.create.return_value = expected_entity
+    result = await usecase.{{ method.name }}(create_model)
+    assert result is not None
+    # Test transaction rollback on error
+    mock_repository.create.side_effect = Exception("Database error")
+    with pytest.raises(Exception):
+        await usecase.{{ method.name }}(create_model)
+    {% endif %}
+    {% endif %}
+    # @pyhex:begin:custom_
+    {{ method.name }}  _tests
+    # Add your custom
+    {{ method.name }}   tests
+    here
+
+# @pyhex:end:custom_
+{{ method.name }}  _tests
+{% endfor %}
+
+def test_{{ usecase.name | lower }}_dependencies(self, usecase):
+    """Test {{ usecase.name }}UseCase dependency injection."""
+
+    """Test {{ usecase.name }}UseCase dependency injection."""
+    assert hasattr(usecase, 'repository')
+    assert hasattr(usecase, 'logger')
+
+{% if usecase.dependencies %}
+{% for dep in usecase.dependencies.services %}
+assert hasattr(usecase, '
+{{ dep }}
+                        ')
+{% endfor %}
+{% endif %}
+# @pyhex:begin:custom_
+{{ usecase.name | lower }}  _tests
+# Add your custom
+{{ usecase.name }}   tests
+here
+# @pyhex:end:custom_
+{{ usecase.name | lower }}  _tests
+{% endfor %}
+
+
+class TestUseCaseIntegration:
+    """Integration tests for all use cases in {{ domain }} domain."""
+
+    @pytest.mark.asyncio
+
+
+async def test_usecase_orchestration(self, mock_repository, mock_logger):
+    """Test use case orchestration and coordination."""
+
+    """Test use case orchestration and coordination."""
+    {% for usecase in usecases %}
+    # Test
+    {{ usecase.name }}  UseCase
+    integration
+
+{{ usecase.name | lower }} = {{ usecase.name }}UseCase(
+    repository=mock_repository,
+    logger=mock_logger
+)
+assert {{ usecase.name | lower }} is not None
+{% endfor %}
+
+@pytest.mark.asyncio
+
+
+async def test_cross_usecase_dependencies(self, mock_repository, mock_logger):
+    """Test dependencies between different use cases."""
+
+    """Test dependencies between different use cases."""
+    # Note: Implement specific cross-use case dependency testing
+    # This is a placeholder for inter-use case coordination testing
+    pass
+
+
+# @pyhex:begin:custom_integration_tests
+# Add your custom integration tests here
+# @pyhex:end:custom_integration_tests
+class TestBusinessRules:
+    """Test cases for business rules validation across use cases."""
+
+{% if business_rules %}
+{% for rule in business_rules.rules %}
+
+def test_business_rule_{{ rule.name }}(self):
+    """Test business rule: {{ rule.name }}."""
+
+    """Test business rule: {{ rule.name }}."""
+    # Rule description:
+    {{ rule.description }}
+    # Priority:
+    {{ rule.priority }}
+    # Note: Implement specific business rule testing logic
+    # This is a template - customize based on actual rule requirements
+    {% if rule.validation_type == "required" %}
+    # Test required field validation
+    pass
+    {% elif rule.validation_type == "unique" %}
+    # Test uniqueness validation
+    pass
+    {% elif rule.validation_type == "range" %}
+    # Test range validation
+    pass
+    {% elif rule.validation_type == "custom" %}
+    # Test custom validation logic
+    pass
+
+{% endif %}
+{% endfor %}
+{% endif %}
+
+# @pyhex:begin:custom_business_rule_tests
+# Add your custom business rule tests here
+# @pyhex:end:custom_business_rule_tests
+class TestErrorHandling:
+    """Test cases for error handling across use cases."""
+
+    @pytest.mark.asyncio
+
+
+async def test_exception_propagation(self, mock_repository, mock_logger):
+    """Test that exceptions are properly propagated."""
+
+    """Test that exceptions are properly propagated."""
+    {% for usecase in usecases %}
+    {{ usecase.name | lower }} = {{ usecase.name }}UseCase(
+        repository=mock_repository,
+        logger=mock_logger
+    )
+
+
+# Test repository exception propagation
+mock_repository.get_by_id.side_effect = Exception("Database connection error")
+{% for method in usecase.methods %}
+{% if 'get' in method.name.lower() %}
+with pytest.raises(Exception):
+    await {{ usecase.name | lower }}.{{ method.name }}(uuid4())
+{% endif %}
+{% endfor %}
+{% endfor %}
+
+@pytest.mark.asyncio
+
+
+async def test_error_logging(self, mock_repository, mock_logger):
+    """Test that errors are properly logged."""
+
+    """Test that errors are properly logged."""
+    {% for usecase in usecases %}
+    {{ usecase.name | lower }} = {{ usecase.name }}UseCase(
+        repository=mock_repository,
+        logger=mock_logger
+    )
+
+
+# Simulate error condition
+mock_repository.get_by_id.side_effect = Exception("Test error")
+{% for method in usecase.methods %}
+{% if 'get' in method.name.lower() %}
+try:
+    await {{ usecase.name | lower }}.{{ method.name }}(uuid4())
+except Exception:
+pass
+# Verify error was logged
+mock_logger.error.assert_called()
+{% endif %}
+{% endfor %}
+{% endfor %}
+# @pyhex:begin:custom_error_handling_tests
+# Add your custom error handling tests here
+# @pyhex:end:custom_error_handling_tests
+# @pyhex:begin:custom_test_classes
+# Add your custom test classes here
+# @pyhex:end:custom_test_classes
+if __name__ == "__main__":
+    pytest.main([__file__])
